@@ -271,9 +271,17 @@
     // The cards floor events hand out. Which of them are checks comes with the slot data.
     const CARD_ITEMS = [39, 40, 60, 71, 74, 76, 77, 78, 79, 80];
     // What taking a received card into the deck costs in souls: 100 for Strip, 200 for the other lewd cards (Ride
-    // Back, Encase, Taunt, Candylick, Ride On, Projection, Temptation). Faithful Dog Lassi and Shadow Cat Assam
-    // cost nothing here, they only give up the score they would add (111 and 222).
-    const CARD_COSTS = { 77: 100, 60: 200, 71: 200, 74: 200, 76: 200, 78: 200, 79: 200, 80: 200 };
+    // Back, Encase, Taunt, Candylick, Ride On, Projection, Temptation), and for Faithful Dog Lassi and Shadow Cat
+    // Assam what the game's score gives for holding them (111 and 222), which they do not add either.
+    const CARD_COSTS = { 77: 100, 60: 200, 71: 200, 74: 200, 76: 200, 78: 200, 79: 200, 80: 200, 40: 111, 39: 222 };
+    // The deck screen shows the card under the cursor as two pictures named after its item id: "<id>" is the card,
+    // "<id>s" its description, which the screen puts into picture 47
+    const PICTURE_CARD_PREVIEW = 48;
+    const PICTURE_CARD_DESCRIPTION = 47;
+    const CARD_PREVIEW_X = 860;
+    const CARD_DESCRIPTION_X = 1020;
+    const CARD_PREVIEW_Y = 240;
+    const LABEL_CARDS = "ArchipelagoCards";
     // Deck screen (common events 73-77): received cards are taken into the deck from a button there
     const SCREEN_DECK = 21;
     const SCREEN_DECK_BUSY = 22;
@@ -1115,9 +1123,13 @@
         return (s.cards || []).map((id, index) => ({ id: id, index: index })).filter(card => !claimed.includes(card.index));
     };
 
-    // Runs in the common event the button of the deck screen starts
+    const cardCost = card => CARD_COSTS[card.id] || 0;
+
+    // Runs in the common event the button of the deck screen starts: the list of the received cards
     AP.offerCards = interpreter => {
         const cards = bound() ? waitingCards() : [];
+        AP.cardPreview = null;
+        AP.cardAgain = false;
         if (cards.length === 0) {
             return;
         }
@@ -1126,26 +1138,51 @@
             interpreter.setWaitMode("message");
             return;
         }
-        const cost = card => CARD_COSTS[card.id] || 0;
-        const label = card => $dataItems[card.id].name + (cost(card) ? " (" + cost(card) + " souls)" : "");
-        $gameMessage.add("Which card from the multiworld do you take? Each can be taken once a run.");
+        const label = card => $dataItems[card.id].name + (cardCost(card) ? " (" + cardCost(card) + " souls)" : "");
+        $gameMessage.add("Which card from the multiworld do you look at? Each can be taken once a run.");
         $gameMessage.add("You have " + soulTotal() + " souls.");
         $gameMessage.setChoices(cards.map(label).concat(["Not Now"]), 0, cards.length);
-        if ($gameMessage.setChoiceEnables) {
-            $gameMessage.setChoiceEnables(cards.map(card => soulTotal() >= cost(card)).concat([true]));
-        }
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
         limitChoiceRows();
         $gameMessage.setChoiceCallback(index => {
-            if (index < cards.length && soulTotal() >= cost(cards[index])) {
-                const s = state();
-                s.spent = (s.spent || 0) + cost(cards[index]);
-                s.claimed = (s.claimed || []).concat([cards[index].index]);
-                AP.granting = true;
-                withoutSouls(() => $gameParty.gainItem($dataItems[cards[index].id], 1));
-                AP.granting = false;
+            AP.cardPreview = index < cards.length ? cards[index] : null;
+        });
+        interpreter.setWaitMode("message");
+    };
+
+    // The next step: the picked card and its description, and the question whether it goes into the deck
+    AP.previewCard = interpreter => {
+        const card = AP.cardPreview;
+        AP.cardPreview = null;
+        if (!card) {
+            return;
+        }
+        const cost = cardCost(card);
+        const affordable = soulTotal() >= cost;
+        const y = CARD_PREVIEW_Y;
+        $gameScreen.showPicture(PICTURE_CARD_PREVIEW, String(card.id), 1, CARD_PREVIEW_X, y, 100, 100, 255, 0);
+        $gameScreen.showPicture(PICTURE_CARD_DESCRIPTION, card.id + "s", 1, CARD_DESCRIPTION_X, y, 100, 100, 255, 0);
+        $gameMessage.add($dataItems[card.id].name + (cost ? ": " + cost + " souls, you have " + soulTotal() + "." : ""));
+        $gameMessage.setChoices(["Add to Deck", "Back"], 0, 1);
+        if ($gameMessage.setChoiceEnables) {
+            $gameMessage.setChoiceEnables([affordable, true]);
+        }
+        $gameMessage.setChoiceBackground(0);
+        $gameMessage.setChoicePositionType(2);
+        $gameMessage.setChoiceCallback(index => {
+            $gameScreen.erasePicture(PICTURE_CARD_PREVIEW);
+            if (index !== 0 || !affordable) {
+                // Back to the list
+                AP.cardAgain = true;
+                return;
             }
+            const s = state();
+            s.spent = (s.spent || 0) + cost;
+            s.claimed = (s.claimed || []).concat([card.index]);
+            AP.granting = true;
+            withoutSouls(() => $gameParty.gainItem($dataItems[card.id], 1));
+            AP.granting = false;
         });
         interpreter.setWaitMode("message");
     };
@@ -1161,7 +1198,13 @@
             list: [
                 command(121, 0, [SWITCH_DECK_CONTROL, SWITCH_DECK_CONTROL, 1]),
                 command(122, 0, [VARIABLE_SCREEN, VARIABLE_SCREEN, 0, 0, SCREEN_DECK_BUSY]),
+                command(118, 0, [LABEL_CARDS]),
                 command(355, 0, ["LostChapterAP.offerCards(this);"]),
+                command(355, 0, ["LostChapterAP.previewCard(this);"]),
+                command(111, 0, [12, "LostChapterAP.cardAgain"]),
+                command(119, 1, [LABEL_CARDS]),
+                command(0, 1, []),
+                command(412, 0, []),
                 command(122, 0, [VARIABLE_SCREEN, VARIABLE_SCREEN, 0, 0, SCREEN_DECK]),
                 command(117, 0, [COMMON_EVENT_DECK_DISPLAY]),
                 command(121, 0, [SWITCH_DECK_CONTROL, SWITCH_DECK_CONTROL, 0]),
