@@ -115,8 +115,8 @@ class FinalBossFloor(Range):
 
 class TrapPercentage(Range):
     """
-    How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap and Paralysis Trap. A trap goes off in
-    the fight it arrives in, or in the next one.
+    How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap and Acid Trap. A trap
+    goes off in the fight it arrives in, or in the next one. The weight options below set how the traps are split.
 
     The rest of the filler is gold and one-time stat boosts for the current run (+5 Max LP, +5 Max RP, +1 STR, MAG,
     DEF or AGL).
@@ -125,6 +125,40 @@ class TrapPercentage(Range):
     range_start = 0
     range_end = 100
     default = 10
+
+
+class TrapWeight(Range):
+    range_start = 0
+    range_end = 100
+    default = 20
+
+
+class ClimaxTrapWeight(TrapWeight):
+    """
+    How likely a trap is a Climax Trap, which forces a climax on your next turn. The five trap weights are compared
+    with each other: with all of them the same, every kind is as likely. 0 leaves a kind out.
+    """
+    display_name = "Climax Trap Weight"
+
+
+class ConfusionTrapWeight(TrapWeight):
+    """How likely a trap is a Confusion Trap, which confuses you."""
+    display_name = "Confusion Trap Weight"
+
+
+class StickyTrapWeight(TrapWeight):
+    """How likely a trap is a Sticky Trap, which covers you in sticky fluid."""
+    display_name = "Sticky Trap Weight"
+
+
+class ParalysisTrapWeight(TrapWeight):
+    """How likely a trap is a Paralysis Trap, which paralyzes you."""
+    display_name = "Paralysis Trap Weight"
+
+
+class AcidTrapWeight(TrapWeight):
+    """How likely a trap is an Acid Trap, which dissolves your clothes."""
+    display_name = "Acid Trap Weight"
 
 
 class StartingEventCount(Range):
@@ -180,6 +214,11 @@ class LostChapterOptions(PerGameCommonOptions):
     finisher_move: FinisherMove
     final_boss_floor: FinalBossFloor
     trap_percentage: TrapPercentage
+    climax_trap_weight: ClimaxTrapWeight
+    confusion_trap_weight: ConfusionTrapWeight
+    sticky_trap_weight: StickyTrapWeight
+    paralysis_trap_weight: ParalysisTrapWeight
+    acid_trap_weight: AcidTrapWeight
     starting_event_count: StartingEventCount
     starting_events: StartingEvents
     soul_multiplier: SoulMultiplier

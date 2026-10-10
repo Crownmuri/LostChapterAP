@@ -261,9 +261,11 @@
     const GOLD_ITEMS = { 1: 100, 2: 300 };
     // Filler: item id -> [parameter of the protagonist, amount]. Parameters 2-5 are STR, DEF, MAG and AGL.
     const STAT_ITEMS = { 20: [0, 5], 21: [1, 5], 22: [2, 1], 23: [4, 1], 24: [3, 1], 25: [5, 1] };
-    // Traps: the Climax Trap empties RP, the others are a state (Confusion, Sticky Fluid, Paralysis)
+    // Traps: the Climax Trap empties RP, the others are a state (Confusion, Sticky Fluid, Paralysis, Torn Clothes)
     const ITEM_CLIMAX_TRAP = 30;
-    const TRAP_STATES = { 31: 121, 32: 101, 33: 242 };
+    const ITEM_ACID_TRAP = 34;
+    const TRAP_STATES = { 31: 121, 32: 101, 33: 242, 34: 131 };
+    const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
 
     // The cards floor events hand out. Which of them are checks comes with the slot data.
@@ -1065,6 +1067,9 @@
             actor.setMp(0);
         } else {
             actor.addState(TRAP_STATES[trap]);
+        }
+        if (trap === ITEM_ACID_TRAP && $gameVariables.value(VARIABLE_TORN_CLOTHES) < 1) {
+            $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 1);
         }
     };
 

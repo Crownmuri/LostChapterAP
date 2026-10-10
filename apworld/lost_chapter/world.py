@@ -431,9 +431,19 @@ class LostChapterWorld(World):
 
         # The rest is filler, a share of it traps
         filler = len(self.included_locations()) - len(pool)
-        traps = round(filler * self.options.trap_percentage.value / 100)
+        weights = [
+            self.options.climax_trap_weight.value,
+            self.options.confusion_trap_weight.value,
+            self.options.sticky_trap_weight.value,
+            self.options.paralysis_trap_weight.value,
+            self.options.acid_trap_weight.value,
+        ]
+        traps = round(filler * self.options.trap_percentage.value / 100) if any(weights) else 0
 
-        pool += [self.create_item(self.random.choice(list(data.TRAPS.values()))) for _ in range(traps)]
+        if traps:
+            # In the order of data.TRAPS
+            pool += [self.create_item(name) for name in self.random.choices(list(data.TRAPS.values()), weights, k=traps)]
+
         pool += [self.create_filler() for _ in range(filler - traps)]
 
         self.multiworld.itempool += pool

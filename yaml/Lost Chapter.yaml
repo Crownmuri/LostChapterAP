@@ -39,9 +39,15 @@ Lost Chapter:
   # 100-200. The floor to reach before the final boss can be challenged at the doors of a boss floor
   final_boss_floor: 100
 
-  # 0-100. How much of the filler is traps (Climax, Confusion, Sticky, Paralysis). The rest is gold and
-  # one-time stat boosts for the current run
+  # 0-100. How much of the filler is traps. The rest is gold and one-time stat boosts for the current run
   trap_percentage: 10
+
+  # 0-100 each. How the traps are split between the five kinds, compared with each other. 0 leaves a kind out
+  climax_trap_weight: 20      # forces a climax on your next turn
+  confusion_trap_weight: 20
+  sticky_trap_weight: 20
+  paralysis_trap_weight: 20
+  acid_trap_weight: 20        # dissolves your clothes
 
   # 0-36. Floor event unlocks you start with, picked at random from the events of the first 40 floors.
   # Desert, Temple, Hot Spring, Market and Small Room are one unlock for two events each
