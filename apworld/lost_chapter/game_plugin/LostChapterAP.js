@@ -997,6 +997,18 @@
         }
     };
 
+    // Souls are for what the run achieves. What the multiworld hands over is worth a lot in the game's score (a
+    // relic 51 to 777, the card Shadow Cat Assam 222), so the score it adds is taken off again.
+    const withoutSouls = give => {
+        const s = state();
+        const before = s.runBase != null ? runScore() : null;
+        give();
+        const after = before !== null ? runScore() : null;
+        if (after !== null) {
+            s.runBase += after - before;
+        }
+    };
+
     const applyItem = item => {
         const s = state();
         if (item.id >= CARD_OFFSET) {
@@ -1056,7 +1068,7 @@
             if (STAT_ITEMS[item.id] && $gameVariables.value(VARIABLE_FLOOR) < 1) {
                 break;
             }
-            applyItem(item);
+            withoutSouls(() => applyItem(item));
             s.itemIndex++;
         }
     };
@@ -1119,7 +1131,7 @@
                 const s = state();
                 s.claimed = (s.claimed || []).concat([cards[index].index]);
                 AP.granting = true;
-                $gameParty.gainItem($dataItems[cards[index].id], 1);
+                withoutSouls(() => $gameParty.gainItem($dataItems[cards[index].id], 1));
                 AP.granting = false;
             }
         });
