@@ -182,7 +182,8 @@ too and Magislilia is a third door there (**The Last Door**). Defeating her is t
 The game has a patch that restores content cut from the Steam release, one for the base game and one for the DLC.
 The plugin is checked against all four combinations. The patch adds no events, enemies or relics, but it is what
 makes the White Key possible: it gives two enemies a Regression Spell, and the Girl event hands the Moon Hair
-Ornament to a player in that Regression State. Without the patch the ornament is only a rare drop.
+Ornament to a player in that Regression State. Without the patch nothing in the game hands the
+ornament out, so neither it nor the White Key can be had.
 
 So that every version plays the same, the plugin has the girl hand the ornament out on any visit while its check
 is open (`patchGirl`), adding the gift to the event where the game does not have it. The Moon Hair Ornament and
