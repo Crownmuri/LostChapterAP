@@ -24,8 +24,6 @@ class Goal(Choice):
     option_true_end = 1
     option_virgin_end = 2
     option_dlc_ending = 3
-    alias_ending = 0
-    alias_ending_1 = 1
     default = 0
 
 
@@ -44,11 +42,11 @@ class IncludeDLC(Toggle):
 
 class ShuffleKeys(DefaultOnToggle):
     """
-    The White Key and the Black Key are shuffled into the multiworld as relics. Having the Locksmith make the Black
-    Key is a check. The White Key is only an item, and only with Include DLC, where it opens the White Door.
+    The White Key and the Black Key are shuffled into the multiworld as relics, and having the Locksmith make one
+    is a check. They open the locked door of the Corridor, the Prison and, with the DLC, the White Door and the
+    Black Door.
 
-    When off, the keys are made at the Locksmith as in the normal game. The White Key then takes a Moon Hair
-    Ornament, a rare drop that logic cannot promise.
+    When off, the keys are made at the Locksmith as in the normal game, from relics that are still shuffled.
 
     Needs Relicsanity, the keys are always made at the Locksmith without it.
     """

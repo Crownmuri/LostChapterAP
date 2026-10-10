@@ -56,7 +56,8 @@ var $gameSystem = {};
 var $dataWeapons = [];
 """
 
-# Loads the data, then reports the errors, the door choices and the events a fresh run could be offered
+# Loads the data, then reports the errors, the door choices, what became of the Girl (41) and the Locksmith (57),
+# and the events a fresh run could be offered
 REPORT = """
 var lines = [];
 try {
@@ -68,6 +69,14 @@ try {
         if (command.code === 102 && /Door/.test(command.parameters[0].join())) {
             lines.push("doors: " + command.parameters[0].join(" | "));
         }
+    });
+    [41, 57].forEach(function(id) {
+        var list = $dataCommonEvents[id].list;
+        var scripts = list.filter(function(command) { return command.code === 111 && command.parameters[0] === 12; });
+        var gains = list.filter(function(command) { return command.code === 127 && command.parameters[1] === 0; });
+        lines.push($dataCommonEvents[id].name + ": asks " +
+            scripts.map(function(command) { return command.parameters[1]; }).join(" ; ") +
+            " | hands out weapons " + gains.map(function(command) { return command.parameters[0]; }).join(","));
     });
     lines.push(LostChapterAP.dev("events 10"));
     lines.push(LostChapterAP.dev("events 50"));

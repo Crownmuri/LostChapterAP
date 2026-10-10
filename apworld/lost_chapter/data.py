@@ -300,10 +300,13 @@ STARTING_SETS: Dict[int, str] = {
 }
 
 # weapon id -> relic name. Only relics with a known event source are listed.
-# Left out on purpose: Moon Hair Ornament (41, only a rare drop of fights), the counted flowers Forget-Me-Not (74)
-# and Pieris (75), and what is used up on the spot (Mark of Attainer 80, 5000 lux 5).
-# The White Key (57) is made from the Moon Hair Ornament, so making it is not a check. It is an item when the
-# keys are shuffled in a seed with the DLC, where it opens the White Door.
+# Left out on purpose: the counted flowers Forget-Me-Not (74) and Pieris (75), and what is used up on the spot
+# (Mark of Attainer 80, 5000 lux 5).
+#
+# The Moon Hair Ornament comes from the Girl event, where the game only hands it to a player in the Regression State.
+# That state, and with it the ornament and the White Key made from it, only exists with the patch of the game that
+# restores its cut content. The plugin has the girl hand the ornament out on any visit, so the three are in every
+# seed and no option is needed for the patch.
 RELICS: Dict[int, str] = {
     29: "Recovery Misanga",
     30: "Dusk Ring",
@@ -311,8 +314,10 @@ RELICS: Dict[int, str] = {
     34: "Music Box",
     36: "Clown Mask",
     38: "Promise Pendant",
+    41: "Moon Hair Ornament",
     42: "Collar Key",
     51: "Pretty Water",
+    57: "White Key",
     58: "Black Key",
     59: "Aetolus Flag",
 }
@@ -344,9 +349,9 @@ RELIC_SOURCES: Dict[str, Dict[str, List[str]]] = {
     "Promise Pendant": {"events": ["Cherry Blossoms"], "relics": []},
     "Collar Key": {"events": ["Battlefield"], "relics": []},
     "Pretty Water": {"events": ["Pond"], "relics": []},
+    "Moon Hair Ornament": {"events": ["Girl"], "relics": []},
     "Black Key": {"events": ["Locksmith"], "relics": ["Plushie", "Clown Mask", "Promise Pendant"]},
-    # Also takes the Moon Hair Ornament, a rare drop of fights that logic cannot promise
-    "White Key": {"events": ["Locksmith"], "relics": ["Music Box", "Recovery Misanga"]},
+    "White Key": {"events": ["Locksmith"], "relics": ["Music Box", "Recovery Misanga", "Moon Hair Ornament"]},
     "Aetolus Flag": {"events": ["Throne"], "relics": ["Dusk Ring"]},
 }
 

@@ -175,8 +175,18 @@ and again behind the hallway. There the game opens them without a key and walks 
 defeated, to start Magislilia on the next boss floor. In a multiworld the doors behind the hallway take their keys
 too and Magislilia is a third door there (**The Last Door**). Defeating her is the `dlc_ending` goal.
 
-`shuffle_keys` (needs relicsanity) makes the two keys items. Making the Black Key at the Locksmith is then a
-check; the White Key has no check, because making it takes a Moon Hair Ornament, a rare drop.
+`shuffle_keys` (needs relicsanity) makes the two keys items, and having the Locksmith make one a check.
+
+### The patch of the game
+
+The game has a patch that restores content cut from the Steam release, one for the base game and one for the DLC.
+The plugin is checked against all four combinations. The patch adds no events, enemies or relics, but it is what
+makes the White Key possible: it gives two enemies a Regression Spell, and the Girl event hands the Moon Hair
+Ornament to a player in that Regression State. Without the patch the ornament is only a rare drop.
+
+So that every version plays the same, the plugin has the girl hand the ornament out on any visit while its check
+is open (`patchGirl`), adding the gift to the event where the game does not have it. The Moon Hair Ornament and
+the White Key are relics like the others in every seed, and there is no option for the patch.
 
 `finisher_move` decides about Kick Balls, the card drawn the turn after the enemy climaxes: `vanilla`, `shuffle`
 (only once the useful item Kick Balls is found) or `remove`.

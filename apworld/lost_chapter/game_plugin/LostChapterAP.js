@@ -214,7 +214,11 @@
     // The relics that are checks in a seed from before the slot data listed them
     const LEGACY_RELIC_WEAPONS = [29, 30, 33, 34, 36, 38, 42, 51, 58, 59];
     // Every relic that can be a check: the ones above and those of the DLC
-    const RELIC_WEAPONS = LEGACY_RELIC_WEAPONS.concat([23, 24, 76, 77]);
+    // (Moon Hair Ornament, White Key)
+    const RELIC_WEAPONS = LEGACY_RELIC_WEAPONS.concat([41, 57, 23, 24, 76, 77]);
+    const WEAPON_MOON_HAIR_ORNAMENT = 41;
+    const COMMON_EVENT_GIRL = 41;
+    const STATE_REGRESSION = 143;
 
     // DLC: the bosses behind the White Door and the Black Door, and Magislilia behind the last door
     const DLC_BOSS_SWITCHES = [278, 279];
@@ -1835,6 +1839,44 @@
         list[draw].parameters = [12, "LostChapterAP.finisher()"];
     };
 
+    // Girl: the patch of the game that restores its cut content has her give the Moon Hair Ornament to a player in
+    // the Regression State. In the game without it there is neither the state nor the gift, and with it no White
+    // Key. In a multiworld she hands the ornament out on any visit while its check is open, in every version.
+    AP.girlGift = () => {
+        if ($gameActors.actor(1).isStateAffected(STATE_REGRESSION)) {
+            return true;
+        }
+        const location = RELIC_OFFSET + WEAPON_MOON_HAIR_ORNAMENT;
+        return bound() && relicChecks().includes(WEAPON_MOON_HAIR_ORNAMENT) && !state().checked.includes(location);
+    };
+
+    const patchGirl = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_GIRL].list;
+        const gate = list.findIndex(item => {
+            const p = item.parameters;
+            return item.code === 111 && item.indent === 0 && p[0] === 4 && p[2] === 6 && p[3] === STATE_REGRESSION;
+        });
+        const otherwise = list.findIndex((item, i) => i > gate && item.indent === 0 && item.code === 411);
+        if (gate < 0 || otherwise < 0) {
+            console.error("[AP] Common event 41 has an unexpected layout, the Moon Hair Ornament is not handed out");
+            return;
+        }
+        const isGift = item => {
+            const p = item.parameters;
+            return item.code === 127 && p[0] === WEAPON_MOON_HAIR_ORNAMENT && p[1] === 0;
+        };
+        list[gate].parameters = [12, "LostChapterAP.girlGift()"];
+        if (!list.slice(gate, otherwise).some(isGift)) {
+            list.splice(
+                gate + 1,
+                0,
+                command(101, 1, ["", 0, 1, 2, ""]),
+                command(401, 1, ["The girl held something out to you, to remember her by."]),
+                command(127, 1, [WEAPON_MOON_HAIR_ORNAMENT, 0, 0, 1, false])
+            );
+        }
+    };
+
     // A floor event that hands out a relic asks "has relic n" to tell whether that already happened
     const patchRelicConditions = () => {
         for (const eventId of allEvents()) {
@@ -1848,9 +1890,15 @@
                 if (item.code !== 111 || p[0] !== 9 || !handedOut.includes(p[1])) {
                     continue;
                 }
-                // The Locksmith only asks this way before he makes the Black Key. His later questions are about
-                // the key in the bag, which he takes back in a loop that runs until it is gone.
-                if (eventId === COMMON_EVENT_LOCKSMITH && patched > 0) {
+                // The Locksmith only asks this way before he makes a key: "unless you have the key already". His
+                // other questions are about what is in the bag: the relics a key is made of, and the key he takes
+                // back in a loop that runs until it is gone.
+                const index = list.indexOf(item);
+                const makesKey =
+                    [WEAPON_WHITE_KEY, WEAPON_BLACK_KEY].includes(p[1]) &&
+                    list[index + 1].code === 0 &&
+                    list[index + 2].code === 411;
+                if (eventId === COMMON_EVENT_LOCKSMITH && !makesKey) {
                     continue;
                 }
                 item.parameters = [12, "LostChapterAP.relicTaken(" + p[1] + ", " + !!p[2] + ")"];
@@ -1885,6 +1933,7 @@
             patchNextFloor();
             patchKingDoors();
             patchTitleReleases();
+            patchGirl();
             patchRelicConditions();
             patchPond();
             patchFinisher();

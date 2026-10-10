@@ -52,8 +52,6 @@ def item_table() -> Dict[str, int]:
     for weapon_id, name in data.RELICS.items():
         table[name] = data.RELIC_OFFSET + weapon_id
 
-    table[data.WHITE_KEY] = data.RELIC_OFFSET + data.WHITE_KEY_ID
-
     for unlock, event_ids in data.UNLOCK_EVENTS.items():
         table[f"Event: {unlock}"] = data.EVENT_OFFSET + event_ids[0]
 
@@ -126,7 +124,7 @@ class LostChapterWorld(World):
     location_name_to_id = location_table()
 
     item_name_groups = {
-        "Relics": set(data.RELICS.values()) | {data.WHITE_KEY},
+        "Relics": set(data.RELICS.values()),
         "Events": {f"Event: {unlock}" for unlock in data.UNLOCK_EVENTS},
         "Door Keys": set(data.DOOR_KEYS.values()),
         "Title Effects": {f"Unlock Title Effect: {name}" for name in data.TITLES.values()},
@@ -199,18 +197,14 @@ class LostChapterWorld(World):
         }
 
         if not self.options.shuffle_keys:
+            del relics[data.WHITE_KEY_ID]
             del relics[data.BLACK_KEY_ID]
 
         return relics
 
     def relic_items(self) -> List[str]:
-        """The relics that are items. The White Key is one without a place of its own."""
-        relics = list(self.relic_locations().values())
-
-        if self.options.relicsanity and self.options.shuffle_keys and self.options.include_dlc:
-            relics.append(data.WHITE_KEY)
-
-        return relics
+        """The relics that are items, one for each of the relic places."""
+        return list(self.relic_locations().values())
 
     def pick_starting_events(self) -> List[str]:
         """The named starting unlocks, filled up with random early ones to the starting event count."""
