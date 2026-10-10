@@ -149,8 +149,8 @@ TITLE_FLOORS: Dict[int, int] = {
     5: 21,   # LEWD 15 or more
     8: 21,   # Use 7 cards during 1 turn
     12: 21,  # Stats over 30
-    14: 81,  # VIRTUE 70 or more
-    15: 81,  # FAITH 70 or more
+    14: 21,  # VIRTUE 70 or more: the origin Forgotten Martyr starts with both at 65
+    15: 21,  # FAITH 70 or more
     16: 21,  # Possess 15 or more cards
 }
 

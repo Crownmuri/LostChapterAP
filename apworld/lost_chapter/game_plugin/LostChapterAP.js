@@ -59,6 +59,8 @@
     const VERSION = "0.8.0";
     const PORT = Number(PluginManager.parameters(PLUGIN_NAME).port || 38472);
     const RECONNECT_MS = 3000;
+    const IMAGE_RETRIES = 3;
+    const IMAGE_RETRY_MS = 250;
     const SESSION_FILE = "archipelago_session.json";
     const MAP_TITLE = 3;
 
@@ -362,6 +364,28 @@
     AP.session = SESSION;
 
     if (SESSION) {
+        // The game now and then fails to load a picture and shows nothing in its place, with or without this
+        // plugin: a card on the deck screen for one. A picture that failed is asked for again, a few times.
+        const _Bitmap_onError = Bitmap.prototype._onError;
+        Bitmap.prototype._onError = function() {
+            this._archipelagoRetries = (this._archipelagoRetries || 0) + 1;
+            if (this._archipelagoRetries > IMAGE_RETRIES || !this._url) {
+                _Bitmap_onError.apply(this, arguments);
+                return;
+            }
+            setTimeout(() => this.retry(), IMAGE_RETRY_MS);
+        };
+        // And one that still ended up failed is loaded anew the next time something asks for it
+        const _ImageManager_loadBitmapFromUrl = ImageManager.loadBitmapFromUrl;
+        ImageManager.loadBitmapFromUrl = function(url) {
+            for (const cache of [this._cache, this._system]) {
+                if (cache && cache[url] && cache[url].isError()) {
+                    delete cache[url];
+                }
+            }
+            return _ImageManager_loadBitmapFromUrl.apply(this, arguments);
+        };
+
         // Every multiworld slot saves into its own folder, the normal save folder is never opened
         StorageManager.fileDirectoryPath = function() {
             return require("path").join(gameFolder(), SESSION.save + "/");
@@ -1581,19 +1605,31 @@
         if (bossFloorSwitch(floor)) {
             return;
         }
-        const offered = offerFloorEvents(interpreter, floor, switchId => (AP.chosenFloorEvent = switchId));
+        const offered = offerFloorEvents(interpreter, floor, switchId => {
+            AP.standbyChoice = false;
+            AP.chosenFloorEvent = switchId;
+        });
+        // Nothing to roll from is settled here too, so the floor is not rolled a second time after the screen went dark
+        AP.standbyChoice = offered;
         if (!offered) {
-            // Nothing to roll from. Settled here, so the floor is not rolled a second time after the screen went dark
             AP.chosenFloorEvent = SWITCH_FIGHT;
-        } else if ($gameMessage.setChoicePos) {
-            // Below the lines of the standby screen instead of over them
-            $gameMessage.setChoicePos(-1, STANDBY_CHOICE_Y, CHOICE_MAX_ROWS);
+        }
+    };
+
+    // The choice of the standby screen sits below its lines instead of over them. Placed here, after the game and
+    // MPP_ChoiceEX have placed the window: handing MPP_ChoiceEX a position of its own left the window out of sight.
+    const _Window_ChoiceList_updatePlacement = Window_ChoiceList.prototype.updatePlacement;
+    Window_ChoiceList.prototype.updatePlacement = function() {
+        _Window_ChoiceList_updatePlacement.apply(this, arguments);
+        if (AP.standbyChoice) {
+            this.y = Math.max(0, Math.min(STANDBY_CHOICE_Y, Graphics.boxHeight - this.height));
         }
     };
 
     // Replaces the fight / random event roll of common event 86
     AP.chooseFloorEvent = interpreter => {
         const forced = AP.nextFloorEvent || AP.chosenFloorEvent;
+        AP.standbyChoice = false;
         AP.nextFloorEvent = 0;
         AP.chosenFloorEvent = 0;
         if (forced) {
