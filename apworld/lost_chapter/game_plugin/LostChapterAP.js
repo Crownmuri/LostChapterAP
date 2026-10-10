@@ -863,7 +863,7 @@
         40: {"Pay -40 G": "MAG +1, FAITH -5", "Pay -160 G": "MAG +2, FAITH -5", "Seduce ＜Levy Suit＞ Required": "MAG +1, FAITH -5, LEWD +2", "Refuse": "FAITH +5"},
         41: {"Yes": "Moon Hair Ornament, VIRTUE +5", "No": "FAITH -5", "Play With Her": "RP +5", "Dodge Her Question": "FAITH -5"},
         42: {"Leave him alone＜HEALING＞ Lost": "Dusk Ring, VIRTUE +5", "So Be It Lose ＜Healing＞": "Dusk Ring, VIRTUE +5", "Can't Do Anything": "Collar Key", "Free him from suffering": "Pieris", "Accept His Request": "Collar Key"},
-        43: {"Beckon Dog Over": "Max RP +5", "Unlock the Dog's Collar": "lose Collar Key, card Faithful Dog Lassi", "Release from curse": "Pieris"},
+        43: {"Beckon Dog Over": "Max RP +5", "Unlock the Dog's Collar": "obtain Faithful Dog Lassi", "Release from curse": "Pieris"},
         44: {"Pat": "LEWD +2, LEWD ≧ 10: a card", "Hug": "Bosom Enlargement, else LEWD +2"},
         45: {"Rummage Through Their Belongings %": "Gold, VIRTUE -3", "Rummage Again %": "Gold, VIRTUE -3", "Flee": "lose Lassi, VIRTUE -10", "Resign Yourself": "lose that Gold, LEWD +3", "Make up your mind": "fight: Pieris", "Give in to their demands": "lose that Gold, LEWD +3"},
         46: {"Entrust": "ends Nude and Torn Clothes", "Attack from behind": "Pieris"},
@@ -911,8 +911,17 @@
         if (!effect || text.includes("\\c[18]")) {
             return text;
         }
-        // A relic that is a check is named by what is really there
-        for (const weaponId of relicChecks()) {
+        // A card that is a check is named by what is really there
+        for (const itemId of cardChecks()) {
+            const name = $dataItems[itemId] ? $dataItems[itemId].name : "";
+            if (name && effect.includes(name)) {
+                const sent = state().checked.includes(CARD_OFFSET + itemId);
+                effect = effect.replace(name, sent ? name + " (found)" : cardLabel(itemId) || name);
+            }
+        }
+        // The same for a relic, where the choice hands it out: one that is given up or used is the relic itself
+        const handsOut = !/^(lose|uses) /.test(effect);
+        for (const weaponId of handsOut ? relicChecks() : []) {
             const name = $dataWeapons[weaponId] ? $dataWeapons[weaponId].name : "";
             if (name && effect.includes(name) && !text.includes(relicLabel(weaponId) || name)) {
                 const sent = state().checked.includes(RELIC_OFFSET + weaponId);
