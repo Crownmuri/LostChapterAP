@@ -202,6 +202,9 @@ four by 81 and five by 101; nothing in the game holds the climb up for them.
 
 The choices of the floor events say what they do, in gray behind their text.
 
+`death_link`: every game over is sent to the other DeathLink players, and a death of theirs ends your run, in the
+fight that is on or before the next floor.
+
 An event that plays one short scene from then on once its relic or card is found (Collapse, Amusement Center, Girl,
 Battlefield, Cat, Throne) asks on every later visit instead: "Revisit Event" for that scene, "Reset Event" for the
 event as it was before. Both choices say what they are worth.

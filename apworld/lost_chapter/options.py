@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from Options import Choice, DefaultOnToggle, OptionSet, PerGameCommonOptions, Range, Toggle
+from Options import Choice, DeathLink, DefaultOnToggle, OptionSet, PerGameCommonOptions, Range, Toggle
 
 from . import data
 
@@ -237,3 +237,4 @@ class LostChapterOptions(PerGameCommonOptions):
     starting_event_count: StartingEventCount
     starting_events: StartingEvents
     soul_multiplier: SoulMultiplier
+    death_link: DeathLink

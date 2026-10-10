@@ -14,7 +14,7 @@ from .options import LostChapterOptions
 
 SLOT_DATA_OPTIONS = (
     "goal", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
-    "finisher_move", "field_exploration", "final_boss_floor", "soul_multiplier",
+    "finisher_move", "field_exploration", "final_boss_floor", "soul_multiplier", "death_link",
 )
 
 

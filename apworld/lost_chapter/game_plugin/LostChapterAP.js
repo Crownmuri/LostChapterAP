@@ -119,6 +119,8 @@
     const ITEM_RESTORE_LP = 26;
     const ITEM_RESTORE_RP = 27;
     const RESTORE_AMOUNT = 5;
+    const SWITCH_GAME_OVER = 66; // turned on by common event 86 when the floor ends without LP
+    const MAP_ENDING = 11;
     const FINISHER_SHUFFLE = 1; // the finisher_move option
     const FINISHER_REMOVE = 2;
     const COMMON_EVENT_POND = 54;
@@ -485,6 +487,9 @@
             AP.scouts = message.locations;
         } else if (message.cmd === "Notice") {
             notify(String(message.text), message.flags & ITEM_FLAG_PROGRESSION);
+        } else if (message.cmd === "Death") {
+            // DeathLink: someone else died, applied by updateItems once a run is under way
+            AP.pendingDeath = String(message.source || "someone");
         } else if (message.cmd === "Speed") {
             setSpeed(message.speed);
         } else if (message.cmd === "Dev") {
@@ -607,6 +612,14 @@
     Game_Switches.prototype.setValue = function(switchId, value) {
         const wasOn = this.value(switchId);
         _Game_Switches_setValue.apply(this, arguments);
+        if (value && !wasOn && switchId === SWITCH_GAME_OVER && bound()) {
+            // DeathLink: every game over is passed on, except the one a death from the multiworld brought
+            // The ending map closes a run through the same switch, which is no death
+            if (!AP.deathReceived && $gameMap.mapId() !== MAP_ENDING) {
+                send({ cmd: "Death", floor: $gameVariables.value(VARIABLE_FLOOR) });
+            }
+            AP.deathReceived = false;
+        }
         if (value && (KING_SWITCHES.includes(switchId) || DLC_BOSS_SWITCHES.includes(switchId))) {
             check(SWITCH_OFFSET + switchId);
         } else if (!value && wasOn && eventCommon[switchId]) {
@@ -658,6 +671,7 @@
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
             s.runOver = false;
+            AP.deathReceived = false;
             s.claimed = [];
             // The souls of the run that ended are kept, the next one adds to them
             s.souls = (s.souls || 0) + (s.runSouls || 0);
@@ -1262,6 +1276,14 @@
             return;
         }
         const s = state();
+        if (AP.pendingDeath && $gameVariables.value(VARIABLE_FLOOR) >= 1 && !s.runOver) {
+            // Like a virgin goal that is lost: the fight is lost, or the game over follows before the next floor
+            notify("DeathLink: " + AP.pendingDeath + " died, this run is over");
+            AP.pendingDeath = null;
+            AP.deathReceived = true;
+            s.runOver = true;
+            $gameActors.actor(1).setHp(0);
+        }
         if (s.regrant && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             s.regrant = false;
             s.relics.forEach(grantRelic);

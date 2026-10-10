@@ -11,12 +11,14 @@ Game -> client:
         the run as it stands, for the tracker. stats is what the title "Minerva's Owl" asks to be over 30:
         (Max LP + Max RP + LEWD) / 5 + STR + DEF + MAG + AGL
     {"cmd": "Error", "text": str}
+    {"cmd": "Death", "floor": int}   a game over, for DeathLink
 
 Client -> game:
     {"cmd": "Slot", "connected": bool, "seed": str, "slot": int, "name": str, "slot_data": dict}
     {"cmd": "Items", "items": [{"index": int, "id": int, "name": str, "sender": str, "flags": int}]}   always the full list
     {"cmd": "Scouts", "locations": {location id: {"item": str, "player": str, "flags": int}}}   what the relic places hold
     {"cmd": "Notice", "text": str, "flags": int}   a line for the top of the screen, flags as for an item
+    {"cmd": "Death", "source": str}   DeathLink: someone died, the run ends
     {"cmd": "Speed", "speed": int}
     {"cmd": "Dev", "args": [str]}
 """

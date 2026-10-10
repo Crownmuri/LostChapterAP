@@ -203,6 +203,7 @@ class LostChapterContext(Context):
                 self.send_msgs([{"cmd": "StatusUpdate", "status": CommonClient.ClientStatus.CLIENT_PLAYING}])
             )
             Utils.async_start(self.sync_game())
+            Utils.async_start(self.update_death_link(bool(self.slot_data.get("death_link"))))
 
             # The game shows what the place of a relic or a card holds instead of the relic or the card
             relic_locations = {data.RELIC_OFFSET + weapon_id for weapon_id in data.RELICS}
@@ -218,6 +219,12 @@ class LostChapterContext(Context):
 
         # UT Tab Integration
         super().on_package(cmd, args)
+
+    def on_deathlink(self, data: Dict[str, Any]) -> None:
+        super().on_deathlink(data)
+
+        # The run of the game ends: in the fight that is on, or before the next floor
+        Utils.async_start(self.bridge.send({"cmd": "Death", "source": data.get("source", "")}))
 
     def on_print_json(self, args: dict) -> None:
         super().on_print_json(args)
@@ -308,6 +315,12 @@ class LostChapterContext(Context):
                 self.finished_game = True
 
                 await self.send_msgs([{"cmd": "StatusUpdate", "status": CommonClient.ClientStatus.CLIENT_GOAL}])
+        elif cmd == "Death":
+            # Every game over of the game, passed on with DeathLink
+            if self.slot and "DeathLink" in self.tags:
+                name = self.player_names[self.slot]
+
+                await self.send_death(f"{name} met their end on floor {message.get('floor', '?')} of Lost Chapter.")
         elif cmd == "Status":
             self.status.update(message)
             self.floor = self.status.get("floor")
