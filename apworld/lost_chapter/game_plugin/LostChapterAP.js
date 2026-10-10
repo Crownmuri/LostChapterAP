@@ -419,7 +419,7 @@
                 events: [],
                 bosses: [],
                 sets: [],
-                souls: 0, // no longer used: souls were banked over the runs once
+                souls: 0, // banked from the runs that ended
                 runSouls: 0, // best value of the current run
                 runBase: null, // score the current run started with, which does not count
                 goals: [], // values of the goal option that wins have reached
@@ -652,9 +652,8 @@
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
             s.claimed = [];
-            // Souls are counted for one run at a time
-            s.souls = 0;
-            s.spent = 0;
+            // The souls of the run that ended are kept, the next one adds to them
+            s.souls = (s.souls || 0) + (s.runSouls || 0);
             s.runSouls = 0;
             s.runBase = null;
         }
@@ -1256,7 +1255,7 @@
             s.regrant = false;
             s.relics.forEach(grantRelic);
         }
-        // Every run starts at 0 souls: what the origin, the starting set and the relics from the multiworld are worth
+        // Every run adds its souls from 0: what the origin, the starting set and the relics from the multiworld are worth
         // in the score is taken off. The DLC's origin alone would start a run at 115.
         if (s.runBase == null && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             s.runBase = runScore();
