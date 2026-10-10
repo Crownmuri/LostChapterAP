@@ -139,6 +139,7 @@
     const EVENT_RANGES = [[21, 61], [161, 171]];
     const LEGACY_EVENTS = Array.from({ length: 41 }, (_, i) => 21 + i);
     const FLOOR_EVENT_CHOICES = 2;
+    const UNVISITED_EVENT_WEIGHT = 6; // times as likely to be rolled as any other event
     // Floor event -> choice (as written in the event, without its condition and colors) -> what it takes.
     // Choices that already name a card they need, and the ones about FAITH, VIRTUE and LEWD, are not listed:
     // the latter are read from their condition.
@@ -1516,9 +1517,17 @@
                 pool.push(eventId);
             }
         }
+        // An unlocked event that was not visited yet is likelier to come up, so its check does not wait on luck
+        const weight = eventId =>
+            unlocked(eventId) && !state().checked.includes(SWITCH_OFFSET + eventId) ? UNVISITED_EVENT_WEIGHT : 1;
+        const draw = () => {
+            let roll = Math.random() * pool.reduce((sum, eventId) => sum + weight(eventId), 0);
+            const index = pool.findIndex(eventId => (roll -= weight(eventId)) < 0);
+            return pool.splice(index < 0 ? pool.length - 1 : index, 1)[0];
+        };
         const offered = [];
         while (offered.length < FLOOR_EVENT_CHOICES && pool.length > 0) {
-            const eventId = pool.splice(Math.randomInt(pool.length), 1)[0];
+            const eventId = draw();
             const group = eventGroup(eventId);
             offered.push(eventId);
             // The two events of a pair go by one name, so only one of them is offered at a time
