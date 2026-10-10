@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+build/
+*.apworld
+
+# Dumps of the game's own data (tools/dump_game_data.py) - do not commit game assets
+dump/
+
+.vs/
+.vscode/
+.idea/
