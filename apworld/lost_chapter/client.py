@@ -202,8 +202,10 @@ class LostChapterContext(Context):
             )
             Utils.async_start(self.sync_game())
 
-            # The game shows what a relic's place holds instead of the relic
-            relic_locations = {data.RELIC_OFFSET + weapon_id for weapon_id in data.RELICS} & self.server_locations
+            # The game shows what the place of a relic or a card holds instead of the relic or the card
+            relic_locations = {data.RELIC_OFFSET + weapon_id for weapon_id in data.RELICS}
+            relic_locations |= {data.CARD_OFFSET + item_id for item_id in data.CARDS}
+            relic_locations &= self.server_locations
 
             if relic_locations:
                 Utils.async_start(self.send_msgs([{"cmd": "LocationScouts", "locations": sorted(relic_locations)}]))

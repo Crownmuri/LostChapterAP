@@ -112,8 +112,7 @@ the normal save is used. The client removes the file when it closes.
 Game changes in a session (the plugin patches the event data in memory at load, the game files stay untouched):
 
 - Every floor is a fight until floor events are unlocked. Each floor rolls two of all the events it could hold
-  and the player picks between Battle and those two; an event without its unlock is grayed out, and a floor that
-  rolls no unlocked event is a fight without asking. The game's own conditions for an event still apply (floor 41+ for Locksmith,
+  and the player picks between Battle and those two; an event without its unlock is grayed out. The game's own conditions for an event still apply (floor 41+ for Locksmith,
   Corridor, Throne and Hill, torn clothes for the Seamstress, ...).
 - The door of a Heavenly King is grayed out without his door key. Every boss floor leads to the hallway, and
   the doors also offer **Turn Back**, which repeats the last 20 floors: the climb only goes on once a king is

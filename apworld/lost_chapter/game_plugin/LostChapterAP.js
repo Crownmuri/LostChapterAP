@@ -71,6 +71,7 @@
     const BOSS_OFFSET = 6000;
     const TITLE_OFFSET = 7000;
     const SET_OFFSET = 8000;
+    const CARD_OFFSET = 9000;
     const SOUL_OFFSET = 10000;
 
     const SWITCH_CLEARED = 1;
@@ -255,7 +256,30 @@
     const eventIds = () => (option("events") || LEGACY_EVENTS).filter(eventId => eventCommon[eventId]);
     // The relics whose place in an event is a check
     const relicChecks = () => option("relics") || (option("relicsanity") ? LEGACY_RELIC_WEAPONS : []);
+    // The cards whose handing out by a floor event is a check
+    const cardChecks = () => option("cards") || [];
     const GOLD_ITEMS = { 1: 100, 2: 300 };
+    // Filler: item id -> [parameter of the protagonist, amount]. Parameters 2-5 are STR, DEF, MAG and AGL.
+    const STAT_ITEMS = { 20: [0, 5], 21: [1, 5], 22: [2, 1], 23: [4, 1], 24: [3, 1], 25: [5, 1] };
+    // Traps: the Climax Trap empties RP, the others are a state (Confusion, Sticky Fluid, Paralysis)
+    const ITEM_CLIMAX_TRAP = 30;
+    const TRAP_STATES = { 31: 121, 32: 101, 33: 242 };
+    const SWITCH_IN_BATTLE = 101;
+
+    // The cards floor events hand out. Which of them are checks comes with the slot data.
+    const CARD_ITEMS = [39, 40, 60, 71, 74, 76, 77, 78, 79, 80];
+    // Deck screen (common events 73-77): received cards are taken into the deck from a button there
+    const SCREEN_DECK = 21;
+    const SCREEN_DECK_BUSY = 22;
+    const SWITCH_DECK_CONTROL = 75;
+    const COMMON_EVENT_DECK_DISPLAY = 75;
+    const VARIABLE_DECK_COUNT = 81;
+    const DECK_LIMIT = 30;
+    const CARD_BUTTON_X = 24;
+    const CARD_BUTTON_Y = 610;
+    const CARD_BUTTON_SIZE = 48;
+    // The Archipelago icon, 48x48
+    const AP_ICON = "data:image/png;base64,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";
     // The milestones come with the slot data. Seeds from before that have these.
     const LEGACY_SOUL_MILESTONES = [50, 100, 200, 500, 1000, 2000];
     const SOUL_UPDATE_FRAMES = 30;
@@ -329,6 +353,9 @@
                 checked: [],
                 itemIndex: 0,
                 relics: [],
+                cards: [], // item ids of the received cards, one entry for each
+                claimed: [], // indexes into cards that were taken into the deck this run
+                traps: [], // received traps that have not gone off yet
                 events: [],
                 bosses: [],
                 sets: [],
@@ -527,6 +554,7 @@
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
+            s.claimed = [];
             s.souls += s.runSouls;
             s.runSouls = 0;
         }
@@ -559,6 +587,11 @@
             check(RELIC_OFFSET + item.id);
             return;
         }
+        // The same for a card, but only where a floor event hands it out: cards also come from fights
+        if (AP.eventCard && item && amount > 0 && DataManager.isItem(item) && cardChecks().includes(item.id)) {
+            check(CARD_OFFSET + item.id);
+            return;
+        }
         _Game_Party_gainItem.apply(this, arguments);
     };
 
@@ -570,6 +603,33 @@
         }
         return $gameParty.hasItem($dataWeapons[weaponId], includeEquip);
     };
+
+    // Change Items of a floor event: gainItem above is told where the card comes from
+    const _Game_Interpreter_command126 = Game_Interpreter.prototype.command126;
+    Game_Interpreter.prototype.command126 = function() {
+        AP.eventCard = bound() && floorEventOf(this._list) !== 0;
+        try {
+            return _Game_Interpreter_command126.apply(this, arguments);
+        } finally {
+            AP.eventCard = false;
+        }
+    };
+
+    // Replaces "has card n" in the event that hands the card out, like relicTaken does for a relic
+    AP.cardTaken = itemId => {
+        if (bound() && cardChecks().includes(itemId)) {
+            return state().checked.includes(CARD_OFFSET + itemId);
+        }
+        return $gameParty.hasItem($dataItems[itemId]);
+    };
+
+    const scoutLabel = location => {
+        const scout = AP.scouts[location];
+        // A backslash would start an escape code in a choice
+        return scout ? (scout.item + " for " + scout.player).replace(/\\/g, "") : null;
+    };
+
+    const cardLabel = itemId => (bound() && cardChecks().includes(itemId) ? scoutLabel(CARD_OFFSET + itemId) : null);
 
     // "Item for Player" for the multiworld item an event hands out in place of the relic, null when unknown
     const relicLabel = weaponId => {
@@ -666,16 +726,18 @@
         _Game_Interpreter_setupChoices.call(this, params);
     };
 
-    // The "Obtained" window of TinyGetInfoWndMZ draws the name and description of the weapon it is given
+    // The "Obtained" window of TinyGetInfoWndMZ draws the name and description of the weapon or card it is given
     const _Spriteset_Base_addGetInfoWindow = Spriteset_Base.prototype.addGetInfoWindow;
     if (_Spriteset_Base_addGetInfoWindow) {
         Spriteset_Base.prototype.addGetInfoWindow = function(id, type, text, value, includeEquip) {
-            const label = type === 1 && value > 0 && relicChecks().includes(id) ? relicLabel(id) : null;
+            const isRelic = type === 1 && value > 0 && relicChecks().includes(id);
+            const isCard = type === 0 && value > 0 && AP.eventCard;
+            const label = isRelic ? relicLabel(id) : isCard ? cardLabel(id) : null;
             if (!label) {
                 _Spriteset_Base_addGetInfoWindow.apply(this, arguments);
                 return;
             }
-            const weapon = $dataWeapons[id];
+            const weapon = isRelic ? $dataWeapons[id] : $dataItems[id];
             const original = { name: weapon.name, description: weapon.description, info: weapon.meta.info };
             weapon.name = label;
             weapon.description = "";
@@ -830,6 +892,7 @@
         this._archipelagoSouls = createLabel(this, Graphics.width - 336, 76, 320, "right");
         this._archipelagoStatus = createLabel(this, 16, Graphics.height - 44, 720, "left");
         this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
+        this._archipelagoCards = createCardButton(this);
     };
 
     const updateSoulCounter = scene => {
@@ -930,7 +993,9 @@
 
     const applyItem = item => {
         const s = state();
-        if (item.id >= SET_OFFSET) {
+        if (item.id >= CARD_OFFSET) {
+            s.cards = (s.cards || []).concat([item.id - CARD_OFFSET]);
+        } else if (item.id >= SET_OFFSET) {
             remember(s.sets, item.id - SET_OFFSET);
         } else if (item.id >= TITLE_OFFSET) {
             remember(s.titles, item.id - TITLE_OFFSET);
@@ -947,6 +1012,10 @@
             s.finisher = true;
         } else if (GOLD_ITEMS[item.id]) {
             $gameParty.gainGold(GOLD_ITEMS[item.id]);
+        } else if (STAT_ITEMS[item.id]) {
+            $gameActors.actor(1).addParam(STAT_ITEMS[item.id][0], STAT_ITEMS[item.id][1]);
+        } else if (item.id === ITEM_CLIMAX_TRAP || TRAP_STATES[item.id]) {
+            s.traps = (s.traps || []).concat([item.id]);
         }
         console.log("[AP] Received " + item.name + " from " + item.sender);
         const own = AP.slot && item.sender === AP.slot.name;
@@ -971,8 +1040,137 @@
             s.relics.forEach(grantRelic);
         }
         while (s.itemIndex < AP.items.length) {
-            applyItem(AP.items[s.itemIndex]);
+            const item = AP.items[s.itemIndex];
+            // A stat boost only lasts for the run it arrives in, so it waits for one
+            if (STAT_ITEMS[item.id] && $gameVariables.value(VARIABLE_FLOOR) < 1) {
+                break;
+            }
+            applyItem(item);
             s.itemIndex++;
+        }
+    };
+
+    // A trap goes off in a fight: the one that is on, or the next
+    const applyTraps = () => {
+        const s = bound() ? state() : null;
+        const actor = $gameActors ? $gameActors.actor(1) : null;
+        if (!s || !s.traps || s.traps.length === 0 || !actor || actor.isDead()) {
+            return;
+        }
+        if (!$gameSwitches.value(SWITCH_IN_BATTLE)) {
+            return;
+        }
+        const trap = s.traps.shift();
+        if (trap === ITEM_CLIMAX_TRAP) {
+            actor.setMp(0);
+        } else {
+            actor.addState(TRAP_STATES[trap]);
+        }
+    };
+
+    const _Scene_Battle_update = Scene_Battle.prototype.update;
+    Scene_Battle.prototype.update = function() {
+        _Scene_Battle_update.apply(this, arguments);
+        applyTraps();
+    };
+
+    //-------------------------------------------------------------------------
+    // Received cards
+
+    // { id, index } of the received cards that were not taken into the deck this run
+    const waitingCards = () => {
+        const s = state();
+        const claimed = s.claimed || [];
+        return (s.cards || []).map((id, index) => ({ id: id, index: index })).filter(card => !claimed.includes(card.index));
+    };
+
+    // Runs in the common event the button of the deck screen starts
+    AP.offerCards = interpreter => {
+        const cards = bound() ? waitingCards() : [];
+        if (cards.length === 0) {
+            return;
+        }
+        if ($gameVariables.value(VARIABLE_DECK_COUNT) >= DECK_LIMIT) {
+            $gameMessage.add("No more cards can be acquired.");
+            interpreter.setWaitMode("message");
+            return;
+        }
+        $gameMessage.add("Which card from the multiworld do you take? Each can be taken once a run.");
+        $gameMessage.setChoices(cards.map(card => $dataItems[card.id].name).concat(["Not Now"]), 0, cards.length);
+        $gameMessage.setChoiceBackground(0);
+        $gameMessage.setChoicePositionType(2);
+        limitChoiceRows();
+        $gameMessage.setChoiceCallback(index => {
+            if (index < cards.length) {
+                const s = state();
+                s.claimed = (s.claimed || []).concat([cards[index].index]);
+                AP.granting = true;
+                $gameParty.gainItem($dataItems[cards[index].id], 1);
+                AP.granting = false;
+            }
+        });
+        interpreter.setWaitMode("message");
+    };
+
+    // The deck screen stops taking input while one of its own questions is up, this does the same
+    const createCardEvent = () => {
+        AP.cardEvent = $dataCommonEvents.length;
+        $dataCommonEvents.push({
+            id: AP.cardEvent,
+            name: "Archipelago Cards",
+            trigger: 0,
+            switchId: 1,
+            list: [
+                command(121, 0, [SWITCH_DECK_CONTROL, SWITCH_DECK_CONTROL, 1]),
+                command(122, 0, [VARIABLE_SCREEN, VARIABLE_SCREEN, 0, 0, SCREEN_DECK_BUSY]),
+                command(355, 0, ["LostChapterAP.offerCards(this);"]),
+                command(122, 0, [VARIABLE_SCREEN, VARIABLE_SCREEN, 0, 0, SCREEN_DECK]),
+                command(117, 0, [COMMON_EVENT_DECK_DISPLAY]),
+                command(121, 0, [SWITCH_DECK_CONTROL, SWITCH_DECK_CONTROL, 0]),
+                command(0, 0, []),
+            ],
+        });
+    };
+
+    const createCardButton = scene => {
+        const button = new Sprite_Clickable();
+        button.bitmap = new Bitmap(CARD_BUTTON_SIZE + 48, CARD_BUTTON_SIZE);
+        button.x = CARD_BUTTON_X;
+        button.y = CARD_BUTTON_Y;
+        button.visible = false;
+        button._archipelagoCount = -1;
+        const icon = new Image();
+        icon.onload = () => {
+            button._archipelagoIcon = icon;
+            button._archipelagoCount = -1;
+        };
+        icon.src = AP_ICON;
+        button.onClick = () => {
+            if (!$gameMessage.isBusy() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK) {
+                SoundManager.playOk();
+                $gameTemp.reserveCommonEvent(AP.cardEvent);
+            }
+        };
+        scene.addChild(button);
+        return button;
+    };
+
+    // Shown on the deck screen while there are received cards to take: the icon and how many
+    const updateCardButton = scene => {
+        const button = scene._archipelagoCards;
+        if (!button) {
+            return;
+        }
+        const onDeck = bound() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK;
+        const count = onDeck ? waitingCards().length : 0;
+        button.visible = count > 0;
+        if (button.visible && button._archipelagoIcon && button._archipelagoCount !== count) {
+            button._archipelagoCount = count;
+            button.bitmap.clear();
+            button.bitmap.context.drawImage(button._archipelagoIcon, 0, 0, CARD_BUTTON_SIZE, CARD_BUTTON_SIZE);
+            button.bitmap.fontFace = $gameSystem.mainFontFace();
+            button.bitmap.fontSize = 22;
+            button.bitmap.drawText("x" + count, CARD_BUTTON_SIZE + 6, 0, 42, CARD_BUTTON_SIZE, "left");
         }
     };
 
@@ -986,6 +1184,8 @@
         updateSoulCounter(this);
         updateConnectionStatus(this);
         updateNotices(this);
+        updateCardButton(this);
+        applyTraps();
     };
 
     // A save was loaded or a new game started
@@ -1188,7 +1388,8 @@
                 }
             }
         }
-        if (!offered.some(unlocked)) {
+        // The rolled events are shown even when none of them is unlocked, so the player sees what the floor held
+        if (offered.length === 0) {
             return false;
         }
         const switchIds = [SWITCH_FIGHT].concat(offered);
@@ -1216,7 +1417,10 @@
             return;
         }
         const offered = offerFloorEvents(interpreter, floor, switchId => (AP.chosenFloorEvent = switchId));
-        if (offered && $gameMessage.setChoicePos) {
+        if (!offered) {
+            // Nothing to roll from. Settled here, so the floor is not rolled a second time after the screen went dark
+            AP.chosenFloorEvent = SWITCH_FIGHT;
+        } else if ($gameMessage.setChoicePos) {
             // Below the lines of the standby screen instead of over them
             $gameMessage.setChoicePos(-1, STANDBY_CHOICE_Y, CHOICE_MAX_ROWS);
         }
@@ -1895,6 +2099,22 @@
         }
     };
 
+    // A floor event that hands out a card asks "has card n" the same way
+    const patchCardConditions = () => {
+        for (const eventId of allEvents()) {
+            const list = eventData(eventId).list;
+            const handedOut = CARD_ITEMS.filter(itemId =>
+                list.some(item => item.code === 126 && item.parameters[0] === itemId && item.parameters[1] === 0)
+            );
+            for (const item of list) {
+                const p = item.parameters;
+                if (item.code === 111 && p[0] === 8 && handedOut.includes(p[1])) {
+                    item.parameters = [12, "LostChapterAP.cardTaken(" + p[1] + ")"];
+                }
+            }
+        }
+    };
+
     // A floor event that hands out a relic asks "has relic n" to tell whether that already happened
     const patchRelicConditions = () => {
         for (const eventId of allEvents()) {
@@ -1952,6 +2172,8 @@
             patchKingDoors();
             patchTitleReleases();
             patchGirl();
+            patchCardConditions();
+            createCardEvent();
             patchRelicConditions();
             patchPond();
             patchFinisher();

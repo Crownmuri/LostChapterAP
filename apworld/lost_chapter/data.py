@@ -18,6 +18,7 @@ EVENT_OFFSET = 5000   # item id = offset + common event id (the first visit loca
 BOSS_OFFSET = 6000    # item id = offset + the Heavenly King's switch id
 TITLE_OFFSET = 7000   # item id = offset + title number
 SET_OFFSET = 8000     # item id = offset + bonus id of the starting set
+CARD_OFFSET = 9000    # location id and item id = offset + item id of the card
 SOUL_OFFSET = 10000   # location id = offset + soul milestone
 
 # Game variables
@@ -360,6 +361,61 @@ FILLER: Dict[int, str] = {
     1: "100 Gold",
     2: "300 Gold",
 }
+
+# Filler that raises a stat of the run it arrives in, once. Stats start over with every run.
+STAT_FILLER: Dict[int, str] = {
+    20: "+5 Max LP",
+    21: "+5 Max RP",
+    22: "+1 STR",
+    23: "+1 MAG",
+    24: "+1 DEF",
+    25: "+1 AGL",
+}
+
+# Traps go off in the fight they arrive in, or the next one
+TRAPS: Dict[int, str] = {
+    30: "Climax Trap",     # RP drops to 0, which is a climax
+    31: "Confusion Trap",  # state 121
+    32: "Sticky Trap",     # state 101 "Sticky Fluid"
+    33: "Paralysis Trap",  # state 242
+}
+
+# item id of the card -> name, for the cards floor events hand out. Handing one out is a check ("Card: ..."), and
+# the card is an item: received cards can be taken into the deck from the deck screen, each of them once a run.
+CARDS: Dict[int, str] = {
+    40: "Faithful Dog Lassi",
+    74: "Taunt",
+    77: "Strip",
+    78: "Ride On",
+    80: "Temptation",
+}
+# Only handed out by the version of the game that comes with the DLC
+DLC_CARDS: Dict[int, str] = {
+    39: "Shadow Cat Assam",
+    60: "Ride Back",
+    71: "Encase",
+    76: "Candylick",
+    79: "Projection",
+}
+CARDS.update(DLC_CARDS)
+
+# card name -> what it takes: the floor events, the relics, and whether LEWD has to go up first (the Cat only hands
+# out a card from LEWD 10 on). Ride On comes from the Cat or from Debauch depending on the version of the game, so
+# it asks for both. First pass read from the event commands, not yet confirmed in play.
+CARD_SOURCES: Dict[str, Dict[str, object]] = {
+    "Faithful Dog Lassi": {"events": ["Dog"], "relics": ["Collar Key"], "lewd": False},
+    "Taunt": {"events": ["Cat"], "relics": [], "lewd": True},
+    "Strip": {"events": ["Cat"], "relics": [], "lewd": True},
+    "Temptation": {"events": ["Cat"], "relics": [], "lewd": True},
+    "Ride On": {"events": ["Cat", "Debauch"], "relics": [], "lewd": True},
+    "Shadow Cat Assam": {"events": ["Cat"], "relics": [], "lewd": True},
+    "Ride Back": {"events": ["Debauch"], "relics": [], "lewd": False},
+    "Encase": {"events": ["Debauch"], "relics": [], "lewd": False},
+    "Candylick": {"events": ["Debauch"], "relics": [], "lewd": False},
+    "Projection": {"events": ["Debauch"], "relics": [], "lewd": False},
+}
+# The title "LEWD is 15 or more" lists the events that raise LEWD
+TITLE_LEWD = 5
 
 # The card that is drawn the turn after the enemy climaxes and defeats it outright (skill 93, common event 103).
 # With the finisher_move option on "shuffle" it only shows up once this item is found.

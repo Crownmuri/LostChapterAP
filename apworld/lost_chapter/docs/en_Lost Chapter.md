@@ -9,7 +9,7 @@ a config file.
 
 Floor events are locked. Every floor is a fight until you receive event unlocks; from then on each floor lets you
 pick between a battle and two events rolled from all the events of the game. The ones you have not unlocked are
-grayed out, and a floor that rolls no unlocked event is simply a fight. You start with a few events unlocked: two
+grayed out. You start with a few events unlocked: two
 random ones by default, which the `starting_event_count` and `starting_events` options change.
 
 Each Heavenly King needs his door key, his door is grayed out without it. Every 20th floor leads to the doors, and

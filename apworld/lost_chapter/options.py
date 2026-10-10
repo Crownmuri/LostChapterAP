@@ -113,6 +113,20 @@ class FinalBossFloor(Range):
     default = 100
 
 
+class TrapPercentage(Range):
+    """
+    How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap and Paralysis Trap. A trap goes off in
+    the fight it arrives in, or in the next one.
+
+    The rest of the filler is gold and one-time stat boosts for the current run (+5 Max LP, +5 Max RP, +1 STR, MAG,
+    DEF or AGL).
+    """
+    display_name = "Trap Percentage"
+    range_start = 0
+    range_end = 100
+    default = 10
+
+
 class StartingEventCount(Range):
     """
     How many floor event unlocks you have from the start, next to the battles. They are picked at random from the
@@ -165,6 +179,7 @@ class LostChapterOptions(PerGameCommonOptions):
     shuffle_title_effects: ShuffleTitleEffects
     finisher_move: FinisherMove
     final_boss_floor: FinalBossFloor
+    trap_percentage: TrapPercentage
     starting_event_count: StartingEventCount
     starting_events: StartingEvents
     soul_multiplier: SoulMultiplier

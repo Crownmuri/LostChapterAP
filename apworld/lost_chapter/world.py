@@ -42,12 +42,20 @@ def location_table() -> Dict[str, int]:
     for milestone in data.SOUL_MILESTONES:
         table[f"Souls: {milestone}"] = data.SOUL_OFFSET + milestone
 
+    for item_id, name in data.CARDS.items():
+        table[f"Card: {name}"] = data.CARD_OFFSET + item_id
+
     return table
 
 
 def item_table() -> Dict[str, int]:
     table: Dict[str, int] = {name: item_id for item_id, name in data.FILLER.items()}
+    table.update({name: item_id for item_id, name in data.STAT_FILLER.items()})
+    table.update({name: item_id for item_id, name in data.TRAPS.items()})
     table[data.FINISHER] = data.FINISHER_ID
+
+    for item_id, name in data.CARDS.items():
+        table[f"Card: {name}"] = data.CARD_OFFSET + item_id
 
     for weapon_id, name in data.RELICS.items():
         table[name] = data.RELIC_OFFSET + weapon_id
@@ -129,6 +137,8 @@ class LostChapterWorld(World):
         "Door Keys": set(data.DOOR_KEYS.values()),
         "Title Effects": {f"Unlock Title Effect: {name}" for name in data.TITLES.values()},
         "Starting Sets": {f"Starting {name}" for name in data.STARTING_SETS.values()},
+        "Cards": {f"Card: {name}" for name in data.CARDS.values()},
+        "Traps": set(data.TRAPS.values()),
     }
     location_name_groups = {
         "Heavenly Kings": {f"Defeat {name}" for name in data.HEAVENLY_KINGS.values()},
@@ -139,6 +149,7 @@ class LostChapterWorld(World):
         "Floors": {f"Reach Floor {floor}" for floor in data.FLOOR_CHECKS},
         "Events": {data.first_visit(event_id) for event_id in data.EVENTS},
         "Souls": {f"Souls: {milestone}" for milestone in data.SOUL_MILESTONES},
+        "Cards": {f"Card: {name}" for name in data.CARDS.values()},
     }
 
     required_client_version = (0, 6, 7)
@@ -186,6 +197,13 @@ class LostChapterWorld(World):
         return {
             troop_id: name for troop_id, name in data.ENEMIES.items()
             if self.options.include_dlc or troop_id not in data.DLC_ENEMIES
+        }
+
+    def cards(self) -> Dict[int, str]:
+        """The cards floor events hand out, each a check and an item."""
+        return {
+            item_id: name for item_id, name in data.CARDS.items()
+            if self.options.include_dlc or item_id not in data.DLC_CARDS
         }
 
     def relic_locations(self) -> Dict[int, str]:
@@ -239,6 +257,9 @@ class LostChapterWorld(World):
 
         included -= self.location_name_groups["Events"]
         included |= {data.first_visit(event_id) for event_id in self.events()}
+
+        included -= self.location_name_groups["Cards"]
+        included |= {f"Card: {name}" for name in self.cards().values()}
 
         if not self.options.include_dlc:
             included -= self.location_name_groups["DLC Bosses"]
@@ -320,6 +341,9 @@ class LostChapterWorld(World):
         for name in self.relic_locations().values():
             self.get_location(f"Relic: {name}").access_rule = lambda state, name=name: self.can_find_relic(state, name)
 
+        for name in self.cards().values():
+            self.get_location(f"Card: {name}").access_rule = lambda state, name=name: self.can_find_card(state, name)
+
         if self.options.include_dlc:
             for switch_id, name in data.DLC_BOSSES.items():
                 self.get_location(f"Defeat {name}").access_rule = (
@@ -349,6 +373,17 @@ class LostChapterWorld(World):
             and all(self.has_relic(state, relic) for relic in source["relics"])
         )
 
+    def can_find_card(self, state: CollectionState, name: str) -> bool:
+        """A floor event can be brought to hand the card out."""
+        source = data.CARD_SOURCES[name]
+        lewd = [data.event_item(event) for event in data.TITLE_EVENTS[data.TITLE_LEWD]]
+
+        return (
+            state.has_all([data.event_item(event) for event in source["events"]], self.player)
+            and all(self.has_relic(state, relic) for relic in source["relics"])
+            and (not source["lewd"] or state.has_any(lewd, self.player))
+        )
+
     def has_relic(self, state: CollectionState, name: str) -> bool:
         """A relic can be held: as the item it is in this seed, or picked up in the game where it is not one."""
         if name in self.relic_items():
@@ -359,7 +394,9 @@ class LostChapterWorld(World):
     def create_item(self, name: str) -> LostChapterItem:
         classification = ItemClassification.progression
 
-        if name in data.FILLER.values():
+        if name in data.TRAPS.values():
+            classification = ItemClassification.trap
+        elif name in data.FILLER.values() or name in data.STAT_FILLER.values() or name in self.item_name_groups["Cards"]:
             classification = ItemClassification.filler
         elif name in self.item_name_groups["Door Keys"]:
             classification = ItemClassification.progression | ItemClassification.useful
@@ -390,14 +427,22 @@ class LostChapterWorld(World):
         pool: List[LostChapterItem] = [self.create_item(name) for name in sorted(names)]
 
         pool += [self.create_item(name) for name in self.relic_items()]
+        pool += [self.create_item(f"Card: {name}") for name in self.cards().values()]
 
-        while len(pool) < len(self.included_locations()):
-            pool.append(self.create_filler())
+        # The rest is filler, a share of it traps
+        filler = len(self.included_locations()) - len(pool)
+        traps = round(filler * self.options.trap_percentage.value / 100)
+
+        pool += [self.create_item(self.random.choice(list(data.TRAPS.values()))) for _ in range(traps)]
+        pool += [self.create_filler() for _ in range(filler - traps)]
 
         self.multiworld.itempool += pool
 
     def get_filler_item_name(self) -> str:
-        return self.random.choices(list(data.FILLER.values()), weights=[3, 1])[0]
+        # 100 Gold, 300 Gold, then the six stat boosts
+        names = list(data.FILLER.values()) + list(data.STAT_FILLER.values())
+
+        return self.random.choices(names, weights=[6, 2] + [1] * len(data.STAT_FILLER))[0]
 
     def fill_slot_data(self) -> Dict[str, Any]:
         slot_data = self.options.as_dict(*SLOT_DATA_OPTIONS)
@@ -406,6 +451,7 @@ class LostChapterWorld(World):
         slot_data["event_groups"] = data.EVENT_GROUPS
         slot_data["events"] = sorted(self.events())
         slot_data["relics"] = sorted(self.relic_locations())
+        slot_data["cards"] = sorted(self.cards())
 
         return slot_data
 
