@@ -48,7 +48,7 @@ class IncludeDLC(Toggle):
     display_name = "Include DLC"
 
 
-class ShuffleKeys(DefaultOnToggle):
+class ShuffleKeys(Toggle):
     """
     The White Key and the Black Key are shuffled into the multiworld as relics, and having the Locksmith make one
     is a check. They open the locked door of the Corridor, the Prison and, with the DLC, the White Door and the

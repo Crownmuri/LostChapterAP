@@ -19,7 +19,7 @@ Lost Chapter:
   include_dlc: false
 
   # The White Key and Black Key are shuffled as relics (needs relicsanity). false: made at the Locksmith as usual
-  shuffle_keys: true
+  shuffle_keys: false
 
   # Relics found in events become checks and are shuffled into the pool
   relicsanity: true
