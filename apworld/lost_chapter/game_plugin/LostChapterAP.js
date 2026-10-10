@@ -289,9 +289,13 @@
     const COMMON_EVENT_DECK_DISPLAY = 75;
     const VARIABLE_DECK_COUNT = 81;
     const DECK_LIMIT = 30;
-    const CARD_BUTTON_X = 930;
+    // The game's own Forget-Me-Not and Pieris counts (picture 46) are moved left by this much, so that the three
+    // lines stay in one column and the key at the end of the first fits on the screen
+    const PICTURE_DECK_COUNTS = 46;
+    const DECK_COUNTS_SHIFT = 80;
+    const CARD_BUTTON_X = 930 - DECK_COUNTS_SHIFT;
     const CARD_BUTTON_Y = 560;
-    const CARD_BUTTON_WIDTH = 345;
+    const CARD_BUTTON_WIDTH = 420;
     const CARD_BUTTON_HEIGHT = 36;
     const CARD_BUTTON_KEY = "pageup"; // Q and Page Up
     // The Archipelago icon, 48x48
@@ -299,6 +303,7 @@
     // The milestones come with the slot data. Seeds from before that have these.
     const LEGACY_SOUL_MILESTONES = [50, 100, 200, 500, 1000, 2000];
     const SOUL_UPDATE_FRAMES = 30;
+    const SOULS_Y = 104; // the two lines of the soul counter, under the stats of the standby screen
 
     const NOTICE_WIDTH = 640;
     const NOTICE_FRAMES = 180;
@@ -877,7 +882,7 @@
             return "";
         }
         const next = soulMilestones().find(milestone => milestone > soulTotal());
-        return "Souls " + soulTotal() + (next ? " / " + next : "");
+        return soulTotal() + (next ? " / " + next : " souls");
     };
 
     // A line of text drawn over the map scene, redrawn only when it changes
@@ -910,14 +915,20 @@
     const _Scene_Map_createDisplayObjects = Scene_Map.prototype.createDisplayObjects;
     Scene_Map.prototype.createDisplayObjects = function() {
         _Scene_Map_createDisplayObjects.apply(this, arguments);
-        this._archipelagoSouls = createLabel(this, Graphics.width - 336, 76, 320, "right");
+        this._archipelagoSoulsTitle = createLabel(this, Graphics.width - 336, SOULS_Y, 320, "right");
+        this._archipelagoSouls = createLabel(this, Graphics.width - 336, SOULS_Y + 28, 320, "right");
         this._archipelagoStatus = createLabel(this, 16, Graphics.height - 44, 720, "left");
         this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
         this._archipelagoCards = createCardButton(this);
     };
 
     const updateSoulCounter = scene => {
-        updateLabel(scene._archipelagoSouls, bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL), soulText());
+        // Only on the standby screen itself, its Title Collection, deck and item screens have that corner in use
+        const shown =
+            bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL) && $gameVariables.value(VARIABLE_SCREEN) === 0;
+        const waiting = soulMilestones().some(milestone => milestone > soulTotal());
+        updateLabel(scene._archipelagoSoulsTitle, shown, waiting ? "Next AP unlock" : "AP unlocks done", "#b0e0a0");
+        updateLabel(scene._archipelagoSouls, shown, soulText());
     };
 
     // [text, color] for the title screen
@@ -1266,7 +1277,7 @@
             bitmap.textColor = "#b0e0a0";
             bitmap.drawText("Archipelago", size + 12, 0, 150, CARD_BUTTON_HEIGHT, "left");
             bitmap.textColor = "#ffffff";
-            bitmap.drawText(":  " + count + " Pcs.  [Q]", size + 166, 0, 170, CARD_BUTTON_HEIGHT, "left");
+            bitmap.drawText(":  " + count + " Pcs.  [Q]", size + 166, 0, 220, CARD_BUTTON_HEIGHT, "left");
         }
     };
 
@@ -1562,6 +1573,10 @@
         _Game_Screen_showPicture.apply(this, arguments);
         const picture = this.picture(pictureId);
         const title = $gameVariables.value(VARIABLE_SELECTED);
+        const screen = $gameVariables.value(VARIABLE_SCREEN);
+        if (pictureId === PICTURE_DECK_COUNTS && picture && bound() && [SCREEN_DECK, SCREEN_DECK_BUSY].includes(screen)) {
+            picture._x -= DECK_COUNTS_SHIFT;
+        }
         if (pictureId !== TITLE_TEXT_PICTURE || !picture || !picture.mzkp_text) {
             return;
         }
