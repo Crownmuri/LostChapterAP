@@ -21,7 +21,9 @@ COLOR_LOCKED = "e05050"
 COLOR_DONE = "808080"
 COLOR_VALUE = "ffd060"
 
-# The square in front of a title: its color is where the title stands in logic
+# The color of a title's name is where the title stands in logic. The square in front of it only says whether its
+# effect is unlocked.
+SQUARE = (0.8, 0.8, 0.8)
 IN_LOGIC = (0.25, 0.82, 0.38)
 BY_GRINDING = (1.0, 0.82, 0.38)
 OUT_OF_LOGIC = (0.88, 0.31, 0.31)
@@ -278,14 +280,16 @@ class LostChapterTabLayout(BoxLayout):
                 if stat and connected and stat in ctx.status:
                     requirement += f" [color={COLOR_VALUE}](now {ctx.status[stat]})[/color]"
 
-                widget.text = f"{data.TITLES[number]}  [color=b0b0b0]{requirement}[/color]"
+                standing = "".join(f"{round(part * 255):02x}" for part in self.title_standing(number, received))
+
+                widget.text = f"[color={standing}]{data.TITLES[number]}[/color]  [color=b0b0b0]{requirement}[/color]"
 
             # Filled once the effect of the title is unlocked
-            square.show(self.title_standing(number, received), effect)
+            square.show(SQUARE, effect)
 
         self.titles_label.text = f"Titles: {done}/{len(self.title_rows)}"
         self.legend_label.text = (
-            f"[color={COLOR_DONE}]filled: effect unlocked.  green in logic, yellow by grinding, red not yet[/color]"
+            f"[color={COLOR_DONE}]filled square: effect unlocked.  name green in logic, yellow by grinding, red not yet[/color]"
         )
 
     def update_events(self) -> None:
