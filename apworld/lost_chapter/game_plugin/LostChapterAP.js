@@ -249,6 +249,17 @@
     const COMMON_EVENT_MARKET = 33;
     const MARKET_RELICS = [33, 34];
     const SWITCH_MARKET_THANKS = 157; // both checks are sent, the merchant can be thanked
+    // Throne (59), Battlefield (42) and Cat (44), see their patches
+    const COMMON_EVENT_THRONE = 59;
+    const COMMON_EVENT_BATTLEFIELD = 42;
+    const COMMON_EVENT_CAT = 44;
+    const WEAPON_AETOLUS_FLAG = 59;
+    const WEAPON_DUSK_RING = 30;
+    const WEAPON_COLLAR_KEY = 42;
+    const SWITCH_BONFIRE = 156; // the soldier of the Battlefield was saved once, his bonfire can be sat at
+    const LABEL_THRONE_REST = "ArchipelagoThroneRest";
+    const LABEL_BONFIRE = "ArchipelagoBonfire";
+    const CAT_LEWD = 10; // from here on the Cat hands out a card when patted
     const LABEL_MARKET_THANKS = "\u6607\u5929";
 
     // event id -> id of the common event that runs it, for the floor events this version of the game has
@@ -646,6 +657,7 @@
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
+            s.runTaken = [];
             s.claimed = [];
             // Souls are counted for one run at a time
             s.souls = 0;
@@ -679,6 +691,7 @@
         const isRelicGain =
             item && amount > 0 && DataManager.isWeapon(item) && RELIC_WEAPONS.includes(item.id);
         if (isRelicGain && !AP.granting && relicChecks().includes(item.id)) {
+            remember(runTaken(), item.id);
             check(RELIC_OFFSET + item.id);
             return;
         }
@@ -692,12 +705,25 @@
 
     // Replaces "has relic n" in the event that hands the relic out. There the game asks whether the relic was
     // already taken, which in a multiworld is whether its check was sent: the relic itself can come from anywhere.
+    // "Taken" is taken in this run, as in the game, where every run starts without relics: the event then plays the
+    // same on every run, with its relic to pick up first and what follows that afterwards. The check behind the
+    // relic is only sent the first time, later runs pick up nothing there.
+    const runTaken = () => {
+        const s = state();
+        s.runTaken = s.runTaken || [];
+        return s.runTaken;
+    };
+
     AP.relicTaken = (weaponId, includeEquip) => {
         if (bound() && relicChecks().includes(weaponId)) {
-            return state().checked.includes(RELIC_OFFSET + weaponId);
+            return runTaken().includes(weaponId);
         }
         return $gameParty.hasItem($dataWeapons[weaponId], includeEquip);
     };
+
+    // The check of a relic was sent, in this run or an earlier one
+    AP.relicSent = weaponId =>
+        bound() && relicChecks().includes(weaponId) && state().checked.includes(RELIC_OFFSET + weaponId);
 
     // Change Items of a floor event: gainItem above is told where the card comes from
     const _Game_Interpreter_command126 = Game_Interpreter.prototype.command126;
@@ -811,6 +837,10 @@
                 const relic = option("relicsanity") ? branchRelic(list, start, choice) : 0;
                 const label = relic ? relicLabel(relic) : null;
                 const named = label ? String(text).replace($dataWeapons[relic].name, () => label) : String(text);
+                const lewd = $gameVariables.value(VARIABLE_LEWD);
+                if (eventId === COMMON_EVENT_CAT && named === "Pat" && lewd >= CAT_LEWD && AP.catDone()) {
+                    return "Pat \\c[18](all cards found)\\c[0]en(0)";
+                }
                 // A gift of the merchant that is taken stays on his list, grayed out
                 if (eventId === COMMON_EVENT_MARKET && AP.marketMenu() && /if\(!s\[1[12]\]\)/.test(named)) {
                     return named.replace("if(!s[", "en(!s[");
@@ -1425,6 +1455,7 @@
         mirrorSwitch(SWITCH_FINAL_BOSS, $gameVariables.value(VARIABLE_FLOOR) >= finalBossFloor());
         const sent = weaponId => state().checked.includes(RELIC_OFFSET + weaponId);
         mirrorSwitch(SWITCH_MARKET_THANKS, AP.marketMenu() && MARKET_RELICS.every(sent));
+        mirrorSwitch(SWITCH_BONFIRE, AP.relicSent(WEAPON_DUSK_RING));
         const hasKey = weaponId => !bound() || $gameParty.hasItem($dataWeapons[weaponId], false);
         mirrorSwitch(SWITCH_WHITE_DOOR, hasKey(WEAPON_WHITE_KEY));
         mirrorSwitch(SWITCH_BLACK_DOOR, hasKey(WEAPON_BLACK_KEY));
@@ -2330,6 +2361,88 @@
         );
     };
 
+    // An event that plays a short scene instead of itself once its relic is in the bag ("the king's flag is
+    // carried: he wishes the player well, LP +10") keeps the player out of the rest of it, a choice only made there
+    // for one. Where the relic is a check that scene is not played by itself.
+    AP.sceneFor = (weaponId, includeEquip) => {
+        if (bound() && relicChecks().includes(weaponId)) {
+            return false;
+        }
+        return $gameParty.hasItem($dataWeapons[weaponId], includeEquip);
+    };
+
+    // The top level "has relic" branch of an event: its index, or -1
+    const relicBranch = (list, weaponId, from) =>
+        list.findIndex((item, i) => {
+            const p = item.parameters;
+            return i >= (from || 0) && item.code === 111 && item.indent === 0 && p[0] === 9 && p[1] === weaponId;
+        });
+
+    const sceneCondition = item => {
+        item.parameters = [12, "LostChapterAP.sceneFor(" + item.parameters[1] + ", " + !!item.parameters[2] + ")"];
+    };
+
+    // Throne: the king is always there to talk to. "Show Ring" hands the flag over once, and from then on brings
+    // the scene the flag used to bring by itself.
+    const patchThrone = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_THRONE].list;
+        const rest = relicBranch(list, WEAPON_AETOLUS_FLAG);
+        const show = list.findIndex(item => item.code === 402 && String(item.parameters[1]).startsWith("Show Ring"));
+        if (rest < 0 || show < rest) {
+            console.error("[AP] Common event 59 has an unexpected layout, the Throne is not patched");
+            return;
+        }
+        const indent = list[show].indent + 1;
+        // Later index first, so the earlier one stays valid
+        list.splice(
+            show + 1,
+            0,
+            command(111, indent, [12, "LostChapterAP.relicSent(" + WEAPON_AETOLUS_FLAG + ")"]),
+            command(119, indent + 1, [LABEL_THRONE_REST]),
+            command(0, indent + 1, []),
+            command(412, indent, [])
+        );
+        sceneCondition(list[rest]);
+        list.splice(rest + 1, 0, command(118, 1, [LABEL_THRONE_REST]));
+    };
+
+    // Battlefield: the wounded soldier is always there. Healing him is worth VIRTUE every time and his ring the
+    // first, and once he was saved his bonfire is a choice of its own: a rest, or with full LP his request and the
+    // Collar Key. The two scenes the relics used to bring by themselves (LP -3, the bonfire) are not played.
+    const patchBattlefield = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_BATTLEFIELD].list;
+        const key = relicBranch(list, WEAPON_COLLAR_KEY);
+        const bonfire = relicBranch(list, WEAPON_DUSK_RING, key);
+        const choices = list.findIndex(
+            item => item.code === 102 && item.parameters[0].some(text => String(text).startsWith("Can't Do Anything"))
+        );
+        const indent = choices < 0 ? 0 : list[choices].indent;
+        const choicesEnd = list.findIndex((item, i) => i > choices && item.code === 404 && item.indent === indent);
+        if (key < 0 || bonfire < key || choices < bonfire || choicesEnd < 0) {
+            console.error("[AP] Common event 42 has an unexpected layout, the Battlefield is not patched");
+            return;
+        }
+        const text = "Sit at His Bonfireif(s[" + SWITCH_BONFIRE + "])";
+        list.splice(
+            choicesEnd,
+            0,
+            command(402, indent, [list[choices].parameters[0].length, text]),
+            command(119, indent + 1, [LABEL_BONFIRE]),
+            command(0, indent + 1, [])
+        );
+        list[choices].parameters[0].push(text);
+        sceneCondition(list[bonfire]);
+        list.splice(bonfire + 1, 0, command(118, 1, [LABEL_BONFIRE]));
+        sceneCondition(list[key]);
+    };
+
+    // Cat: patting it hands out its cards one after the other from LEWD 10 on. With all of them found there is
+    // nothing left to hand out, and the choice says so instead of doing nothing.
+    AP.catDone = () => {
+        const cards = (AP.catCards || []).filter(itemId => cardChecks().includes(itemId));
+        return bound() && cards.length > 0 && cards.every(itemId => state().checked.includes(CARD_OFFSET + itemId));
+    };
+
     // Girl: the patch of the game that restores its cut content has her give the Moon Hair Ornament to a player in
     // the Regression State. In the game without it there is neither the state nor the gift, and with it no White
     // Key. In a multiworld she hands the ornament out on any visit while its check is open, in every version.
@@ -2387,9 +2500,15 @@
             const handedOut = CARD_ITEMS.filter(itemId =>
                 list.some(item => item.code === 126 && item.parameters[0] === itemId && item.parameters[1] === 0)
             );
+            if (eventId === COMMON_EVENT_CAT) {
+                AP.catCards = handedOut;
+            }
             for (const item of list) {
                 const p = item.parameters;
-                if (item.code === 111 && p[0] === 8 && handedOut.includes(p[1])) {
+                // The Cat's first question is whether its own card is in the deck, which stays what it is: the
+                // menu with its other choices is only skipped for a player who really carries the cat
+                const skipped = eventId === COMMON_EVENT_CAT && item.indent === 0;
+                if (item.code === 111 && p[0] === 8 && handedOut.includes(p[1]) && !skipped) {
                     item.parameters = [12, "LostChapterAP.cardTaken(" + p[1] + ")"];
                 }
             }
@@ -2454,6 +2573,8 @@
             patchTitleReleases();
             patchGirl();
             patchMarket();
+            patchThrone();
+            patchBattlefield();
             patchStandbyVerse();
             patchCardConditions();
             createCardEvent();

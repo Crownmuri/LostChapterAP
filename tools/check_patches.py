@@ -90,6 +90,18 @@ try {
             lines.push("market memory: " + command.parameters[1]);
         }
     });
+    // The Throne (59) and the Battlefield (42): the scenes their relics bring, and the choices that lead there
+    [59, 42].forEach(function(id) {
+        var list = $dataCommonEvents[id].list;
+        lines.push($dataCommonEvents[id].name + ": " + list.filter(function(command) {
+            return (command.code === 111 && /sceneFor|relicSent/.test(command.parameters[1])) ||
+                (command.code === 118 && /^Archipelago/.test(command.parameters[0])) ||
+                (command.code === 119 && /^Archipelago/.test(command.parameters[0])) ||
+                (command.code === 102 && /Show Ring|Can't Do Anything/.test(command.parameters[0].join()));
+        }).map(function(command) {
+            return command.code + " " + (command.code === 102 ? command.parameters[0].join(" | ") : command.parameters.slice(-1)[0]);
+        }).join(" ; "));
+    });
     // The verse of the standby screen that lost a line break in one version of the game
     $dataCommonEvents[87].list.forEach(function(command) {
         var text = command.code === 357 && command.parameters[3] ? String(command.parameters[3].text) : "";
