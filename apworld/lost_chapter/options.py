@@ -193,9 +193,9 @@ class StartingEvents(OptionSet):
 
 class SoulMultiplier(Range):
     """
-    Multiplies the souls every run earns. Souls add up over all runs and send checks at 50, 100, 200, 400, 600,
-    800, 1000, 1200, 1600 and 2000. The first four are expected within the first 20 floors, the later ones take
-    floors further up.
+    Multiplies the souls every run earns. Souls add up over all runs and send checks at 200, 400, 600, 800, 1000,
+    1200, 1600 and 2000. The first two are expected within the first 20 floors, the later ones take floors further
+    up.
     """
     display_name = "Soul Multiplier"
     range_start = 1

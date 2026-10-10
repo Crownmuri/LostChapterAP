@@ -37,10 +37,9 @@ LATE_EVENT_FLOOR = 41
 # (Max LP + Max RP + Gold + fluids) / 10 + STR + DEF + MAG + AGL + LEWD + Floor + counts, plus fixed amounts for
 # relics, quest flags and Heavenly Kings. The plugin adds up the best score of every run.
 #
-# milestone -> the floor a climb is expected to reach for it. The first four belong to the first 20 floors.
+# milestone -> the floor a climb is expected to reach for it. The first two belong to the first 20 floors.
+# There is nothing below 200: the origin of the DLC, The New Ruler, starts a run at 115.
 SOUL_MILESTONES: Dict[int, int] = {
-    50: 20,
-    100: 20,
     200: 20,
     400: 20,
     600: 40,

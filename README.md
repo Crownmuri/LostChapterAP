@@ -130,8 +130,8 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - The bonus shop and its currency are skipped. Received starting sets are offered in a menu right after the
   origin is confirmed, one set per run.
 - Souls are counted live with the game's own score formula. The best score of every run adds up, times the
-  `soul_multiplier` option, and sends checks at 50, 100, 200, 400, 600, 800, 1000, 1200, 1600 and 2000. In logic the
-  first four belong to the first 20 floors, 600 and 800 to floor 40, 1000 and 1200 to floor 60, 1600 to floor 80
+  `soul_multiplier` option, and sends checks at 200, 400, 600, 800, 1000, 1200, 1600 and 2000. In logic the
+  first two belong to the first 20 floors, 600 and 800 to floor 40, 1000 and 1200 to floor 60, 1600 to floor 80
   and 2000 to floor 100. The standby screen shows the total and the next milestone.
 - The "Once upon a time" questions are replaced by one list of the nine origins with their effects. The
   description and the Correct / Wrong confirmation are unchanged.
