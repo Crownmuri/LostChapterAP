@@ -93,6 +93,20 @@ class FinisherMove(Choice):
     default = 0
 
 
+class FinalBossFloor(Range):
+    """
+    The floor you have to reach before the final boss can be challenged. He is one of the doors of a boss floor, and
+    those come every 20 floors, so a value in between counts up to the next one.
+
+    The doors of floor 100 and later still let you fight the Heavenly Kings again or keep going, which is how you
+    climb on. This does not change the DLC ending.
+    """
+    display_name = "Final Boss Floor"
+    range_start = 100
+    range_end = 200
+    default = 100
+
+
 class StartingEventCount(Range):
     """
     How many floor event unlocks you have from the start, next to the battles. They are picked at random from the
@@ -136,6 +150,7 @@ class LostChapterOptions(PerGameCommonOptions):
     first_victories: FirstVictories
     shuffle_title_effects: ShuffleTitleEffects
     finisher_move: FinisherMove
+    final_boss_floor: FinalBossFloor
     starting_event_count: StartingEventCount
     starting_events: StartingEvents
     soul_multiplier: SoulMultiplier

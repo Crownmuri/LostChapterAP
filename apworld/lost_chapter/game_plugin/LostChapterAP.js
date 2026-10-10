@@ -227,6 +227,7 @@
     const SWITCH_WHITE_DOOR = 182; // the White Door there can be opened
     const SWITCH_BLACK_DOOR = 183;
     const SWITCH_LAST_DOOR = 193; // both are defeated, the last door is offered
+    const SWITCH_FINAL_BOSS = 159; // the floor of the final_boss_floor option is reached
 
     // event id -> id of the common event that runs it, for the floor events this version of the game has
     const eventCommon = {};
@@ -576,6 +577,7 @@
     };
 
     // MPP_ChoiceEX conditions at the end of a choice: if(...) hides it, en(...) grays it out
+    const FINAL_BOSS_LOCK = "en(s[" + SWITCH_FINAL_BOSS + "])";
     const CHOICE_SHOWN = /\s?if\((.+?)\)/;
     const CHOICE_ENABLED = /\s?en\((.+?)\)/;
     const STAT_VARIABLES = { 49: "FAITH", 50: "VIRTUE", 51: "LEWD" };
@@ -632,6 +634,9 @@
                 const relic = option("relicsanity") ? branchRelic(list, start, choice) : 0;
                 const label = relic ? relicLabel(relic) : null;
                 const named = label ? String(text).replace($dataWeapons[relic].name, () => label) : String(text);
+                if (named.includes(FINAL_BOSS_LOCK) && !$gameSwitches.value(SWITCH_FINAL_BOSS)) {
+                    return named.replace(FINAL_BOSS_LOCK, " \\c[18]requires floor " + finalBossFloor() + "\\c[0]en(0)");
+                }
                 return eventId ? lockedChoice(this, eventId, String(text), named) : named;
             });
             params = [choices].concat(params.slice(1));
@@ -976,6 +981,9 @@
     // From the floor of the last boss on the doors are a free choice: any king again, the last boss, or go on
     const freeDoors = () => bound() && ($gameVariables.value(VARIABLE_FLOOR) >= FREE_DOORS_FLOOR || kingsDefeated());
 
+    // The "Final Boss" door choice only opens from this floor on (final_boss_floor option)
+    const finalBossFloor = () => option("final_boss_floor") || FREE_DOORS_FLOOR;
+
     const doorOpen = kingSwitch => {
         const defeated = $gameSwitches.value(kingSwitch);
         if (!bound()) {
@@ -996,6 +1004,7 @@
         }
         mirrorSwitch(SWITCH_TURN_BACK, bound() && !freeDoors());
         mirrorSwitch(SWITCH_FREE_DOORS, freeDoors());
+        mirrorSwitch(SWITCH_FINAL_BOSS, $gameVariables.value(VARIABLE_FLOOR) >= finalBossFloor());
         const hasKey = weaponId => !bound() || $gameParty.hasItem($dataWeapons[weaponId], false);
         mirrorSwitch(SWITCH_WHITE_DOOR, hasKey(WEAPON_WHITE_KEY));
         mirrorSwitch(SWITCH_BLACK_DOOR, hasKey(WEAPON_BLACK_KEY));
@@ -1722,7 +1731,7 @@
         const added = [
             // The last boss (common event 64) expects to start on the map of the climb with the screen faded out
             [
-                "Final Bossif(s[" + SWITCH_FREE_DOORS + "])",
+                "Final Bossen(s[" + SWITCH_FINAL_BOSS + "])if(s[" + SWITCH_FREE_DOORS + "])",
                 [command(221, 0, [])].concat(leaveHallway, [
                     command(121, 0, [SWITCH_KING_BATTLE, SWITCH_KING_BATTLE, 1]),
                     command(121, 0, [SWITCH_LAST_BOSS, SWITCH_LAST_BOSS, 0]),

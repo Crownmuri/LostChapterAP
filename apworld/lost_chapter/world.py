@@ -14,7 +14,7 @@ from .options import LostChapterOptions
 
 SLOT_DATA_OPTIONS = (
     "goal", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
-    "finisher_move", "soul_multiplier",
+    "finisher_move", "final_boss_floor", "soul_multiplier",
 )
 
 
@@ -336,9 +336,10 @@ class LostChapterWorld(World):
                 lambda state: all(self.has_relic(state, key) for key in data.DLC_BOSS_KEYS.values())
             )
         else:
-            # The last boss is one of the doors of floor 100, which takes all four Heavenly Kings defeated
+            # The last boss is one of the doors from the final boss floor on, 100 at the least, which takes all four
+            # Heavenly Kings defeated
             self.get_location(data.ENDING_EVENT).access_rule = (
-                lambda state: state.has_group("Door Keys", player, len(data.HEAVENLY_KINGS))
+                lambda state: self.can_reach_floor(state, self.options.final_boss_floor.value)
             )
 
     def can_find_relic(self, state: CollectionState, name: str) -> bool:
