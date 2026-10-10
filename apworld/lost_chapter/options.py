@@ -104,13 +104,13 @@ class FieldExploration(Range):
     How many Progressive Field Exploration items are shuffled into the multiworld. Each one adds a floor event to
     the two you get to choose from on every floor, which makes it easier to find the event you are after.
 
-    The climb expects one of them by floor 41, two by floor 61, three by floor 81 and four by floor 101, as far as
-    there are that many.
+    The climb expects one of them by floor 21, two by floor 41, three by floor 61, four by floor 81 and five by
+    floor 101, as far as there are that many.
     """
     display_name = "Field Exploration"
     range_start = 0
     range_end = len(data.EXPLORATION_FLOORS)
-    default = 0
+    default = len(data.EXPLORATION_FLOORS)
 
 
 class FinalBossFloor(Range):

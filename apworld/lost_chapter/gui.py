@@ -235,7 +235,7 @@ class LostChapterTabLayout(BoxLayout):
             unlock = data.EVENT_UNLOCKS[data.EVENT_IDS[event]]
             return data.EVENT_OFFSET + data.UNLOCK_EVENTS[unlock][0] in received
 
-        events = data.TITLE_EVENTS.get(number, [])
+        events = data.title_events(number, bool(self.ctx.slot_data.get("include_dlc")))
         floor = data.TITLE_FLOORS.get(number, 1)
         needed = min((floor - 1) // data.BOSS_FLOOR_INTERVAL, len(keys))
 

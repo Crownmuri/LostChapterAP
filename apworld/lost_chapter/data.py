@@ -134,11 +134,26 @@ TITLE_KINGS: Dict[int, str] = {
 TITLE_EVENTS: Dict[int, List[str]] = {
     2: ["Desert", "Desert 2", "Market", "Library", "Girl", "Debauch", "Highway"],  # FAITH down
     3: ["Collapse", "Camp", "Highway"],  # VIRTUE down
-    5: ["Desert 2", "Devil Temple", "Camp", "Debauch", "Highway", "Lake Shore"],  # LEWD up
+    5: ["Desert 2", "Devil Temple", "Camp", "Debauch", "Small Room 2", "Highway", "Lake Shore"],  # LEWD up
     12: ["Forest", "Quarrel", "Market 2", "Small Room", "Library", "River", "Lake Shore"],  # STR/DEF/MAG/AGL, LP/RP
     14: ["Beggar", "Highway"],  # VIRTUE up
     15: ["Goddess Temple", "Devil Temple"],  # FAITH up
 }
+
+# The same with the DLC, on top of the above: its own events, and the events of the base game that the version of
+# the game the DLC comes with gave a new choice or outcome (tools: compare dump/base with dump/dlc).
+DLC_TITLE_EVENTS: Dict[int, List[str]] = {
+    2: ["Gold and Silver Treasures", "Farm Village", "Old Woman", "Graveyard", "Treasury"],  # FAITH down
+    5: ["Cat"],  # LEWD up
+    12: ["Barracks", "Checkpoint"],  # STR/DEF/MAG/AGL
+    14: ["Old Woman", "Sculptor"],  # VIRTUE up
+    15: ["Desert", "Library", "Farm Village", "Sculptor", "Treasury"],  # FAITH up
+}
+
+
+def title_events(number: int, dlc: bool) -> List[str]:
+    """The floor events that move the stat the condition of a title is about."""
+    return TITLE_EVENTS.get(number, []) + (DLC_TITLE_EVENTS.get(number, []) if dlc else [])
 
 # title number -> the floor from which its condition is expected to be met. All of these can be had earlier, by
 # taking the same events over and over, but that is out of logic: stats, cards and the swings of FAITH and VIRTUE
@@ -463,7 +478,7 @@ FINISHER = "Kick Balls"
 # option says how many there are, and the climb expects one of them by each of these floors.
 EXPLORATION_ID = 11
 EXPLORATION = "Progressive Field Exploration"
-EXPLORATION_FLOORS = (41, 61, 81, 101)
+EXPLORATION_FLOORS = (21, 41, 61, 81, 101)
 
 DLC_LAST_BOSS = "Magislilia"
 

@@ -342,7 +342,7 @@ class LostChapterWorld(World):
         # A title about FAITH, VIRTUE, LEWD or the stats takes an event that moves them, and most of those and the
         # ones about cards take the floors it needs to add up
         for number in sorted(set(data.TITLE_EVENTS) | set(data.TITLE_FLOORS)):
-            items = [data.event_item(event) for event in data.TITLE_EVENTS.get(number, [])]
+            items = [data.event_item(event) for event in data.title_events(number, bool(self.options.include_dlc))]
 
             self.get_location(f"Title: {data.TITLES[number]}").access_rule = (
                 lambda state, items=items, floor=data.TITLE_FLOORS.get(number, 1): (
@@ -388,7 +388,9 @@ class LostChapterWorld(World):
     def can_find_card(self, state: CollectionState, name: str) -> bool:
         """A floor event can be brought to hand the card out."""
         source = data.CARD_SOURCES[name]
-        lewd = [data.event_item(event) for event in data.TITLE_EVENTS[data.TITLE_LEWD]]
+        lewd = [
+            data.event_item(event) for event in data.title_events(data.TITLE_LEWD, bool(self.options.include_dlc))
+        ]
 
         return (
             state.has_all([data.event_item(event) for event in source["events"]], self.player)

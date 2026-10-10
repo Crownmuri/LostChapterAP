@@ -801,6 +801,89 @@
         return stripConditions(text) + " \\c[18]" + note + "\\c[0]en(0)";
     };
 
+    // What a choice of a floor event does, by the common event and the text of the choice without its codes. Where
+    // two events share a name on the floor choice (Desert, Temple, Hot Spring) both outcomes are named, so the
+    // choice does not give away which of them it is.
+    const CHOICE_EFFECTS = {
+        21: {"Explore %": "Forget-Me-Not, fail: LP -3"},
+        22: {"Enter the Hot Spring": "LP & RP + or LP -20%"},
+        23: {"Enter the Hot Spring": "LP & RP + or LP -20%"},
+        24: {"Pass Through the Forest %": "AGL +1, fail: LP -5", "Take a Detour": "LP -2"},
+        25: {"Rest in a Cheap Room -50 G": "LP & RP +1/3", "Rest in an Expensive Room -150 G": "LP & RP full", "Cheap Room -50 G": "LP & RP +1/3", "Expensive Room -150 G": "LP & RP full", "I Don't Mind": "LEWD +2, then rest", "Take Off Underwear": "RP -2", "Expose Vagina": "RP -10, Gold, LEWD +3", "Can't Do That": "LEWD +2, rest", "Flee": "LEWD +2, rest", "Answer": "more Gold", "Disregard": "less Gold"},
+        26: {"Drink": "LP +3, FAITH +5 or Lust", "Refuse": "FAITH -5"},
+        27: {"Drink": "LP +3, FAITH +5 or Lust", "Refuse": "FAITH -5", "Beg For His Semen": "LEWD +2, ends Lust", "Ignore Him and Move On": "Lust stays", "Get Revenge on the Man": "Pieris, VIRTUE -10"},
+        28: {"Ask for Assistance": "LP + or Forget-Me-Not", "Ask for Salvation": "FAITH +5, Womb Crest off or on", "Ask for Mercy": "Gold +60 or LEWD +2"},
+        29: {"Ask for Assistance": "LP + or Forget-Me-Not", "Ask for Salvation": "FAITH +5, Womb Crest off or on", "Ask for Mercy": "Gold +60 or LEWD +2"},
+        30: {"Pray": "FAITH +5", "Rush Over": "＜Cure＞ saves him, else he dies", "Abandon": "VIRTUE -5", "Save Lose ＜Cure＞": "Recovery Misanga", "Talk About the Woman": "Recovery Misanga", "Say Nothing": "Recovery Misanga"},
+        31: {"Donate -20 G": "VIRTUE +5", "Advise": "VIRTUE ≧ 70: VIRTUE +5", "For Their Sake": "gives all Gold, the Corridor returns it ×3"},
+        32: {"The Man Is in the Wrong %": "Max LP +5", "The Woman Is in the Wrong %": "Max RP +5"},
+        33: {"Receive clothes": "ends Nude", "Refuse the offer": "FAITH -5", "Don't Need Anything": "FAITH -5"},
+        34: {"Buy -30 G": "Random Stat +1", "Buy -50 G": "chosen Stat +1", "Invest Lose ＜Investment＞": "better goods from now on", "Attack from behind": "Pieris"},
+        35: {"Drink the Blue Potion": "Max LP +5", "Drink the Red Potion": "breasts larger or smaller", "Drink the Yellow Potion": "ends Regression"},
+        36: {"Bet on Heads": "heads: Gold +200, tails: LP +", "Bet on Tails": "tails: LP ++, heads: Gold +100", "Bet your life": "Clown Mask, Pieris"},
+        37: {"Pick It Up": "LP -2, Forget-Me-Not", "Water It": "lose Pretty Water, all Stats +1"},
+        38: {"Obtain": "Promise Pendant", "Overlook": "Promise Pendant", "Can't Do That": "LP damage, ends the Monster quest", "Tell Her the Location of the Man's Grave": "Promise Pendant"},
+        39: {"Rummage Through a Shelf %": "a find", "Search Under the Floor %": "a find"},
+        40: {"Pay -40 G": "MAG +1, FAITH -5", "Pay -160 G": "MAG +2, FAITH -5", "Seduce ＜Levy Suit＞ Required": "MAG +1, FAITH -5, LEWD +2", "Refuse": "FAITH +5"},
+        41: {"Yes": "Moon Hair Ornament, VIRTUE +5", "No": "FAITH -5", "Play With Her": "RP +5", "Dodge Her Question": "FAITH -5"},
+        42: {"Leave him alone＜HEALING＞ Lost": "Dusk Ring, VIRTUE +5", "So Be It Lose ＜Healing＞": "Dusk Ring, VIRTUE +5", "Can't Do Anything": "Collar Key", "Free him from suffering": "Pieris", "Accept His Request": "Collar Key"},
+        43: {"Beckon Dog Over": "Max RP +5", "Unlock the Dog's Collar": "lose Collar Key, card Faithful Dog Lassi", "Release from curse": "Pieris"},
+        44: {"Pat": "LEWD +2, LEWD ≧ 10: a card", "Hug": "Bosom Enlargement, else LEWD +2"},
+        45: {"Rummage Through Their Belongings %": "Gold, VIRTUE -3", "Rummage Again %": "Gold, VIRTUE -3", "Flee": "lose Lassi, VIRTUE -10", "Resign Yourself": "lose that Gold, LEWD +3", "Make up your mind": "fight: Pieris", "Give in to their demands": "lose that Gold, LEWD +3"},
+        46: {"Entrust": "ends Nude and Torn Clothes", "Attack from behind": "Pieris"},
+        47: {"Cross the River %": "LP -2, DEF +1, fail: LP -4", "Take a Detour": "AGL +1"},
+        48: {"Help Yourself": "Gold +200, then a trap", "Doubt": "FAITH -5", "! %": "fail: LP -10, Torn Clothes", "Dodge ＜Step＞ Required": "no damage"},
+        49: {"Stay": "a card or LEWD +2", "Flee": "FAITH -5", "Follow the Man": "LEWD +2"},
+        50: {"Hold His Hand": "VIRTUE +20", "Get Revenge on Him": "VIRTUE -20", "Leave This World": "plays an ending"},
+        51: {"Pick It Up": "LP -2, Forget-Me-Not"},
+        52: {"Masturbate": "LEWD +5"},
+        53: {"Pay": "Gold -60", "Don't Pay": "LP -3", "Seduce": "Gold +100, LEWD +2", "Take Off Underwear": "Gold +100, LEWD +3", "Refuse": "LEWD +1", "Resign Yourself": "LP -3"},
+        54: {"Drink the Water": "LP +1/3", "Bathe in water": "washes you clean", "Bathe in the Water": "washes you clean"},
+        55: {"Help": "LP -2, Gold +80, VIRTUE +5", "Pilfer %": "Gold +150, VIRTUE -5", "Depart": "FAITH -5"},
+        56: {"I Came to See You": "a wish", "I Wish for Strength": "Random Stat +1", "I Wish for Gold": "Gold +158", "I Wish for Charm": "LEWD +2", "Counterattack": "LP damage, Pieris"},
+        57: {"Create White Key": "uses Music Box, Recovery Misanga, Moon Hair Ornament", "Create Black Key": "uses Plushie, Clown Mask, Promise Pendant", "Hand Over the Other Key": "its three relics back"},
+        58: {"Remove the Portrait": "the donated Gold ×3", "Use Black Key": "all Stats +3, later +1"},
+        59: {"Seduce the King": "LEWD +4, VIRTUE -10, the king dies", "Show Ring": "Aetolus Flag"},
+        60: {"Hoist Flag": "uses Aetolus Flag"},
+        61: {"Open the Door": "White Key and Black Key: Monster quest"},
+        591: {"Wear Clothes": "ends Nude", "Wear a swimsuit": "ends Nude", "Stay as you are": "LUX +50"},
+        592: {"I want to fight too": "DEF +1", "Leave him ＜Loyal Dog Lassie＞ Lost": "Max LP +30", "I don’t know what to do": "opens the Checkpoint"},
+        593: {"Show contempt for the man": "FAITH -5", "Praise the woman": "FAITH +5", "Release desire": "LEWD +2"},
+        594: {"Depart": "FAITH -5", "Accept to take a message.": "VIRTUE +5", "Hello": "Memento Chisel: VIRTUE +5, else LP & RP full", "I won't hesitate to do it.": "Gold +150, Pieris"},
+        595: {"Continue onward": "AGL +1", "I came to see you": "VIRTUE +5, Memento Chisel", "Don't you want to see your mother?": "Pieris, Memento Chisel", "Refuse the request": "LEWD +2"},
+        597: {"Sell your body": "Gold +100, LEWD +2", "Refuse": "LEWD -3", "Overlook": "Gold +300", "Give Judgment": "Pieris, ends Beastification", "Resist": "LP -8", "Accept the offer": "Beastification"},
+        598: {"Offer a crown of Forget-Me-Not": "LP regen +5", "Offer a crown of Pieris": "RP regen +5", "Depart": "FAITH -5"},
+        600: {"Do you know how to get out?": "FAITH +5", "What about you?": "VIRTUE +5", "You brought a tool": "VIRTUE +5"},
+        601: {"Explore the coffin %": "FAITH -5, a find", "Depart": "FAITH +5"},
+    };
+
+    const effectKey = text =>
+        stripConditions(text)
+            .replace(/\\[a-z]+\[\d*\]/gi, "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+    // `text` with what the choice does behind it, in front of its conditions
+    const withEffect = (eventId, original, text) => {
+        let effect = (CHOICE_EFFECTS[eventData(eventId).id] || {})[effectKey(original)];
+        if (!effect || text.includes("\\c[18]")) {
+            return text;
+        }
+        // A relic that is a check is named by what is really there
+        for (const weaponId of relicChecks()) {
+            const name = $dataWeapons[weaponId] ? $dataWeapons[weaponId].name : "";
+            if (name && effect.includes(name) && !text.includes(relicLabel(weaponId) || name)) {
+                const sent = state().checked.includes(RELIC_OFFSET + weaponId);
+                effect = effect.replace(name, sent ? name + " (found)" : relicLabel(weaponId) || name);
+            } else if (name && effect === name) {
+                return text;
+            }
+        }
+        const conditions = /((?:if|en)\([^)]*\)\s*)+$/.exec(text);
+        const at = conditions ? conditions.index : text.length;
+        return text.slice(0, at) + " \\c[8](" + effect + ")\\c[0]" + text.slice(at);
+    };
+
     const floorEventOf = list => {
         return allEvents().find(eventId => eventData(eventId).list === list) || 0;
     };
@@ -831,7 +914,7 @@
                 if (named.includes(FINAL_BOSS_LOCK) && !$gameSwitches.value(SWITCH_FINAL_BOSS)) {
                     return named.replace(FINAL_BOSS_LOCK, " \\c[18]requires floor " + finalBossFloor() + "\\c[0]en(0)");
                 }
-                return eventId ? lockedChoice(this, eventId, String(text), named) : named;
+                return eventId ? withEffect(eventId, String(text), lockedChoice(this, eventId, String(text), named)) : named;
             });
             params = [choices].concat(params.slice(1));
         }
@@ -1659,6 +1742,15 @@
         }
     };
 
+    // Every event of the floor choice is in sight, without scrolling: MPP_ChoiceEX stops at six rows
+    const _Window_ChoiceList_numVisibleRows = Window_ChoiceList.prototype.numVisibleRows;
+    Window_ChoiceList.prototype.numVisibleRows = function() {
+        if (AP.standbyChoice) {
+            return $gameMessage.choices().length;
+        }
+        return _Window_ChoiceList_numVisibleRows.apply(this, arguments);
+    };
+
     // Replaces the fight / random event roll of common event 86
     AP.chooseFloorEvent = interpreter => {
         const forced = AP.nextFloorEvent || AP.chosenFloorEvent;
@@ -2352,20 +2444,28 @@
     // event asks at its top level, 9 for a relic and 8 for a card. A scene without a label is never played.
     const bonfireLabel = () => {
         const open = relicChecks().includes(WEAPON_COLLAR_KEY) && !state().checked.includes(RELIC_OFFSET + WEAPON_COLLAR_KEY);
-        return "LP +" + Math.floor($gameVariables.value(VARIABLE_FLOOR) / 4) + (open ? ", full LP: Collar Key" : "");
+        return "LP Recovery" + (open ? ", full LP: Collar Key" : "");
     };
 
+    const SWITCH_TRAVELER_DEAD = 281; // "For Cherry Blossom Tree Event": the traveler of the Collapse died
+    const travelerDead = () => $gameSwitches.value(SWITCH_TRAVELER_DEAD);
+
     const CONCLUSIONS = {
-        // Collapse
-        30: { scenes: [{ kind: 9, id: 29, label: "Gold" }], reset: "VIRTUE -5, his grave: FAITH +5" },
+        // Collapse: the traveler who was saved, or his grave when he was left to die since. A reset brings him back.
+        30: {
+            scenes: [{ kind: 9, id: 29, label: () => (travelerDead() ? "FAITH +5 (Dead)" : "Gold (Alive)") }],
+            reset: "VIRTUE -5",
+            blocked: () => travelerDead(),
+            onReset: () => $gameSwitches.setValue(SWITCH_TRAVELER_DEAD, false),
+        },
         // Amusement Center
-        36: { scenes: [{ kind: 9, id: 36, label: "STR, DEF, MAG or AGL +1" }], reset: "coin toss: Gold or LP" },
+        36: { scenes: [{ kind: 9, id: 36, label: "Random Stat +1" }], reset: "Gold or LP" },
         // Girl, who only asks in the versions of the game that have her gift
         41: { scenes: [{ kind: 9, id: 41, label: "Max RP +5", optional: true }], reset: "RP +5 / FAITH -5" },
         // Battlefield: the regrets the Collar Key brings (LP -3), then the bonfire of the soldier who gave his ring
         42: {
             scenes: [{ kind: 9, id: WEAPON_COLLAR_KEY, label: null }, { kind: 9, id: WEAPON_DUSK_RING, label: bonfireLabel }],
-            reset: "Healing: VIRTUE +5",
+            reset: "\uff1cHealing\uff1e required: VIRTUE +5",
         },
         // Cat, whose own card only exists with the DLC
         44: { scenes: [{ kind: 8, id: 39, label: "Max RP +5", optional: true }], reset: "LEWD +2 / Bosom Enlargement" },
@@ -2394,7 +2494,17 @@
         if (!sceneIsCheck(scene)) {
             return $gameParty.hasItem((scene.kind === 9 ? $dataWeapons : $dataItems)[scene.id], scene.equip);
         }
-        return AP.revisit === index + 1;
+        // A scene that is `blocked` gives way to what the event holds further down, the grave of the Collapse
+        const event = CONCLUSIONS[eventId];
+        return AP.revisit === index + 1 && !(event.blocked && event.blocked());
+    };
+
+    AP.answer = (eventId, answer) => {
+        const event = CONCLUSIONS[eventId];
+        AP.revisit = answer;
+        if (answer < 0 && event.onReset) {
+            event.onReset();
+        }
     };
 
     // What a choice of the question is called, null for any other choice
@@ -2449,7 +2559,7 @@
             answers.forEach((answer, index) => {
                 question.push(
                     command(402, 1, [index, answer[0]]),
-                    command(355, 2, ["LostChapterAP.revisit = " + answer[1] + ";"]),
+                    command(355, 2, ["LostChapterAP.answer(" + eventId + ", " + answer[1] + ");"]),
                     command(0, 2, [])
                 );
             });
