@@ -474,6 +474,8 @@
             AP.items = message.items;
         } else if (message.cmd === "Scouts") {
             AP.scouts = message.locations;
+        } else if (message.cmd === "Notice") {
+            notify(String(message.text), message.flags & ITEM_FLAG_PROGRESSION);
         } else if (message.cmd === "Speed") {
             setSpeed(message.speed);
         } else if (message.cmd === "Dev") {

@@ -16,6 +16,7 @@ Client -> game:
     {"cmd": "Slot", "connected": bool, "seed": str, "slot": int, "name": str, "slot_data": dict}
     {"cmd": "Items", "items": [{"index": int, "id": int, "name": str, "sender": str, "flags": int}]}   always the full list
     {"cmd": "Scouts", "locations": {location id: {"item": str, "player": str, "flags": int}}}   what the relic places hold
+    {"cmd": "Notice", "text": str, "flags": int}   a line for the top of the screen, flags as for an item
     {"cmd": "Speed", "speed": int}
     {"cmd": "Dev", "args": [str]}
 """

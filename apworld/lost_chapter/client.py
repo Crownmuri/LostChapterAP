@@ -219,6 +219,20 @@ class LostChapterContext(Context):
         # UT Tab Integration
         super().on_package(cmd, args)
 
+    def on_print_json(self, args: dict) -> None:
+        super().on_print_json(args)
+
+        # An item of this slot's world that went to somebody else is announced in the game too. What comes back to
+        # this slot is announced there when it arrives.
+        item = args.get("item")
+        receiving = args.get("receiving")
+
+        if args.get("type") == "ItemSend" and item is not None and item.player == self.slot and receiving != self.slot:
+            name = self.item_names.lookup_in_slot(item.item, receiving)
+            text = f"Sent {name} to {self.player_names.get(receiving, 'another player')}"
+
+            Utils.async_start(self.bridge.send({"cmd": "Notice", "text": text, "flags": item.flags}))
+
     async def sync_game(self) -> None:
         """Brings a freshly connected game (or a freshly connected slot) up to date."""
         if not self.slot or not self.slot_data:
