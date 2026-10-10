@@ -155,7 +155,8 @@ class LostChapterContext(Context):
             CommonClient.logger.error("Connect to the multiworld first, /run launches the game for the connected slot.")
             return
 
-        if not game_install.is_plugin_installed(game_path):
+        # Also replaces the plugin of an older apworld
+        if not game_install.is_plugin_current(game_path):
             self.install_plugin()
 
         folder = game_install.write_session(game_path, self.seed_name, self.slot)
@@ -284,8 +285,16 @@ class LostChapterContext(Context):
             if not self.slot or self.finished_game:
                 return
 
-            # Any win satisfies the plain ending goal
-            if self.slot_data.get("goal", 0) == 0 or message.get("kind") == "ending_1":
+            goal = self.slot_data.get("goal", 0)
+
+            # Any win is the normal end. "ending_1" is the win of the true end, a climax count of 20 or less.
+            reached = (
+                goal == 0
+                or (goal == 1 and message.get("kind") == "ending_1")
+                or (goal == 2 and message.get("virgin"))
+            )
+
+            if reached:
                 self.finished_game = True
 
                 await self.send_msgs([{"cmd": "StatusUpdate", "status": CommonClient.ClientStatus.CLIENT_GOAL}])

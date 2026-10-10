@@ -23,10 +23,13 @@
  *
  * Game changes in such a session:
  *  - Every floor is a fight until floor events are unlocked. With unlocked
- *    events the player picks between a fight and up to two of them.
- *  - A Heavenly King can only be challenged with his boss unlock, the other
+ *    events the player picks between a fight and two events rolled from all
+ *    of them, where the ones still locked are grayed out.
+ *  - A Heavenly King can only be challenged with his door key, the other
  *    doors are grayed out. The doors also offer to turn back, which repeats
  *    the last 20 floors: the climb only goes on once a king is defeated.
+ *  - From floor 100 on the doors are a free choice every 20 floors: any king
+ *    again, the last boss, or keep going without a fight.
  *  - Relics handed out by events become checks (relicsanity).
  *  - Meeting the condition of a title is a check. Releasing the title in the
  *    Title Collection also needs its Unlock Title Effect item, unless the
@@ -86,25 +89,70 @@
     const TROOP_LAST_BOSS = 30;
     // The ending map plays its other ending from this climax count on, the TRUE END below it
     const TRUE_END_CLIMAX_LIMIT = 21;
+    const STATE_VIRGINITY = 301;
+    const TITLE_LOSE_VIRGINITY = 1;
+    const GOAL_VIRGIN_END = 2; // the goal option of apworld/lost_chapter/options.py
 
     const COMMON_EVENT_NEXT_FLOOR = 86;
     const COMMON_EVENT_STANDBY = 11;
     const COMMON_EVENT_SCORE = 72;
     const COMMON_EVENT_TITLE_RELEASE = 400; // + title number
     const COMMON_EVENT_KING_BATTLE = 63;
+    // Kick Balls: the turn start (common event 103) draws card 93 while the enemy is in its Refractory Period
+    const COMMON_EVENT_TURN_START = 103;
+    const CARD_FINISHER = 93;
+    const STATE_REFRACTORY = 16;
+    const ITEM_FINISHER = 10; // FINISHER_ID of apworld/lost_chapter/data.py
+    const FINISHER_SHUFFLE = 1; // the finisher_move option
+    const FINISHER_REMOVE = 2;
+    const COMMON_EVENT_POND = 54;
+    const COMMON_EVENT_LOCKSMITH = 57;
+    // Switch 12 is on in the Pond while there is filth on the body (variable 209)
+    const POND_BATHE_HIDDEN = "Bathe in the Waterif(!s[12])";
+    const POND_BATHE_SHOWN = "Bathe in the Waterif(s[12])";
     const LABEL_END = "終了";
 
     const KING_SWITCHES = [71, 72, 73, 74];
-    // Unused game switches mirroring the boss unlocks, read by the door choices of common event 63
-    const KING_UNLOCK_SWITCH_SHIFT = 190; // 71-74 -> 261-264
-    const SWITCH_BOUND = 265; // unused game switch, on while the save plays a multiworld (read by "Turn Back")
+    // Unused game switches mirroring the door keys, read by the door choices of common event 63
+    const KING_UNLOCK_SWITCH_SHIFT = 190; // 71-74 -> 261-264, on while the door of that king can be opened
+    // More unused game switches read by the door choices. MPP_ChoiceEX reads a choice condition up to its first
+    // closing bracket, so a condition has to be made of plain switches.
+    const SWITCH_TURN_BACK = 265; // the doors offer "Turn Back"
+    const SWITCH_FREE_DOORS = 266; // the doors offer "Final Boss" and "Keep Going"
+    const SWITCH_KING_BATTLE = 63;
     const BOSS_FLOOR_INTERVAL = 20;
-    const LABEL_TURN_BACK = "ArchipelagoTurnBack";
+    const FREE_DOORS_FLOOR = 100;
+    const LABEL_LEAVE_DOORS = "ArchipelagoLeaveDoors";
 
     const EVENT_MIN = 21;
     const EVENT_MAX = 61;
     const FLOOR_EVENT_CHOICES = 2;
+    // Floor event -> choice (as written in the event, without its condition and colors) -> what it takes.
+    // Choices that already name a card they need, and the ones about FAITH, VIRTUE and LEWD, are not listed:
+    // the latter are read from their condition.
+    const CHOICE_REQUIREMENTS = {
+        37: { "Water It": "Pretty Water" },
+        38: { "Tell Her the Location of the Man's Grave": "having found the man in Collapse" },
+        40: { "Pay -160 G": "MAG 15 or more" },
+        54: { "Bathe in the Water": "filth to wash off" },
+        56: { "I Came to See You": "having met him before" },
+        57: {
+            "Create White Key": "Music Box, Recovery Misanga, Moon Hair Ornament",
+            "Create Black Key": "Plushie, Clown Mask, Promise Pendant",
+        },
+        58: {
+            "Remove the Portrait": "having given all your gold to the beggars",
+            "Use White Key": "White Key",
+            "Use Black Key": "Black Key",
+        },
+        59: { "Show Ring": "Dusk Ring" },
+        60: { "Hoist Flag": "Aetolus Flag" },
+    };
+
+    // The game calls common event 52 "Small Room" like common event 35, the apworld calls it "Small Room 2"
+    const EVENT_ALIASES = { "small room 2": 52 };
     const CHOICE_MAX_ROWS = 5;
+    const STANDBY_CHOICE_Y = 315; // in the 600 high UI area, which sits 60 below the top of the screen
 
     const TITLE_COUNT = 16; // title n is held as armor n once its condition is met
     const TITLE_SWITCH_BASE = 200;
@@ -156,15 +204,12 @@
         106: ["Succubus Set", [80, 80, 37]],
     };
 
-    const CHECK_SWITCHES = KING_SWITCHES.slice();
-    for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
-        CHECK_SWITCHES.push(eventId);
-    }
     const CHECK_TROOP_MAX = 21;
     const CHECK_FLOORS = [10, 20, 30, 40, 50, 60, 70, 80];
     const RELIC_WEAPONS = [29, 30, 33, 34, 36, 38, 42, 51, 58, 59];
     const GOLD_ITEMS = { 1: 100, 2: 300 };
-    const SOUL_MILESTONES = [50, 100, 200, 500, 1000, 2000];
+    // The milestones come with the slot data. Seeds from before that have these.
+    const LEGACY_SOUL_MILESTONES = [50, 100, 200, 500, 1000, 2000];
     const SOUL_UPDATE_FRAMES = 30;
 
     const NOTICE_WIDTH = 640;
@@ -349,7 +394,7 @@
 
     const sendGoal = () => {
         if (active() && state().goal) {
-            send({ cmd: "Goal", kind: state().goal });
+            send({ cmd: "Goal", kind: state().goal, virgin: !!state().goalVirgin });
         }
     };
 
@@ -360,10 +405,26 @@
         } else if (!s.goal) {
             s.goal = "ending_2";
         }
+        if ($gameActors.actor(1).isStateAffected(STATE_VIRGINITY)) {
+            s.goalVirgin = true;
+        }
         sendGoal();
     };
 
     const checkTitle = title => check(SWITCH_OFFSET + TITLE_SWITCH_BASE + title);
+
+    // Virgin end: losing the Virginity state ends the run the way running out of LP does. The fight is lost, or
+    // the event plays out and the game over follows on the way to the next floor.
+    const _Game_Battler_removeState = Game_Battler.prototype.removeState;
+    Game_Battler.prototype.removeState = function(stateId) {
+        const lost = stateId === STATE_VIRGINITY && this.isStateAffected(stateId) && this === $gameActors.actor(1);
+        _Game_Battler_removeState.apply(this, arguments);
+        if (lost && bound() && option("goal") === GOAL_VIRGIN_END && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
+            checkTitle(TITLE_LOSE_VIRGINITY);
+            notify("Virginity lost, this run is over");
+            this.setHp(0);
+        }
+    };
 
     // Picks up everything the save already achieved
     const scanState = () => {
@@ -372,7 +433,7 @@
                 checkTitle(title);
             }
         }
-        for (const switchId of CHECK_SWITCHES) {
+        for (const switchId of KING_SWITCHES) {
             if ($gameSwitches.value(switchId)) {
                 check(SWITCH_OFFSET + switchId);
             }
@@ -383,11 +444,13 @@
 
     const _Game_Switches_setValue = Game_Switches.prototype.setValue;
     Game_Switches.prototype.setValue = function(switchId, value) {
+        const wasOn = this.value(switchId);
         _Game_Switches_setValue.apply(this, arguments);
-        if (!value) {
-            return;
-        }
-        if (CHECK_SWITCHES.includes(switchId)) {
+        if (value && KING_SWITCHES.includes(switchId)) {
+            check(SWITCH_OFFSET + switchId);
+        } else if (!value && wasOn && switchId >= EVENT_MIN && switchId <= EVENT_MAX) {
+            // A floor event runs while its switch is on and ends in the standby screen, which turns it off. The
+            // first visit is only sent then, when the player has seen which event it was.
             check(SWITCH_OFFSET + switchId);
         }
     };
@@ -435,6 +498,15 @@
         _Game_Party_gainItem.apply(this, arguments);
     };
 
+    // Replaces "has relic n" in the event that hands the relic out. There the game asks whether the relic was
+    // already taken, which in a multiworld is whether its check was sent: the relic itself can come from anywhere.
+    AP.relicTaken = (weaponId, includeEquip) => {
+        if (bound() && option("relicsanity")) {
+            return state().checked.includes(RELIC_OFFSET + weaponId);
+        }
+        return $gameParty.hasItem($dataWeapons[weaponId], includeEquip);
+    };
+
     // "Item for Player" for the multiworld item an event hands out in place of the relic, null when unknown
     const relicLabel = weaponId => {
         const scout = bound() && option("relicsanity") && AP.scouts[RELIC_OFFSET + weaponId];
@@ -462,16 +534,69 @@
         return 0;
     };
 
-    // "Take a Plushie" names what is really there
+    // MPP_ChoiceEX conditions at the end of a choice: if(...) hides it, en(...) grays it out
+    const CHOICE_SHOWN = /\s?if\((.+?)\)/;
+    const CHOICE_ENABLED = /\s?en\((.+?)\)/;
+    const STAT_VARIABLES = { 49: "FAITH", 50: "VIRTUE", 51: "LEWD" };
+    const STAT_PHRASES = {
+        ">=": value => value + " or more",
+        ">": value => "over " + value,
+        "<=": value => value + " or less",
+        "<": value => "under " + value,
+    };
+
+    // "LEWD 10 or more" for a condition like v[51]>=10, null when it is about anything else
+    const statRequirement = condition => {
+        const parts = [];
+        const rest = condition.replace(/v\[(\d+)\]\s*(>=|<=|>|<)\s*(\d+)/g, (match, variableId, comparison, value) => {
+            if (!STAT_VARIABLES[variableId]) {
+                return match;
+            }
+            parts.push(STAT_VARIABLES[variableId] + " " + STAT_PHRASES[comparison](value));
+            return "";
+        });
+        return parts.length > 0 && !/[^\s&]/.test(rest) ? parts.join(", ") : null;
+    };
+
+    const stripConditions = text => text.replace(CHOICE_SHOWN, "").replace(CHOICE_ENABLED, "");
+
+    // A choice of a floor event whose condition is not met stays on the list, grayed out, and says what it takes.
+    // `original` is the text of the event data, `text` what is shown for it.
+    const lockedChoice = (interpreter, eventId, original, text) => {
+        const failed = [CHOICE_SHOWN.exec(original), CHOICE_ENABLED.exec(original)].find(
+            match => match && !interpreter.evalChoice(match[1])
+        );
+        if (!failed) {
+            return text;
+        }
+        const key = stripConditions(original)
+            .replace(/\\c\[\d+\]/gi, "")
+            .trim();
+        const requirement = (CHOICE_REQUIREMENTS[eventId] || {})[key] || statRequirement(failed[1]);
+        return requirement ? stripConditions(text) + " \\c[18]requires " + requirement + "\\c[0]en(0)" : text;
+    };
+
+    const floorEventOf = list => {
+        for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
+            if ($dataCommonEvents[eventId].list === list) {
+                return eventId;
+            }
+        }
+        return 0;
+    };
+
     const _Game_Interpreter_setupChoices = Game_Interpreter.prototype.setupChoices;
     Game_Interpreter.prototype.setupChoices = function(params) {
         const list = this._list;
         const start = this._index;
-        if (bound() && option("relicsanity") && list && list[start] && list[start].code === 102) {
+        if (bound() && list && list[start] && list[start].code === 102) {
+            const eventId = this.evalChoice ? floorEventOf(list) : 0;
             const choices = params[0].map((text, choice) => {
-                const relic = branchRelic(list, start, choice);
+                // "Take a Plushie" names what is really there
+                const relic = option("relicsanity") ? branchRelic(list, start, choice) : 0;
                 const label = relic ? relicLabel(relic) : null;
-                return label ? String(text).replace($dataWeapons[relic].name, () => label) : text;
+                const named = label ? String(text).replace($dataWeapons[relic].name, () => label) : String(text);
+                return eventId ? lockedChoice(this, eventId, String(text), named) : named;
             });
             params = [choices].concat(params.slice(1));
         }
@@ -586,13 +711,15 @@
 
     const soulTotal = () => state().souls + state().runSouls;
 
+    const soulMilestones = () => option("soul_milestones") || LEGACY_SOUL_MILESTONES;
+
     const updateSouls = () => {
         const s = state();
         const score = $gameVariables.value(VARIABLE_FLOOR) >= 1 ? runScore() : null;
         if (score !== null) {
             s.runSouls = Math.max(s.runSouls, score * (option("soul_multiplier") || 1));
         }
-        for (const milestone of SOUL_MILESTONES) {
+        for (const milestone of soulMilestones()) {
             if (soulTotal() >= milestone && !s.checked.includes(SOUL_OFFSET + milestone)) {
                 check(SOUL_OFFSET + milestone);
             }
@@ -603,7 +730,7 @@
         if (!bound()) {
             return "";
         }
-        const next = SOUL_MILESTONES.find(milestone => milestone > soulTotal());
+        const next = soulMilestones().find(milestone => milestone > soulTotal());
         return "Souls " + soulTotal() + (next ? " / " + next : "");
     };
 
@@ -747,10 +874,14 @@
         } else if (item.id >= BOSS_OFFSET) {
             remember(s.bosses, item.id - BOSS_OFFSET);
         } else if (item.id >= EVENT_OFFSET) {
-            remember(s.events, item.id - EVENT_OFFSET);
+            // One unlock can open a pair of events
+            const group = eventGroup(item.id - EVENT_OFFSET);
+            (group ? group.events : [item.id - EVENT_OFFSET]).forEach(eventId => remember(s.events, eventId));
         } else if (item.id >= RELIC_OFFSET) {
             remember(s.relics, item.id - RELIC_OFFSET);
             grantRelic(item.id - RELIC_OFFSET);
+        } else if (item.id === ITEM_FINISHER) {
+            s.finisher = true;
         } else if (GOLD_ITEMS[item.id]) {
             $gameParty.gainGold(GOLD_ITEMS[item.id]);
         }
@@ -804,18 +935,31 @@
     //-------------------------------------------------------------------------
     // Floor flow (called from the patched common events)
 
-    const kingUnlocked = kingSwitch => !bound() || state().bosses.includes(kingSwitch);
+    const kingsDefeated = () => KING_SWITCHES.every(kingSwitch => $gameSwitches.value(kingSwitch));
+
+    // From the floor of the last boss on the doors are a free choice: any king again, the last boss, or go on
+    const freeDoors = () => bound() && ($gameVariables.value(VARIABLE_FLOOR) >= FREE_DOORS_FLOOR || kingsDefeated());
+
+    const doorOpen = kingSwitch => {
+        const defeated = $gameSwitches.value(kingSwitch);
+        if (!bound()) {
+            return !defeated;
+        }
+        return state().bosses.includes(kingSwitch) && (!defeated || freeDoors());
+    };
+
+    const mirrorSwitch = (switchId, value) => {
+        if ($gameSwitches.value(switchId) !== value) {
+            _Game_Switches_setValue.call($gameSwitches, switchId, value);
+        }
+    };
 
     const syncKingUnlockSwitches = () => {
         for (const kingSwitch of KING_SWITCHES) {
-            const unlockSwitch = kingSwitch + KING_UNLOCK_SWITCH_SHIFT;
-            if ($gameSwitches.value(unlockSwitch) !== kingUnlocked(kingSwitch)) {
-                _Game_Switches_setValue.call($gameSwitches, unlockSwitch, kingUnlocked(kingSwitch));
-            }
+            mirrorSwitch(kingSwitch + KING_UNLOCK_SWITCH_SHIFT, doorOpen(kingSwitch));
         }
-        if ($gameSwitches.value(SWITCH_BOUND) !== bound()) {
-            _Game_Switches_setValue.call($gameSwitches, SWITCH_BOUND, bound());
-        }
+        mirrorSwitch(SWITCH_TURN_BACK, bound() && !freeDoors());
+        mirrorSwitch(SWITCH_FREE_DOORS, freeDoors());
     };
 
     // Switch of the boss scene `floor` leads to, 0 when it is an ordinary floor
@@ -823,10 +967,11 @@
         if (floor % BOSS_FLOOR_INTERVAL !== 0) {
             return 0;
         }
-        if (KING_SWITCHES.every(kingSwitch => $gameSwitches.value(kingSwitch))) {
+        if (!bound() && kingsDefeated()) {
             return SWITCH_LAST_BOSS;
         }
-        // The hallway also comes up without an open door: the way on is closed until a king falls
+        // In a multiworld every boss floor leads to the doors. The last boss is one of the choices there, and
+        // without an open door the way on is closed until a king falls.
         return SWITCH_BEFORE_BOSS;
     };
 
@@ -865,6 +1010,19 @@
         }
     };
 
+    // { name, events } of the pair `eventId` belongs to (slot data "event_groups"), null for an event on its own
+    const eventGroup = eventId => {
+        const groups = option("event_groups") || {};
+        const name = Object.keys(groups).find(groupName => groups[groupName].includes(eventId));
+        return name ? { name: name, events: groups[name] } : null;
+    };
+
+    // What the floor choice calls an event: a pair goes by the name of its unlock, which hides which one it is
+    const eventName = eventId => {
+        const group = eventGroup(eventId);
+        return group ? group.name : $dataCommonEvents[eventId].name;
+    };
+
     const startFloorEvent = switchId => {
         if (switchId !== SWITCH_FIGHT) {
             $gameVariables.setValue(VARIABLE_FLOOR_EVENT, switchId);
@@ -874,17 +1032,37 @@
 
     // Asks what `floor` holds and hands the switch id to `callback`. False when there is nothing to choose from.
     const offerFloorEvents = (interpreter, floor, callback) => {
-        const pool = state().events.filter(eventId => eventAvailable(eventId, floor));
+        // Drawn from every event the floor could hold. The ones without their unlock are shown grayed out, so a
+        // few unlocked events do not come up floor after floor.
+        const unlocked = eventId => state().events.includes(eventId);
+        const canGray = !!$gameMessage.setChoiceEnables; // MPP_ChoiceEX
+        const pool = [];
+        for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
+            if (eventAvailable(eventId, floor) && (canGray || unlocked(eventId))) {
+                pool.push(eventId);
+            }
+        }
         const offered = [];
         while (offered.length < FLOOR_EVENT_CHOICES && pool.length > 0) {
-            offered.push(pool.splice(Math.randomInt(pool.length), 1)[0]);
+            const eventId = pool.splice(Math.randomInt(pool.length), 1)[0];
+            const group = eventGroup(eventId);
+            offered.push(eventId);
+            // The two events of a pair go by one name, so only one of them is offered at a time
+            for (let i = pool.length - 1; group && i >= 0; i--) {
+                if (group.events.includes(pool[i])) {
+                    pool.splice(i, 1);
+                }
+            }
         }
-        if (offered.length === 0) {
+        if (!offered.some(unlocked)) {
             return false;
         }
         const switchIds = [SWITCH_FIGHT].concat(offered);
-        const names = ["Battle"].concat(offered.map(eventId => $dataCommonEvents[eventId].name));
+        const names = ["Battle"].concat(offered.map(eventName));
         $gameMessage.setChoices(names, 0, -1);
+        if (canGray) {
+            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked)));
+        }
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
         $gameMessage.setChoiceCallback(index => callback(switchIds[index]));
@@ -903,7 +1081,11 @@
         if (bossFloorSwitch(floor)) {
             return;
         }
-        offerFloorEvents(interpreter, floor, switchId => (AP.chosenFloorEvent = switchId));
+        const offered = offerFloorEvents(interpreter, floor, switchId => (AP.chosenFloorEvent = switchId));
+        if (offered && $gameMessage.setChoicePos) {
+            // Below the lines of the standby screen instead of over them
+            $gameMessage.setChoicePos(-1, STANDBY_CHOICE_Y, CHOICE_MAX_ROWS);
+        }
     };
 
     // Replaces the fight / random event roll of common event 86
@@ -1091,7 +1273,13 @@
         },
         event: words => {
             const text = words.join(" ");
-            const entry = text.toLowerCase() === "fight" ? { id: SWITCH_FIGHT, name: "Fight" } : findEntry($dataCommonEvents, text);
+            const alias = EVENT_ALIASES[text.toLowerCase()];
+            const entry =
+                text.toLowerCase() === "fight"
+                    ? { id: SWITCH_FIGHT, name: "Fight" }
+                    : alias
+                    ? { id: alias, name: text }
+                    : findEntry($dataCommonEvents, text);
             if (!entry || (entry.id !== SWITCH_FIGHT && (entry.id < EVENT_MIN || entry.id > EVENT_MAX))) {
                 return "No floor event called " + text;
             }
@@ -1380,39 +1568,121 @@
         }
         choices.parameters[0] = choices.parameters[0].map((text, index) => {
             const kingSwitch = KING_SWITCHES[index];
-            const unlockSwitch = kingSwitch + KING_UNLOCK_SWITCH_SHIFT;
-            return text.replace("(!s[" + kingSwitch + "]", "(s[" + unlockSwitch + "]&&!s[" + kingSwitch + "]");
+            return text.replace("!s[" + kingSwitch + "]", "s[" + (kingSwitch + KING_UNLOCK_SWITCH_SHIFT) + "]");
         });
-        patchTurnBack(list, list.indexOf(choices));
+        patchDoorChoices(list, list.indexOf(choices));
     };
 
-    // A fifth door choice that leads to the standby screen the way a victory does, without the fight
-    const patchTurnBack = (list, choices) => {
+    // More door choices. After a victory the event clears the particles of the hallway, moves to the map of the
+    // climb and calls the standby screen: the new choices that skip the fight join in there.
+    const patchDoorChoices = (list, choices) => {
         const indent = list[choices].indent;
         const choicesEnd = list.findIndex((item, i) => i > choices && item.code === 404 && item.indent === indent);
         const leave = list.findIndex(
             (item, i) => i > choicesEnd && item.indent === 0 && item.code === 357 && item.parameters[1] === "clear"
         );
-        if (choicesEnd < 0 || leave < 0) {
-            console.error("[AP] Common event 63 has an unexpected layout, the boss doors have no way back");
+        const transfer = list.findIndex((item, i) => i > leave && item.indent === 0 && item.code === 201);
+        if (choicesEnd < 0 || leave < 0 || transfer < 0) {
+            console.error("[AP] Common event 63 has an unexpected layout, the boss doors have no other choices");
             return;
         }
-        const choice = list[choices].parameters[0].length;
-        // MPP_ChoiceEX reads the condition up to the first closing bracket, so it has to be a plain switch
-        const text = "Turn Backif(s[" + SWITCH_BOUND + "])";
+        const leaveHallway = list.slice(leave, transfer + 1).map(item => Object.assign({}, item));
+        const added = [
+            // The last boss (common event 64) expects to start on the map of the climb with the screen faded out
+            [
+                "Final Bossif(s[" + SWITCH_FREE_DOORS + "])",
+                [command(221, 0, [])].concat(leaveHallway, [
+                    command(121, 0, [SWITCH_KING_BATTLE, SWITCH_KING_BATTLE, 1]),
+                    command(121, 0, [SWITCH_LAST_BOSS, SWITCH_LAST_BOSS, 0]),
+                    command(119, 0, [LABEL_END]),
+                ]),
+            ],
+            ["Keep Goingif(s[" + SWITCH_FREE_DOORS + "])", [command(119, 0, [LABEL_LEAVE_DOORS])]],
+            [
+                "Turn Backif(s[" + SWITCH_TURN_BACK + "])",
+                [
+                    command(355, 0, ["LostChapterAP.turnBack();"]),
+                    command(101, 0, ["", 0, 1, 2, ""]),
+                    command(401, 0, ["You turned back. The way on stays closed until a Heavenly King falls."]),
+                    command(119, 0, [LABEL_LEAVE_DOORS]),
+                ],
+            ],
+        ];
+        const branches = [];
+        for (const [text, commands] of added) {
+            branches.push(command(402, indent, [list[choices].parameters[0].length, text]));
+            commands.forEach(item => (item.indent = indent + 1));
+            branches.push(...commands, command(0, indent + 1, []));
+            list[choices].parameters[0].push(text);
+        }
         // Later index first, so the earlier one stays valid
-        list.splice(leave, 0, command(118, 0, [LABEL_TURN_BACK]));
-        list.splice(
-            choicesEnd,
-            0,
-            command(402, indent, [choice, text]),
-            command(355, indent + 1, ["LostChapterAP.turnBack();"]),
-            command(101, indent + 1, ["", 0, 1, 2, ""]),
-            command(401, indent + 1, ["You turned back. The way on stays closed until a Heavenly King falls."]),
-            command(119, indent + 1, [LABEL_TURN_BACK]),
-            command(0, indent + 1, [])
+        list.splice(leave, 0, command(118, 0, [LABEL_LEAVE_DOORS]));
+        list.splice(choicesEnd, 0, ...branches);
+    };
+
+    // Replaces "the enemy is in its Refractory Period" where the turn start draws Kick Balls
+    AP.finisher = () => {
+        const enemy = $gameTroop.members()[0];
+        if (!enemy || !enemy.isStateAffected(STATE_REFRACTORY)) {
+            return false;
+        }
+        const mode = option("finisher_move");
+        return mode === FINISHER_REMOVE ? false : mode === FINISHER_SHUFFLE ? !!state().finisher : true;
+    };
+
+    const patchFinisher = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_TURN_START].list;
+        const draw = list.findIndex((item, i) => {
+            const p = item.parameters;
+            const next = list[i + 1];
+            return (
+                item.code === 111 && p[0] === 5 && p[2] === 1 && p[3] === STATE_REFRACTORY &&
+                next && next.code === 122 && next.parameters[4] === CARD_FINISHER
+            );
+        });
+        if (draw < 0) {
+            console.error("[AP] Common event 103 has an unexpected layout, Kick Balls is not patched");
+            return;
+        }
+        list[draw].parameters = [12, "LostChapterAP.finisher()"];
+    };
+
+    // A floor event that hands out a relic asks "has relic n" to tell whether that already happened
+    const patchRelicConditions = () => {
+        for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
+            const list = $dataCommonEvents[eventId].list;
+            const handedOut = RELIC_WEAPONS.filter(weaponId =>
+                list.some(item => item.code === 127 && item.parameters[0] === weaponId && item.parameters[1] === 0)
+            );
+            let patched = 0;
+            for (const item of list) {
+                const p = item.parameters;
+                if (item.code !== 111 || p[0] !== 9 || !handedOut.includes(p[1])) {
+                    continue;
+                }
+                // The Locksmith only asks this way before he makes the Black Key. His later questions are about
+                // the key in the bag, which he takes back in a loop that runs until it is gone.
+                if (eventId === COMMON_EVENT_LOCKSMITH && patched > 0) {
+                    continue;
+                }
+                item.parameters = [12, "LostChapterAP.relicTaken(" + p[1] + ", " + !!p[2] + ")"];
+                patched++;
+            }
+        }
+    };
+
+    // Pond: the game offers "Bathe in the Water" while there is nothing to wash off and hides it otherwise
+    const patchPond = () => {
+        const choices = $dataCommonEvents[COMMON_EVENT_POND].list.find(
+            item => item.code === 102 && item.parameters[0].some(text => String(text).includes(POND_BATHE_HIDDEN))
         );
-        list[choices].parameters[0].push(text);
+        if (!choices) {
+            console.error("[AP] Common event 54 has an unexpected layout, bathing is not patched");
+            return;
+        }
+        choices.parameters[0] = choices.parameters[0].map(text =>
+            String(text).replace(POND_BATHE_HIDDEN, POND_BATHE_SHOWN)
+        );
     };
 
     const _DataManager_onLoad = DataManager.onLoad;
@@ -1426,6 +1696,9 @@
             patchNextFloor();
             patchKingDoors();
             patchTitleReleases();
+            patchRelicConditions();
+            patchPond();
+            patchFinisher();
             findScoreCommands();
         } else if (object === $dataMap) {
             patchMap(object);

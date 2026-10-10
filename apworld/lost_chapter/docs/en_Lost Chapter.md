@@ -8,11 +8,14 @@ a config file.
 ## What does randomization do to this game?
 
 Floor events are locked. Every floor is a fight until you receive event unlocks; from then on each floor lets you
-pick between a battle and up to two of your unlocked events.
+pick between a battle and two events rolled from all the events of the game. The ones you have not unlocked are
+grayed out, and a floor that rolls no unlocked event is simply a fight. You start with a few events unlocked: two
+random ones by default, which the `starting_event_count` and `starting_events` options change.
 
-Each Heavenly King needs his boss unlock, his door is grayed out without it. Every 20th floor leads to the doors, and
+Each Heavenly King needs his door key, his door is grayed out without it. Every 20th floor leads to the doors, and
 the climb only goes on once a king is defeated there. Until then the doors let you turn back, which repeats the
-last 20 floors.
+last 20 floors. From floor 100 on, with all four kings defeated, the doors let you pick freely every 20 floors:
+any king again, the final boss, or keep going without a fight.
 
 Relics normally handed out by events are shuffled into the multiworld. Finding one in an event sends a check instead,
 and the relic arrives when someone finds it for you. Received relics are kept between runs.
@@ -35,8 +38,12 @@ the remaining checks stay reachable.
 
 ## What is the goal?
 
-Defeating the last boss, which needs all four Heavenly Kings defeated first. With the `ending_1` goal it has
-to happen in a run that would get ENDING 1, which takes a climax count of 20 or less.
+Defeating the last boss, which needs all four Heavenly Kings defeated first. The `goal` option picks one of:
+
+- `normal_end`: any win over the last boss.
+- `true_end`: a win in a run that would get ENDING 1, which takes a climax count of 20 or less.
+- `virgin_end`: a win with the Virginity status intact. Losing it ends the run on the spot, and the "Lose Virginity"
+  title check only holds filler. There is no story difference, it is only for those who want the challenge.
 
 ## Which locations are checks?
 
@@ -50,4 +57,4 @@ to happen in a run that would get ENDING 1, which takes a climax count of 20 or 
 
 ## Which items can be in another player's world?
 
-Floor event unlocks, boss unlocks, title effects, starting sets, relics and gold.
+Floor event unlocks, door keys, title effects, starting sets, relics and gold.

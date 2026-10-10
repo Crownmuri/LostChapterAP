@@ -24,7 +24,7 @@ SOUL_OFFSET = 10000   # location id = offset + soul milestone
 VARIABLE_FLOOR = 11
 
 # A Heavenly King waits on every 20th floor (common event 86 "---Standby End---"). The plugin only lets the climb
-# go on once one of them is defeated there, so every boss floor passed takes one more boss unlock.
+# go on once one of them is defeated there, so every boss floor passed takes one more door key.
 BOSS_FLOOR_INTERVAL = 20
 FLOOR_CHECKS = range(10, 81, 10)
 
@@ -35,7 +35,20 @@ LATE_EVENT_FLOOR = 41
 # Souls are the score the bonus shop spends. Common event 72 computes the score of a run:
 # (Max LP + Max RP + Gold + fluids) / 10 + STR + DEF + MAG + AGL + LEWD + Floor + counts, plus fixed amounts for
 # relics, quest flags and Heavenly Kings. The plugin adds up the best score of every run.
-SOUL_MILESTONES = (50, 100, 200, 500, 1000, 2000)
+#
+# milestone -> the floor a climb is expected to reach for it. The first four belong to the first 20 floors.
+SOUL_MILESTONES: Dict[int, int] = {
+    50: 20,
+    100: 20,
+    200: 20,
+    400: 20,
+    600: 40,
+    800: 40,
+    1000: 60,
+    1200: 60,
+    1600: 80,
+    2000: 100,
+}
 
 # Game switches
 SWITCH_CLEARED = 1  # set by the Ending map (Map011). The plugin keeps it on, so the climb continues after the last boss
@@ -46,6 +59,14 @@ HEAVENLY_KINGS: Dict[int, str] = {
     72: "Orgenbein",
     73: "Hielohude",
     74: "Spisnix",
+}
+
+# switch id of the Heavenly King -> the item that opens his door (the door choices of common event 63)
+DOOR_KEYS: Dict[int, str] = {
+    71: "Crimson Door Key",
+    72: "Azure Door Key",
+    73: "Emerald Door Key",
+    74: "Gold Door Key",
 }
 
 # title number -> name, in the order of the Title Collection screen (rows of four).
@@ -73,6 +94,7 @@ TITLES: Dict[int, str] = {
     16: "Azure Philosophy",  # Possess 15 or more cards
 }
 TITLE_SWITCH_BASE = 200
+TITLE_LOSE_VIRGINITY = 1
 
 # title number -> the Heavenly King whose defeat is the condition of that title
 TITLE_KINGS: Dict[int, str] = {
@@ -80,6 +102,19 @@ TITLE_KINGS: Dict[int, str] = {
     7: "Granisso",
     10: "Hielohude",
     13: "Orgenbein",
+}
+
+# title number -> floor events that move the stat its condition is about (docs/events.md). Any one of them will do.
+# FAITH and VIRTUE start at 50 and an origin shifts them by 15 at most, LEWD starts at 2, and nothing but floor
+# events changes them. Only choices that are open on a first visit are counted, not the ones behind a quest, a
+# card or a stat that has to be reached first.
+TITLE_EVENTS: Dict[int, List[str]] = {
+    2: ["Desert", "Desert 2", "Market", "Library", "Girl", "Debauch", "Highway"],  # FAITH down
+    3: ["Collapse", "Camp", "Highway"],  # VIRTUE down
+    5: ["Desert 2", "Devil Temple", "Camp", "Debauch", "Highway", "Lake Shore"],  # LEWD up
+    12: ["Forest", "Quarrel", "Market 2", "Small Room", "Library", "River", "Lake Shore"],  # STR/DEF/MAG/AGL, LP/RP
+    14: ["Beggar", "Highway"],  # VIRTUE up
+    15: ["Goddess Temple", "Devil Temple"],  # FAITH up
 }
 
 # troop id -> enemy name (common event 65 "Fight")
@@ -106,6 +141,14 @@ ENEMIES: Dict[int, str] = {
     20: "Fortitude",
     21: "Despair",
 }
+
+# troop id -> the first floor the enemy shows up on. Common event 65 rolls the troop by floor: three new enemies
+# every 20 floors, and from floor 21 on half of the fights are picked from the newest ones only (the newest six on
+# floors 101-120, the newest nine on 121-160). Enemies of lower floors keep appearing in the other half. From floor
+# 161 on every enemy is equally likely.
+#   floors 1-20: 1-3      21-40: 4-6      41-60: 7-9      61-80: 10-12
+#   81-100: 13-15         101-120: 16-18  121+: 19-21
+ENEMY_FLOORS: Dict[int, int] = {troop_id: 1 + BOSS_FLOOR_INTERVAL * ((troop_id - 1) // 3) for troop_id in ENEMIES}
 
 # common event id -> floor event name. Event n runs while switch n is on (set by common event 86).
 EVENTS: Dict[int, str] = {
@@ -151,6 +194,57 @@ EVENTS: Dict[int, str] = {
     60: "Hill",
     61: "Prison",  # the game only offers it once cleared, which the plugin makes true from the start
 }
+
+# Events that only come up in a state a fresh run is not in (torn clothes, Lust). Not handed out as random
+# starting events.
+CONDITIONAL_EVENTS = (46, 52)
+
+# unlock name -> the floor events it opens. The two of a pair start out alike (same place, mostly the same opening
+# lines), so they share one unlock and the game offers them under that one name. Each keeps its own first visit.
+EVENT_GROUPS: Dict[str, List[int]] = {
+    "Hot Spring": [22, 23],
+    "Desert": [26, 27],
+    "Temple": [28, 29],
+    "Market": [33, 34],
+    "Small Room": [35, 52],
+}
+
+# event id -> name of the unlock that opens it: its group, or the event itself
+EVENT_UNLOCKS: Dict[int, str] = dict(EVENTS)
+for _unlock, _event_ids in EVENT_GROUPS.items():
+    for _event_id in _event_ids:
+        EVENT_UNLOCKS[_event_id] = _unlock
+
+# unlock name -> its events. The item id of an unlock is EVENT_OFFSET + its first event.
+UNLOCK_EVENTS: Dict[str, List[int]] = {}
+for _event_id, _unlock in sorted(EVENT_UNLOCKS.items()):
+    UNLOCK_EVENTS.setdefault(_unlock, []).append(_event_id)
+
+EVENT_IDS: Dict[str, int] = {name: event_id for event_id, name in EVENTS.items()}
+
+# event id -> what its first visit is called, for the events of a pair: the unlock and what sets the two apart
+EVENT_VISITS: Dict[int, str] = {
+    22: "Hot Spring - Heal",
+    23: "Hot Spring - Trap",
+    26: "Desert - Heal",
+    27: "Desert - Trap",
+    28: "Temple - Good",
+    29: "Temple - Evil",
+    33: "Market - Elderly",
+    34: "Market - Merchant",
+    35: "Small Room - Vials",
+    52: "Small Room - Vacant Cabin",
+}
+
+
+def first_visit(event_id: int) -> str:
+    """Name of the first visit location of a floor event."""
+    return f"First Visit: {EVENT_VISITS.get(event_id, EVENTS[event_id])}"
+
+
+def event_item(event: str) -> str:
+    """Name of the item that unlocks a floor event."""
+    return f"Event: {EVENT_UNLOCKS[EVENT_IDS[event]]}"
 
 # bonus id of the bonus shop (common event 418) -> starting set. Each set is three cards.
 STARTING_SETS: Dict[int, str] = {
@@ -198,6 +292,11 @@ FILLER: Dict[int, str] = {
     1: "100 Gold",
     2: "300 Gold",
 }
+
+# The card that is drawn the turn after the enemy climaxes and defeats it outright (skill 93, common event 103).
+# With the finisher_move option on "shuffle" it only shows up once this item is found.
+FINISHER_ID = 10
+FINISHER = "Kick Balls"
 
 VICTORY = "Victory"
 ENDING_EVENT = "Reach the Ending"

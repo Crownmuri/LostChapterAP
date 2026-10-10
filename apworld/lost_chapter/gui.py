@@ -41,7 +41,7 @@ class LostChapterTabLayout(BoxLayout):
     status_label: Label
     progress_label: Label
     events_label: Label
-    event_labels: Dict[int, Label]
+    event_labels: Dict[str, Label]
 
     def __init__(self, ctx: LostChapterContext) -> None:
         super().__init__(orientation="vertical", spacing="8dp", padding="12dp")
@@ -60,11 +60,12 @@ class LostChapterTabLayout(BoxLayout):
 
         self.event_labels = dict()
 
-        for event_id in data.EVENTS:
+        # One row for each unlock, a pair of events shares one
+        for unlock in data.UNLOCK_EVENTS:
             label = Label(font_size="15dp", halign="left", valign="middle", markup=True)
             label.bind(size=label.setter("text_size"))
 
-            self.event_labels[event_id] = label
+            self.event_labels[unlock] = label
             event_grid.add_widget(label)
 
         event_scroll = ScrollView(do_scroll_x=False)
@@ -97,15 +98,21 @@ class LostChapterTabLayout(BoxLayout):
         received = {network_item.item for network_item in ctx.items_received}
         unlocked_count = 0
 
-        for event_id, label in self.event_labels.items():
-            unlocked = data.EVENT_OFFSET + event_id in received
+        for unlock, label in self.event_labels.items():
+            event_ids = data.UNLOCK_EVENTS[unlock]
+
+            # A seed from before the pairs has an unlock for each of the two events
+            unlocked = any(data.EVENT_OFFSET + event_id in received for event_id in event_ids)
             unlocked_count += unlocked
 
-            left = sum(1 for location in EVENT_LOCATIONS[event_id] if location in ctx.missing_locations)
+            left = sum(
+                1 for event_id in event_ids for location in EVENT_LOCATIONS[event_id]
+                if location in ctx.missing_locations
+            )
             color = COLOR_UNLOCKED if unlocked else COLOR_LOCKED
             checks = f"{left} left" if left else f"[color={COLOR_DONE}]done[/color]"
 
-            label.text = f"[color={color}]{data.EVENTS[event_id]}[/color]  {checks}"
+            label.text = f"[color={color}]{unlock}[/color]  {checks}"
 
         self.events_label.text = f"Events unlocked: {unlocked_count}/{len(self.event_labels)}"
 
@@ -116,7 +123,12 @@ class LostChapterTabLayout(BoxLayout):
         lines: List[str] = [f"Install: {game_path or 'not found (set lost_chapter_options.game_path in host.yaml)'}"]
 
         if game_path:
-            lines.append(f"Plugin: {'installed' if game_install.is_plugin_installed(game_path) else 'not installed (/patch)'}")
+            if game_install.is_plugin_current(game_path):
+                lines.append("Plugin: installed")
+            elif game_install.is_plugin_installed(game_path):
+                lines.append("Plugin: outdated (/patch, then restart the game)")
+            else:
+                lines.append("Plugin: not installed (/patch)")
 
         if ctx.bridge.is_game_connected:
             lines.append(f"Game: connected (plugin {ctx.bridge.plugin_version or '?'})")

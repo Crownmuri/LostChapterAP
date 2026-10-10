@@ -72,6 +72,15 @@ def is_plugin_installed(game_path: str) -> bool:
         return _ENTRY_PATTERN.search(f.read()) is not None
 
 
+def is_plugin_current(game_path: str) -> bool:
+    """The plugin in the game folder is the one this apworld ships."""
+    if not is_plugin_installed(game_path):
+        return False
+
+    with open(os.path.join(game_path, "js", "plugins", PLUGIN_FILE), "rb") as f:
+        return f.read() == pkgutil.get_data(__package__, f"game_plugin/{PLUGIN_FILE}")
+
+
 def install_plugin(game_path: str, port: int) -> None:
     """Copies the plugin into js/plugins and registers it in js/plugins.js (the original is backed up once)."""
     plugin_source = pkgutil.get_data(__package__, f"game_plugin/{PLUGIN_FILE}")

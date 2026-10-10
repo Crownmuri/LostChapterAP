@@ -6,9 +6,11 @@ requires:
   version: 0.6.7
 
 Lost Chapter:
-  # ending: defeat the last boss
-  # ending_1: defeat the last boss with a climax count of 20 or less
-  goal: ending
+  # normal_end: defeat the last boss
+  # true_end: defeat the last boss with a climax count of 20 or less
+  # virgin_end: defeat the last boss with the Virginity status intact, losing it ends the run.
+  #             No story difference, only for those who want the challenge
+  goal: normal_end
 
   # Relics found in events become checks and are shuffled into the pool
   relicsanity: true
@@ -19,7 +21,20 @@ Lost Chapter:
   # Releasing a title also needs its Unlock Title Effect item. false: titles release as in the normal game
   shuffle_title_effects: true
 
-  # 1-10. Souls add up over all runs and send checks at 50, 100, 200, 500, 1000 and 2000
+  # Kick Balls, the card that turns up after the enemy climaxes and defeats it outright
+  # vanilla: as in the normal game
+  # shuffle: only once the Kick Balls item is found
+  # remove: never
+  finisher_move: vanilla
+
+  # 0-36. Floor event unlocks you start with, picked at random from the events of the first 40 floors.
+  # Desert, Temple, Hot Spring, Market and Small Room are one unlock for two events each
+  starting_event_count: 2
+
+  # Floor events unlocked from the start by name, e.g. ["Market", "Inn"]. They count towards the number above
+  starting_events: []
+
+  # 1-10. Souls add up over all runs and send checks at milestones from 50 to 2000
   soul_multiplier: 2
 
   progression_balancing: 50

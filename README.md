@@ -100,7 +100,7 @@ real `CommonEvents.json` in a headless browser with a stubbed engine, but has no
 Checks: Heavenly Kings, title conditions, first victories, every 10th floor, first visit of each floor event,
 relics from events, soul milestones.
 
-Items: floor event unlocks, boss unlocks, title effects, starting sets, relics, gold.
+Items: floor event unlocks, door keys, title effects, starting sets, relics, gold.
 
 The plugin only acts in a session: the client's `/run` writes `archipelago_session.json`
 into the game folder, and the plugin reads it at boot. In a session the game saves into `save_ap_<seed>_<slot>/`
@@ -109,12 +109,16 @@ the normal save is used. The client removes the file when it closes.
 
 Game changes in a session (the plugin patches the event data in memory at load, the game files stay untouched):
 
-- Every floor is a fight until floor events are unlocked. With unlocked events the player picks between Battle and
-  up to two random unlocked events. The game's own conditions for an event still apply (floor 41+ for Locksmith,
+- Every floor is a fight until floor events are unlocked. Each floor rolls two of all the events it could hold
+  and the player picks between Battle and those two; an event without its unlock is grayed out, and a floor that
+  rolls no unlocked event is a fight without asking. The game's own conditions for an event still apply (floor 41+ for Locksmith,
   Corridor, Throne and Hill, torn clothes for the Seamstress, ...).
-- The door of a Heavenly King is grayed out without his boss unlock. Every boss floor leads to the hallway, and
+- The door of a Heavenly King is grayed out without his door key. Every boss floor leads to the hallway, and
   the doors also offer **Turn Back**, which repeats the last 20 floors: the climb only goes on once a king is
-  defeated there. The last boss still appears once all four are defeated.
+  defeated there.
+- From floor 100 on (all four kings defeated) the doors are a free choice on every boss floor: fight any king
+  again, fight the last boss (**Final Boss**), or **Keep Going** without a fight. Nothing has to be beaten again
+  to climb further.
 - Meeting the condition of a title sends its check. Releasing the title in the Title Collection, which is what
   grants the reward and counts for the row and column bonuses, also needs its Unlock Title Effect item (the Title Collection names it under the description while it is
   missing). The `shuffle_title_effects` option turns that off.
@@ -125,15 +129,31 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - The bonus shop and its currency are skipped. Received starting sets are offered in a menu right after the
   origin is confirmed, one set per run.
 - Souls are counted live with the game's own score formula. The best score of every run adds up, times the
-  `soul_multiplier` option, and sends checks at 50, 100, 200, 500, 1000 and 2000. The standby screen shows the
-  total and the next milestone.
+  `soul_multiplier` option, and sends checks at 50, 100, 200, 400, 600, 800, 1000, 1200, 1600 and 2000. In logic the
+  first four belong to the first 20 floors, 600 and 800 to floor 40, 1000 and 1200 to floor 60, 1600 to floor 80
+  and 2000 to floor 100. The standby screen shows the total and the next milestone.
 - The "Once upon a time" questions are replaced by one list of the nine origins with their effects. The
   description and the Correct / Wrong confirmation are unchanged.
 
-Logic: first visits need the event unlock, kings and their four titles need the boss unlock, relics need their
-source events, the ending needs all four boss unlocks. Every boss floor passed takes one more boss unlock: floors
-21-40 need one, 41-60 two, 61-80 three, which also applies to the floor 41+ events and their relics. Fights and the
-other titles have no rules yet.
+Logic: first visits need the event unlock, kings and their four titles need the door key, relics need their
+source events, the ending needs all four door keys. Every boss floor passed takes one more door key: floors
+21-40 need one, 41-60 two, 61-80 three, which also applies to the floor 41+ events and their relics. The titles about
+FAITH, VIRTUE, LEWD and the stats need one of the events that move them (`TITLE_EVENTS` in `data.py`). A first victory
+needs the floor its enemy first shows up on (`ENEMY_FLOORS`): three new enemies every 20 floors, the last six on
+floors 101 and 121, which are past the last boss. How hard a fight is and the remaining titles have no rules yet.
+
+Five pairs of events that start out alike share one unlock and one name in the floor choice (`EVENT_GROUPS`):
+Desert (Desert, Desert 2), Temple (Goddess Temple, Devil Temple), Hot Spring (Hot Spring, Pond of Acid), Market
+(Market, Market 2) and Small Room (Small Room, Small Room 2). Each event keeps its own first visit check, named after
+what sets the two apart ("First Visit: Desert - Heal" and "First Visit: Desert - Trap", `EVENT_VISITS`), which is
+sent when the event ends. A choice inside an event whose condition is not met is shown grayed out with what it
+requires instead of being hidden.
+
+`finisher_move` decides about Kick Balls, the card drawn the turn after the enemy climaxes: `vanilla`, `shuffle`
+(only once the useful item Kick Balls is found) or `remove`.
+
+A seed starts with `starting_event_count` floor events unlocked (2 by default), random ones from the first 40
+floors on top of the ones named in `starting_events`.
 
 ## Roadmap
 
