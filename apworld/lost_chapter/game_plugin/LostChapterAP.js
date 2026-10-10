@@ -2258,6 +2258,37 @@
     };
 
     // Takes "floor 19" or ["floor", "19"] and returns a line of text
+    // What the game is waiting for, for a standby screen that does not react
+    devCommands.stuck = () => {
+        const interpreter = $gameMap._interpreter;
+        const running = [];
+        for (let current = interpreter; current; current = current._childInterpreter) {
+            const list = current._list;
+            const event = list ? $dataCommonEvents.find(other => other && other.list === list) : null;
+            const item = list ? list[current._index] : null;
+            running.push(
+                (list ? (event ? "CE " + event.id + " " + event.name : "map event " + current._eventId) : "idle") +
+                    (list ? " at " + current._index + "/" + list.length + " code " + (item ? item.code : "end") : "") +
+                    (current._waitMode ? " waits for " + current._waitMode : "") +
+                    (current._waitCount ? " waits " + current._waitCount + " frames" : "")
+            );
+        }
+        const on = [1, 2, 16, 17, 66, 86, 87, 88, 89, 90, 101, 294].filter(id => $gameSwitches.value(id));
+        const s = state();
+        return [
+            "map " + $gameMap.mapId() + ", floor " + $gameVariables.value(VARIABLE_FLOOR) + ", screen " +
+                $gameVariables.value(VARIABLE_SCREEN) + ", LP " + $gameVariables.value(VARIABLE_LP),
+            "interpreter: " + running.join(" > "),
+            "switches on: " + on.join(", "),
+            "message busy " + $gameMessage.isBusy() + ", choice " + $gameMessage.isChoice() + ", reserved CE " +
+                $gameTemp.isCommonEventReserved() + ", fade " + $gameScreen.brightness(),
+            "bound " + bound() + ", active " + active() + ", holdFloor " + (s ? !!s.holdFloor : "-") + ", runOver " +
+                (s ? !!s.runOver : "-") + ", standbyChoice " + !!AP.standbyChoice + ", menu " + AP.standbyMenu +
+                ", again " + !!AP.standbyAgain + ", chosen " + AP.chosenFloorEvent,
+            "bgm " + (AudioManager._currentBgm ? AudioManager._currentBgm.name : "none"),
+        ].join("\n");
+    };
+
     AP.dev = input => {
         const words = Array.isArray(input) ? input.map(String) : String(input).trim().split(/\s+/);
         const handler = devCommands[(words[0] || "help").toLowerCase()];
