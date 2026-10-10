@@ -83,6 +83,7 @@
     const VARIABLE_FLOOR = 11;
     const VARIABLE_FLOOR_EVENT = 12;
     const VARIABLE_ORIGIN = 2;
+    const VARIABLE_LEWD = 51;
     const VARIABLE_PLAYTHROUGH = 67;
     const VARIABLE_CLIMAX_COUNT = 232;
     const VARIABLE_SCORE = 77;
@@ -417,7 +418,10 @@
         const socket = new WebSocket("ws://127.0.0.1:" + PORT);
         AP.socket = socket;
 
-        socket.onopen = () => send({ cmd: "Hello", version: VERSION, session: SESSION ? SESSION.save : null });
+        socket.onopen = () => {
+            AP.lastStatus = null;
+            send({ cmd: "Hello", version: VERSION, session: SESSION ? SESSION.save : null });
+        };
         socket.onmessage = event => onMessage(JSON.parse(event.data));
         socket.onclose = () => {
             AP.slot = null;
@@ -566,6 +570,33 @@
         }
     };
 
+    // The run as it stands, for the tracker of the client. Sent when something in it changed.
+    const sendStatus = () => {
+        const actor = $gameActors ? $gameActors.actor(1) : null;
+        if (!actor || !$gameParty) {
+            return;
+        }
+        const lewd = $gameVariables.value(VARIABLE_LEWD);
+        const status = {
+            cmd: "Status",
+            floor: $gameVariables.value(VARIABLE_FLOOR),
+            faith: actor.param(6),
+            virtue: actor.param(7),
+            lewd: lewd,
+            // What the title "Minerva's Owl" asks to be over 30
+            stats:
+                Math.floor((actor.param(0) + actor.param(1) + lewd) / 5) +
+                actor.param(2) + actor.param(3) + actor.param(4) + actor.param(5),
+            gold: $gameParty.gold(),
+            cards: $gameVariables.value(VARIABLE_DECK_COUNT),
+        };
+        const text = JSON.stringify(status);
+        if (text !== AP.lastStatus) {
+            AP.lastStatus = text;
+            send(status);
+        }
+    };
+
     const _Game_Variables_setValue = Game_Variables.prototype.setValue;
     Game_Variables.prototype.setValue = function(variableId, value) {
         _Game_Variables_setValue.apply(this, arguments);
@@ -584,7 +615,7 @@
             s.runBase = null;
         }
         checkFloor(value);
-        send({ cmd: "Status", floor: value });
+        sendStatus();
     };
 
     const _BattleManager_processVictory = BattleManager.processVictory;
@@ -1287,6 +1318,7 @@
         updateItems();
         if (bound() && Graphics.frameCount % SOUL_UPDATE_FRAMES === 0) {
             updateSouls();
+            sendStatus();
         }
         updateSoulCounter(this);
         updateConnectionStatus(this);

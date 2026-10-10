@@ -97,6 +97,28 @@ TITLES: Dict[int, str] = {
 TITLE_SWITCH_BASE = 200
 TITLE_LOSE_VIRGINITY = 1
 
+# title number -> its condition, as the client's tracker shows it
+TITLE_REQUIREMENTS: Dict[int, str] = {
+    1: "Lose Virginity",
+    2: "FAITH 30 or less",
+    3: "VIRTUE 30 or less",
+    4: "Defeat the Gold Heavenly King",
+    5: "LEWD 15 or more",
+    6: "LP lowers to 1",
+    7: "Defeat the Crimson Heavenly King",
+    8: "Use 7 cards during 1 turn",
+    9: "7 ailments at the same time",
+    10: "Defeat the Emerald Heavenly King",
+    11: "Possess 1000 G",
+    12: "Stats over 30",
+    13: "Defeat the Azure Heavenly King",
+    14: "VIRTUE 70 or more",
+    15: "FAITH 70 or more",
+    16: "Possess 15 or more cards",
+}
+# title number -> the value of the game's status report its condition is about (bridge.py "Status")
+TITLE_STATS: Dict[int, str] = {2: "faith", 3: "virtue", 5: "lewd", 11: "gold", 12: "stats", 14: "virtue", 15: "faith", 16: "cards"}
+
 # title number -> the Heavenly King whose defeat is the condition of that title
 TITLE_KINGS: Dict[int, str] = {
     4: "Spisnix",

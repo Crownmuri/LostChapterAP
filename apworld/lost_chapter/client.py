@@ -86,6 +86,7 @@ class LostChapterContext(Context):
     bridge: GameBridge
     slot_data: Dict[str, Any]
     floor: Optional[int]
+    status: Dict[str, Any]  # what the game last reported about the run: floor, faith, virtue, lewd, stats, ...
 
     tracker_loaded: bool
 
@@ -103,6 +104,7 @@ class LostChapterContext(Context):
 
         self.slot_data = dict()
         self.floor = None
+        self.status = dict()
 
         self.tracker_loaded = tracker_loaded
 
@@ -293,7 +295,8 @@ class LostChapterContext(Context):
 
                 await self.send_msgs([{"cmd": "StatusUpdate", "status": CommonClient.ClientStatus.CLIENT_GOAL}])
         elif cmd == "Status":
-            self.floor = message.get("floor")
+            self.status.update(message)
+            self.floor = self.status.get("floor")
         elif cmd == "DevResult":
             for line in str(message.get("text", "")).split("\n"):
                 CommonClient.logger.info(f"[Dev] {line}")
