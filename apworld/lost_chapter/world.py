@@ -464,10 +464,10 @@ class LostChapterWorld(World):
         self.multiworld.itempool += pool
 
     def get_filler_item_name(self) -> str:
-        # 100 Gold, 300 Gold, then the six stat boosts
+        # 100 Gold, 300 Gold, then the six stat boosts, of which Max LP and Max RP come first and weigh more
         names = list(data.FILLER.values()) + list(data.STAT_FILLER.values())
 
-        return self.random.choices(names, weights=[6, 2] + [1] * len(data.STAT_FILLER))[0]
+        return self.random.choices(names, weights=[3, 1, 3, 3] + [1] * (len(data.STAT_FILLER) - 2))[0]
 
     def fill_slot_data(self) -> Dict[str, Any]:
         slot_data = self.options.as_dict(*SLOT_DATA_OPTIONS)
