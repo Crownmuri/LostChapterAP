@@ -37,18 +37,18 @@ LATE_EVENT_FLOOR = 41
 # (Max LP + Max RP + Gold + fluids) / 10 + STR + DEF + MAG + AGL + LEWD + Floor + counts, plus fixed amounts for
 # relics, quest flags and Heavenly Kings. The plugin counts the best score of the current run, from 0.
 #
-# milestone -> the floor a climb is expected to reach for it. The first four belong to the first 20 floors.
+# milestone -> the floor a climb is expected to reach for it: 200 souls by floor 20 and 200 more every 20 floors.
 SOUL_MILESTONES: Dict[int, int] = {
+    25: 20,
     50: 20,
     100: 20,
     200: 20,
-    400: 20,
-    600: 40,
-    800: 40,
-    1000: 60,
-    1200: 60,
-    1600: 80,
-    2000: 100,
+    300: 40,
+    400: 40,
+    500: 60,
+    600: 60,
+    800: 80,
+    1000: 100,
 }
 
 # Game switches

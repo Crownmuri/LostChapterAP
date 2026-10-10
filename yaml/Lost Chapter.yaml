@@ -67,7 +67,7 @@ Lost Chapter:
   #   Girl with Flower Crown, Sculptor, Treasury
   starting_events: []
 
-  # 1-10. Souls add up over the runs of a seed and send checks at milestones from 50 to 2000
+  # 1-10. Souls add up over the runs of a seed and send checks at milestones from 25 to 1000
   soul_multiplier: 2
 
   # Every game over is passed on to the other DeathLink players, and their deaths end your run

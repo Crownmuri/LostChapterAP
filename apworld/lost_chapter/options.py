@@ -19,9 +19,8 @@ class Goal(Choice):
     Door) and Bordosegeia (Black Door) are defeated in the same run. Needs Include DLC.
     DLC Virgin: the DLC End with the Virginity status intact.
 
-    With a Virgin goal, losing the Virginity status ends the run on the spot, like running out of LP, and the soul
-    checks take half the souls their names say. These two have no story difference, they are only there for those
-    who want the challenge.
+    With a Virgin goal, losing the Virginity status ends the run on the spot, like running out of LP. These two have
+    no story difference, they are only there for those who want the challenge.
     """
     display_name = "Goal"
     option_normal_end = 0
@@ -208,9 +207,9 @@ class StartingEvents(OptionSet):
 
 class SoulMultiplier(Range):
     """
-    Multiplies the souls a run earns. Souls add up over the runs of a seed and send checks at 50, 100, 200, 400,
-    600, 800, 1000, 1200, 1600 and 2000. The first four are expected within the first 20 floors, the later ones take
-    floors further up.
+    Multiplies the souls a run earns. Souls add up over the runs of a seed and send checks at 25, 50, 100, 200,
+    300, 400, 500, 600, 800 and 1000. The first four are expected within the first 20 floors, then 200 more every
+    20 floors.
     """
     display_name = "Soul Multiplier"
     range_start = 1

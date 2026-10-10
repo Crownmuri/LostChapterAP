@@ -1054,8 +1054,8 @@
 
     const soulMilestones = () => option("soul_milestones") || LEGACY_SOUL_MILESTONES;
 
-    // The souls a milestone takes: half of its name with a virgin goal, where a run is over sooner
-    const soulsFor = milestone => (VIRGIN_GOALS.includes(option("goal")) ? Math.ceil(milestone / 2) : milestone);
+    // The souls a milestone takes
+    const soulsFor = milestone => milestone;
 
     const updateSouls = () => {
         const s = state();
