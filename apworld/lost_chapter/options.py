@@ -30,6 +30,10 @@ class Goal(Choice):
     option_dlc_virgin = 4
     default = 0
 
+    @classmethod
+    def get_option_name(cls, value: int) -> str:
+        return super().get_option_name(value).replace("Dlc", "DLC")
+
 
 class IncludeDLC(Toggle):
     """
