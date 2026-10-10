@@ -4,6 +4,8 @@ from kvui import GameManager
 
 from kivy.clock import Clock
 
+from kivy.graphics import Color, Line, Rectangle
+from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
@@ -18,6 +20,11 @@ COLOR_UNLOCKED = "40d060"
 COLOR_LOCKED = "e05050"
 COLOR_DONE = "808080"
 COLOR_VALUE = "ffd060"
+
+# The square in front of a title: its color is where the title stands in logic
+IN_LOGIC = (0.25, 0.82, 0.38)
+BY_GRINDING = (1.0, 0.82, 0.38)
+OUT_OF_LOGIC = (0.88, 0.31, 0.31)
 
 
 def event_locations(event_id: int) -> List[int]:
@@ -47,6 +54,65 @@ def label(**kwargs) -> Label:
     return widget
 
 
+class Square(Widget):
+    """A small square, filled or only outlined, drawn rather than written: the font has no such character."""
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+        self.shown: Optional[Tuple[Tuple[float, float, float], bool]] = None
+        self.bind(pos=self.redraw, size=self.redraw)
+
+    def show(self, color: Optional[Tuple[float, float, float]], filled: bool = True) -> None:
+        shown = None if color is None else (color, filled)
+
+        if shown != self.shown:
+            self.shown = shown
+            self.redraw()
+
+    def redraw(self, *_) -> None:
+        self.canvas.clear()
+
+        if self.shown is None:
+            return
+
+        color, filled = self.shown
+        side = dp(11)
+        x = self.x + dp(2)
+        y = self.center_y - side / 2
+
+        with self.canvas:
+            Color(*color, 1)
+
+            if filled:
+                Rectangle(pos=(x, y), size=(side, side))
+            else:
+                Line(rectangle=(x, y, side, side), width=dp(1))
+
+
+def title_rows(count: int, height: str) -> Tuple[ScrollView, List[Tuple[Square, Label]]]:
+    """A scrolling list of rows that are a square and a label."""
+    column = BoxLayout(orientation="vertical", size_hint_y=None)
+    column.bind(minimum_height=column.setter("height"))
+
+    widgets = []
+
+    for _ in range(count):
+        row = BoxLayout(orientation="horizontal", size_hint_y=None, height=height)
+        square = Square(size_hint_x=None, width="18dp")
+        text = label(font_size="14dp", valign="middle")
+
+        row.add_widget(square)
+        row.add_widget(text)
+        column.add_widget(row)
+        widgets.append((square, text))
+
+    scroll = ScrollView(do_scroll_x=False)
+    scroll.add_widget(column)
+
+    return scroll, widgets
+
+
 def rows(count: int, columns: int, height: str) -> Tuple[ScrollView, List[Label]]:
     """A scrolling grid of labels."""
     grid = GridLayout(cols=columns, size_hint_y=None, row_default_height=height, row_force_default=True)
@@ -69,7 +135,8 @@ class LostChapterTabLayout(BoxLayout):
     status_label: Label
     run_label: Label
     titles_label: Label
-    title_labels: Dict[int, Label]
+    title_rows: Dict[int, Tuple[Square, Label]]
+    legend_label: Label
     events_label: Label
     event_labels: Dict[str, Label]
 
@@ -83,9 +150,11 @@ class LostChapterTabLayout(BoxLayout):
         self.titles_label = label(font_size="16dp", valign="middle", size_hint_y=None, height="28dp")
         self.events_label = label(font_size="16dp", valign="middle", size_hint_y=None, height="28dp")
 
+        self.legend_label = label(font_size="13dp", valign="middle", size_hint_y=None, height="20dp")
+
         # All sixteen fit the tab at its smallest without scrolling
-        title_scroll, title_rows = rows(len(data.TITLES), 1, "21dp")
-        self.title_labels = dict(zip(data.TITLES, title_rows))
+        title_scroll, widgets = title_rows(len(data.TITLES), "21dp")
+        self.title_rows = dict(zip(data.TITLES, widgets))
 
         # One row for each unlock, a pair of events shares one
         event_scroll, event_rows = rows(len(data.UNLOCK_EVENTS), 2, "21dp")
@@ -93,6 +162,7 @@ class LostChapterTabLayout(BoxLayout):
 
         titles = BoxLayout(orientation="vertical", size_hint_x=0.5)
         titles.add_widget(self.titles_label)
+        titles.add_widget(self.legend_label)
         titles.add_widget(title_scroll)
 
         events = BoxLayout(orientation="vertical", size_hint_x=0.5)
@@ -153,13 +223,38 @@ class LostChapterTabLayout(BoxLayout):
             ]),
         ])
 
+    def title_standing(self, number: int, received: set) -> Tuple[float, float, float]:
+        """Where a title stands in logic, from the door keys and the event unlocks this slot has."""
+        keys = {name: data.BOSS_OFFSET + switch_id for switch_id, name in data.DOOR_KEYS.items()}
+        kings = {name: data.DOOR_KEYS[switch_id] for switch_id, name in data.HEAVENLY_KINGS.items()}
+
+        if number in data.TITLE_KINGS:
+            return IN_LOGIC if keys[kings[data.TITLE_KINGS[number]]] in received else OUT_OF_LOGIC
+
+        def unlocked(event: str) -> bool:
+            unlock = data.EVENT_UNLOCKS[data.EVENT_IDS[event]]
+            return data.EVENT_OFFSET + data.UNLOCK_EVENTS[unlock][0] in received
+
+        events = data.TITLE_EVENTS.get(number, [])
+        floor = data.TITLE_FLOORS.get(number, 1)
+        needed = min((floor - 1) // data.BOSS_FLOOR_INTERVAL, len(keys))
+
+        if events and not any(unlocked(event) for event in events):
+            return OUT_OF_LOGIC
+
+        # Without the floors logic asks for, the title is still there for whoever takes the same events or fights
+        # over and over
+        return IN_LOGIC if sum(1 for item_id in keys.values() if item_id in received) >= needed else BY_GRINDING
+
     def update_titles(self) -> None:
         ctx = self.ctx
 
         if not ctx.slot:
             self.titles_label.text = "Connect to an Archipelago server to see the titles and events."
+            self.legend_label.text = ""
 
-            for widget in self.title_labels.values():
+            for square, widget in self.title_rows.values():
+                square.show(None)
                 widget.text = ""
 
             return
@@ -169,7 +264,7 @@ class LostChapterTabLayout(BoxLayout):
         connected = ctx.bridge.is_game_connected
         done = 0
 
-        for number, widget in self.title_labels.items():
+        for number, (square, widget) in self.title_rows.items():
             checked = data.SWITCH_OFFSET + data.TITLE_SWITCH_BASE + number in ctx.checked_locations
             effect = not shuffled or data.TITLE_OFFSET + number in received
             done += checked
@@ -178,15 +273,20 @@ class LostChapterTabLayout(BoxLayout):
             stat = data.TITLE_STATS.get(number)
 
             if checked:
-                requirement = f"[color={COLOR_DONE}]{requirement}, done[/color]"
-            elif stat and connected and stat in ctx.status:
-                requirement += f" [color={COLOR_VALUE}](now {ctx.status[stat]})[/color]"
+                widget.text = f"[color={COLOR_DONE}]{data.TITLES[number]}  {requirement}, done[/color]"
+            else:
+                if stat and connected and stat in ctx.status:
+                    requirement += f" [color={COLOR_VALUE}](now {ctx.status[stat]})[/color]"
 
-            color = COLOR_UNLOCKED if effect else COLOR_LOCKED
+                widget.text = f"{data.TITLES[number]}  [color=b0b0b0]{requirement}[/color]"
 
-            widget.text = f"[color={color}]{data.TITLES[number]}[/color]  {requirement}"
+            # Filled once the effect of the title is unlocked
+            square.show(self.title_standing(number, received), effect)
 
-        self.titles_label.text = f"Titles: {done}/{len(self.title_labels)}"
+        self.titles_label.text = f"Titles: {done}/{len(self.title_rows)}"
+        self.legend_label.text = (
+            f"[color={COLOR_DONE}]filled: effect unlocked.  green in logic, yellow by grinding, red not yet[/color]"
+        )
 
     def update_events(self) -> None:
         ctx = self.ctx
