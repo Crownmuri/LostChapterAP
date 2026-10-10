@@ -591,6 +591,10 @@
             faith: actor.param(6),
             virtue: actor.param(7),
             lewd: lewd,
+            str: actor.param(2),
+            def: actor.param(3),
+            mag: actor.param(4),
+            agi: actor.param(5),
             // What the title "Minerva's Owl" asks to be over 30
             stats:
                 Math.floor((actor.param(0) + actor.param(1) + lewd) / 5) +

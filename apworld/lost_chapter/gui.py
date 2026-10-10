@@ -52,7 +52,7 @@ def rows(count: int, columns: int, height: str) -> Tuple[ScrollView, List[Label]
     grid = GridLayout(cols=columns, size_hint_y=None, row_default_height=height, row_force_default=True)
     grid.bind(minimum_height=grid.setter("height"))
 
-    labels = [label(font_size="15dp", valign="middle") for _ in range(count)]
+    labels = [label(font_size="14dp", valign="middle") for _ in range(count)]
 
     for widget in labels:
         grid.add_widget(widget)
@@ -79,15 +79,16 @@ class LostChapterTabLayout(BoxLayout):
         self.ctx = ctx
 
         self.status_label = label(font_size="14dp", valign="middle", size_hint_y=None, height="24dp")
-        self.run_label = label(font_size="18dp", valign="middle", size_hint_y=None, height="32dp")
+        self.run_label = label(font_size="17dp", valign="middle", size_hint_y=None, height="52dp")
         self.titles_label = label(font_size="16dp", valign="middle", size_hint_y=None, height="28dp")
         self.events_label = label(font_size="16dp", valign="middle", size_hint_y=None, height="28dp")
 
-        title_scroll, title_rows = rows(len(data.TITLES), 1, "24dp")
+        # All sixteen fit the tab at its smallest without scrolling
+        title_scroll, title_rows = rows(len(data.TITLES), 1, "21dp")
         self.title_labels = dict(zip(data.TITLES, title_rows))
 
         # One row for each unlock, a pair of events shares one
-        event_scroll, event_rows = rows(len(data.UNLOCK_EVENTS), 2, "24dp")
+        event_scroll, event_rows = rows(len(data.UNLOCK_EVENTS), 2, "21dp")
         self.event_labels = dict(zip(data.UNLOCK_EVENTS, event_rows))
 
         titles = BoxLayout(orientation="vertical", size_hint_x=0.5)
@@ -139,12 +140,17 @@ class LostChapterTabLayout(BoxLayout):
         def value(name: str, key: str) -> str:
             return f"{name} [color={COLOR_VALUE}]{status.get(key, '?')}[/color]"
 
-        self.run_label.text = "    ".join([
-            value("Floor", "floor"),
-            value("FAITH", "faith"),
-            value("VIRTUE", "virtue"),
-            value("LEWD", "lewd"),
-            value("Stats", "stats") + " / 31",
+        # The second line is what the title "Minerva's Owl" adds up, which also counts a fifth of Max LP + Max RP
+        self.run_label.text = "\n".join([
+            "    ".join([value("Floor", "floor"), value("FAITH", "faith"), value("VIRTUE", "virtue")]),
+            "    ".join([
+                value("STR", "str"),
+                value("DEF", "def"),
+                value("MAG", "mag"),
+                value("AGI", "agi"),
+                value("LEWD", "lewd"),
+                value("TOTAL", "stats") + " / 31",
+            ]),
         ])
 
     def update_titles(self) -> None:
@@ -172,7 +178,7 @@ class LostChapterTabLayout(BoxLayout):
             stat = data.TITLE_STATS.get(number)
 
             if checked:
-                requirement = f"[color={COLOR_DONE}]{requirement} (done)[/color]"
+                requirement = f"[color={COLOR_DONE}]{requirement}, done[/color]"
             elif stat and connected and stat in ctx.status:
                 requirement += f" [color={COLOR_VALUE}](now {ctx.status[stat]})[/color]"
 
@@ -180,9 +186,7 @@ class LostChapterTabLayout(BoxLayout):
 
             widget.text = f"[color={color}]{data.TITLES[number]}[/color]  {requirement}"
 
-        note = "  (green: its effect is unlocked)" if shuffled else ""
-
-        self.titles_label.text = f"Title conditions met: {done}/{len(self.title_labels)}{note}"
+        self.titles_label.text = f"Titles: {done}/{len(self.title_labels)}"
 
     def update_events(self) -> None:
         ctx = self.ctx
@@ -224,11 +228,12 @@ class LostChapterTabLayout(BoxLayout):
                 if location in ctx.missing_locations
             )
             color = COLOR_UNLOCKED if unlocked else COLOR_LOCKED
-            checks = f"{left} left" if left else f"[color={COLOR_DONE}]done[/color]"
+            # Short enough for the longest name to stay on one line
+            checks = f"({left})" if left else f"[color={COLOR_DONE}](0)[/color]"
 
-            widget.text = f"[color={color}]{unlock}[/color]  {checks}"
+            widget.text = f"[color={color}]{unlock}[/color] {checks}"
 
-        self.events_label.text = f"Events unlocked: {unlocked_count}/{unlock_total}"
+        self.events_label.text = f"Events: {unlocked_count}/{unlock_total} unlocked (checks left)"
 
     def update(self, *_) -> None:
         self.update_status()
