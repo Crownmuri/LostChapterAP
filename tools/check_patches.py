@@ -78,6 +78,18 @@ try {
             scripts.map(function(command) { return command.parameters[1]; }).join(" ; ") +
             " | hands out weapons " + gains.map(function(command) { return command.parameters[0]; }).join(","));
     });
+    // The Market: the merchant's list and the condition of the memory that replaces him
+    $dataCommonEvents[33].list.forEach(function(command, index, list) {
+        if (command.code === 102 && /Plushie/.test(command.parameters[0].join())) {
+            lines.push("market: " + command.parameters[0].join(" | ") + " (cancel " + command.parameters[1] + ")");
+            lines.push("market branches: " + list.filter(function(other) {
+                return other.code === 402 && other.indent === command.indent && /Plushie|Music|Thank|Need/.test(other.parameters[1]);
+            }).map(function(other) { return other.parameters[0] + " " + other.parameters[1].split("if(")[0]; }).join(", "));
+        }
+        if (command.code === 111 && command.parameters[0] === 12 && /marketMenu/.test(command.parameters[1])) {
+            lines.push("market memory: " + command.parameters[1]);
+        }
+    });
     // The verse of the standby screen that lost a line break in one version of the game
     $dataCommonEvents[87].list.forEach(function(command) {
         var text = command.code === 357 && command.parameters[3] ? String(command.parameters[3].text) : "";

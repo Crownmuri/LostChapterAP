@@ -242,6 +242,12 @@
     const SWITCH_BLACK_DOOR = 183;
     const SWITCH_LAST_DOOR = 193; // both are defeated, the last door is offered
     const SWITCH_FINAL_BOSS = 159; // the floor of the final_boss_floor option is reached
+    // Market (common event 33): the merchant hands out the Plushie and the Music Box, thanks the player who took
+    // both (VIRTUE +5) and is gone from then on. With both as checks he stays, see patchMarket.
+    const COMMON_EVENT_MARKET = 33;
+    const MARKET_RELICS = [33, 34];
+    const SWITCH_MARKET_THANKS = 157; // both checks are sent, the merchant can be thanked
+    const LABEL_MARKET_THANKS = "\u6607\u5929";
 
     // event id -> id of the common event that runs it, for the floor events this version of the game has
     const eventCommon = {};
@@ -774,6 +780,10 @@
                 const relic = option("relicsanity") ? branchRelic(list, start, choice) : 0;
                 const label = relic ? relicLabel(relic) : null;
                 const named = label ? String(text).replace($dataWeapons[relic].name, () => label) : String(text);
+                // A gift of the merchant that is taken stays on his list, grayed out
+                if (eventId === COMMON_EVENT_MARKET && AP.marketMenu() && /if\(!s\[1[12]\]\)/.test(named)) {
+                    return named.replace("if(!s[", "en(!s[");
+                }
                 if (named.includes(FINAL_BOSS_LOCK) && !$gameSwitches.value(SWITCH_FINAL_BOSS)) {
                     return named.replace(FINAL_BOSS_LOCK, " \\c[18]requires floor " + finalBossFloor() + "\\c[0]en(0)");
                 }
@@ -1368,6 +1378,8 @@
         mirrorSwitch(SWITCH_TURN_BACK, bound() && !freeDoors());
         mirrorSwitch(SWITCH_FREE_DOORS, freeDoors());
         mirrorSwitch(SWITCH_FINAL_BOSS, $gameVariables.value(VARIABLE_FLOOR) >= finalBossFloor());
+        const sent = weaponId => state().checked.includes(RELIC_OFFSET + weaponId);
+        mirrorSwitch(SWITCH_MARKET_THANKS, AP.marketMenu() && MARKET_RELICS.every(sent));
         const hasKey = weaponId => !bound() || $gameParty.hasItem($dataWeapons[weaponId], false);
         mirrorSwitch(SWITCH_WHITE_DOOR, hasKey(WEAPON_WHITE_KEY));
         mirrorSwitch(SWITCH_BLACK_DOOR, hasKey(WEAPON_BLACK_KEY));
@@ -2218,6 +2230,49 @@
         list[draw].parameters = [12, "LostChapterAP.finisher()"];
     };
 
+    // Market. In the game the merchant is gone once both of his gifts are taken, and the place only brings back a
+    // memory of him from then on (Max RP +5). As checks the gifts stay taken for good, which would leave every later
+    // run with that memory alone: no merchant to thank (VIRTUE +5) and none to turn down (FAITH down), which the
+    // titles about VIRTUE and FAITH count on. So with both as checks the merchant is always there: his gifts are
+    // grayed out once taken, and he can be thanked from then on or turned down as before.
+    AP.marketMenu = () => bound() && MARKET_RELICS.every(weaponId => relicChecks().includes(weaponId));
+
+    const patchMarket = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_MARKET].list;
+        const choices = list.findIndex(
+            item => item.code === 102 && item.parameters[0].some(text => String(text).startsWith("Take a Plushie"))
+        );
+        const memory = list.findIndex(item => {
+            const p = item.parameters;
+            return item.code === 111 && item.indent === 0 && p[0] === 0 && p[1] === 11 && p[2] === 0;
+        });
+        const indent = choices < 0 ? 0 : list[choices].indent;
+        const refuse = list.findIndex(
+            (item, i) => i > choices && item.code === 402 && item.indent === indent && item.parameters[0] === 2
+        );
+        const hasThanks = list.some(item => item.code === 118 && item.parameters[0] === LABEL_MARKET_THANKS);
+        if (choices < 0 || memory < 0 || memory > choices || refuse < 0 || !hasThanks) {
+            console.error("[AP] Common event 33 has an unexpected layout, the merchant is not kept");
+            return;
+        }
+        const thanks = "Thank Himif(s[" + SWITCH_MARKET_THANKS + "])";
+        const p = list[choices].parameters;
+        list[memory].parameters = [12, "$gameSwitches.value(11) && !LostChapterAP.marketMenu()"];
+        // "Thank Him" goes ahead of "Don't Need Anything", which stays what cancelling picks
+        p[0] = p[0].slice(0, 2).concat([thanks], p[0].slice(2));
+        if (p[1] === 2) {
+            p[1] = 3;
+        }
+        list[refuse].parameters[0] = 3;
+        list.splice(
+            refuse,
+            0,
+            command(402, indent, [2, thanks]),
+            command(119, indent + 1, [LABEL_MARKET_THANKS]),
+            command(0, indent + 1, [])
+        );
+    };
+
     // Girl: the patch of the game that restores its cut content has her give the Moon Hair Ornament to a player in
     // the Regression State. In the game without it there is neither the state nor the gift, and with it no White
     // Key. In a multiworld she hands the ornament out on any visit while its check is open, in every version.
@@ -2341,6 +2396,7 @@
             patchKingDoors();
             patchTitleReleases();
             patchGirl();
+            patchMarket();
             patchStandbyVerse();
             patchCardConditions();
             createCardEvent();
