@@ -78,6 +78,19 @@ try {
             scripts.map(function(command) { return command.parameters[1]; }).join(" ; ") +
             " | hands out weapons " + gains.map(function(command) { return command.parameters[0]; }).join(","));
     });
+    // The opening: what follows the list of origins the plugin puts in place of the questions
+    MAPS["Map001.json"].events.forEach(function(event) {
+        (event ? event.pages : []).forEach(function(page) {
+            var at = page.list.findIndex(function(command) {
+                return command.code === 355 && String(command.parameters[0]).indexOf("chooseOrigin") >= 0;
+            });
+            if (at >= 0) {
+                lines.push("origin list is followed by: " + page.list.slice(at + 1, at + 6).map(function(command) {
+                    return command.code + (command.code === 111 ? JSON.stringify(command.parameters) : "");
+                }).join(" "));
+            }
+        });
+    });
     lines.push(LostChapterAP.dev("events 10"));
     lines.push(LostChapterAP.dev("events 50"));
 } catch (error) {

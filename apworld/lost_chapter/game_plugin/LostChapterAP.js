@@ -1888,9 +1888,12 @@
             return;
         }
         // With the DLC the reveal sits in a branch that words it differently for the origin of its own
+        // ("Oh... You are..." for The New Ruler, "That's right" otherwise). The list ends ahead of that whole branch.
         let revealStart = reveal - 1;
-        while (list[revealStart].indent > 0) {
-            revealStart--;
+        if (list[reveal].indent > 0) {
+            while (list[revealStart].indent > 0 || list[revealStart].code !== 111) {
+                revealStart--;
+            }
         }
         AP.dlcOrigin = list.some(item => {
             const p = item.parameters;
