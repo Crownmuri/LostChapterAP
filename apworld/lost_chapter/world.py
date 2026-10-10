@@ -332,10 +332,15 @@ class LostChapterWorld(World):
                 LocationProgressType.EXCLUDED
             )
 
-        # A title about FAITH, VIRTUE, LEWD or the stats takes an event that moves them
-        for number, events in data.TITLE_EVENTS.items():
+        # A title about FAITH, VIRTUE, LEWD or the stats takes an event that moves them, and most of those and the
+        # ones about cards take the floors it needs to add up
+        for number in sorted(set(data.TITLE_EVENTS) | set(data.TITLE_FLOORS)):
+            items = [data.event_item(event) for event in data.TITLE_EVENTS.get(number, [])]
+
             self.get_location(f"Title: {data.TITLES[number]}").access_rule = (
-                lambda state, items=[data.event_item(event) for event in events]: state.has_any(items, player)
+                lambda state, items=items, floor=data.TITLE_FLOORS.get(number, 1): (
+                    (not items or state.has_any(items, player)) and self.can_reach_floor(state, floor)
+                )
             )
 
         for name in self.relic_locations().values():

@@ -140,6 +140,20 @@ TITLE_EVENTS: Dict[int, List[str]] = {
     15: ["Goddess Temple", "Devil Temple"],  # FAITH up
 }
 
+# title number -> the floor from which its condition is expected to be met. All of these can be had earlier, by
+# taking the same events over and over, but that is out of logic: stats, cards and the swings of FAITH and VIRTUE
+# take a while to add up.
+TITLE_FLOORS: Dict[int, int] = {
+    2: 41,   # FAITH 30 or less
+    3: 41,   # VIRTUE 30 or less
+    5: 21,   # LEWD 15 or more
+    8: 21,   # Use 7 cards during 1 turn
+    12: 41,  # Stats over 30
+    14: 81,  # VIRTUE 70 or more
+    15: 81,  # FAITH 70 or more
+    16: 21,  # Possess 15 or more cards
+}
+
 # troop id -> enemy name (common event 65 "Fight")
 ENEMIES: Dict[int, str] = {
     1: "Bond",
