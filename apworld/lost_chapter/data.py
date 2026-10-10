@@ -135,6 +135,12 @@ TITLE_EVENTS: Dict[int, List[str]] = {
     2: ["Desert", "Desert 2", "Market", "Library", "Girl", "Debauch", "Highway"],  # FAITH down
     3: ["Collapse", "Camp", "Highway"],  # VIRTUE down
     5: ["Desert 2", "Devil Temple", "Camp", "Debauch", "Small Room 2", "Highway", "Lake Shore"],  # LEWD up
+    # 1000 G: an income next to what the fights drop. The events that raise LEWD or give the Womb Crest (Devil
+    # Temple) open the ones that pay for it, and the treasures pay outright.
+    11: [
+        "Desert 2", "Devil Temple", "Camp", "Debauch", "Small Room 2", "Highway", "Lake Shore",
+        "Gold and Silver Treasures",
+    ],
     12: ["Forest", "Quarrel", "Market 2", "Small Room", "Library", "River", "Lake Shore"],  # STR/DEF/MAG/AGL, LP/RP
     14: ["Beggar", "Highway"],  # VIRTUE up
     15: ["Goddess Temple", "Devil Temple"],  # FAITH up
@@ -145,6 +151,7 @@ TITLE_EVENTS: Dict[int, List[str]] = {
 DLC_TITLE_EVENTS: Dict[int, List[str]] = {
     2: ["Gold and Silver Treasures", "Farm Village", "Old Woman", "Graveyard", "Treasury"],  # FAITH down
     5: ["Cat"],  # LEWD up
+    11: ["Cat"],  # 1000 G, by way of LEWD
     12: ["Barracks", "Checkpoint"],  # STR/DEF/MAG/AGL
     14: ["Old Woman", "Sculptor"],  # VIRTUE up
     15: ["Desert", "Library", "Farm Village", "Sculptor", "Treasury"],  # FAITH up
@@ -155,6 +162,7 @@ def title_events(number: int, dlc: bool) -> List[str]:
     """The floor events that move the stat the condition of a title is about."""
     return TITLE_EVENTS.get(number, []) + (DLC_TITLE_EVENTS.get(number, []) if dlc else [])
 
+
 # title number -> the floor from which its condition is expected to be met. All of these can be had earlier, by
 # taking the same events over and over, but that is out of logic: stats, cards and the swings of FAITH and VIRTUE
 # take a while to add up.
@@ -163,10 +171,10 @@ TITLE_FLOORS: Dict[int, int] = {
     3: 41,   # VIRTUE 30 or less
     5: 21,   # LEWD 15 or more
     8: 21,   # Use 7 cards during 1 turn
+    9: 21,   # 7 ailments at the same time: the enemies of the first floors do not inflict that many
     12: 21,  # Stats over 30
     14: 21,  # VIRTUE 70 or more: the origin Forgotten Martyr starts with both at 65
     15: 21,  # FAITH 70 or more
-    16: 21,  # Possess 15 or more cards
 }
 
 # troop id -> enemy name (common event 65 "Fight")
