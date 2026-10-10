@@ -143,7 +143,7 @@ source events, the ending needs all four door keys. Every boss floor passed take
 21-40 need one, 41-60 two, 61-80 three, which also applies to the floor 41+ events and their relics. The titles about
 FAITH, VIRTUE, LEWD and the stats need one of the events that move them (`TITLE_EVENTS` in `data.py`). Those and
 the titles about cards are also only in logic from the floor they are expected by (`TITLE_FLOORS`): LEWD 15, 7 cards
-in a turn and 15 cards from floor 21, FAITH or VIRTUE 30 or less and the stats over 30 from floor 41, FAITH or VIRTUE
+in a turn, 15 cards and the stats over 30 from floor 21, FAITH or VIRTUE 30 or less from floor 41, FAITH or VIRTUE
 70 or more from floor 81. Earlier is possible by taking the same events over and over, which is out of logic. A first victory
 needs the floor its enemy first shows up on (`ENEMY_FLOORS`): three new enemies every 20 floors, the last six on
 floors 101 and 121, which are past the last boss. How hard a fight is and the remaining titles have no rules yet.
