@@ -143,7 +143,7 @@
     const CHOICE_REQUIREMENTS = {
         37: { "Water It": "Pretty Water" },
         38: { "Tell Her the Location of the Man's Grave": "Collapse first" },
-        40: { "Pay -160 G": "MAG 15 or more" },
+        40: { "Pay -160 G": "(MAG \u2267 15)" },
         54: { "Bathe in the Water": "filth to wash off", "Bathe in water": "filth to wash off" },
         56: { "I Came to See You": "an earlier visit" },
         57: {
@@ -688,24 +688,19 @@
     const CHOICE_SHOWN = /\s?if\((.+?)\)/;
     const CHOICE_ENABLED = /\s?en\((.+?)\)/;
     const STAT_VARIABLES = { 49: "FAITH", 50: "VIRTUE", 51: "LEWD" };
-    const STAT_PHRASES = {
-        ">=": value => value + " or more",
-        ">": value => "over " + value,
-        "<=": value => value + " or less",
-        "<": value => "under " + value,
-    };
+    const STAT_SIGNS = { ">=": "\u2267", ">": ">", "<=": "\u2266", "<": "<" };
 
-    // "LEWD 10 or more" for a condition like v[51]>=10, null when it is about anything else
+    // "(LEWD \u2267 10)" for a condition like v[51]>=10, null when it is about anything else
     const statRequirement = condition => {
         const parts = [];
         const rest = condition.replace(/v\[(\d+)\]\s*(>=|<=|>|<)\s*(\d+)/g, (match, variableId, comparison, value) => {
             if (!STAT_VARIABLES[variableId]) {
                 return match;
             }
-            parts.push(STAT_VARIABLES[variableId] + " " + STAT_PHRASES[comparison](value));
+            parts.push(STAT_VARIABLES[variableId] + " " + STAT_SIGNS[comparison] + " " + value);
             return "";
         });
-        return parts.length > 0 && !/[^\s&]/.test(rest) ? parts.join(", ") : null;
+        return parts.length > 0 && !/[^\s&]/.test(rest) ? "(" + parts.join(", ") + ")" : null;
     };
 
     const stripConditions = text => text.replace(CHOICE_SHOWN, "").replace(CHOICE_ENABLED, "");
@@ -723,7 +718,12 @@
             .replace(/\\c\[\d+\]/gi, "")
             .trim();
         const requirement = (CHOICE_REQUIREMENTS[eventId] || {})[key] || statRequirement(failed[1]);
-        return requirement ? stripConditions(text) + " \\c[18]requires " + requirement + "\\c[0]en(0)" : text;
+        if (!requirement) {
+            return text;
+        }
+        // A stat reads as "(LEWD \u2267 10)", anything else as "requires Pretty Water"
+        const note = requirement.startsWith("(") ? requirement : "requires " + requirement;
+        return stripConditions(text) + " \\c[18]" + note + "\\c[0]en(0)";
     };
 
     const floorEventOf = list => {
