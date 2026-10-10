@@ -114,11 +114,12 @@
 
     const KING_SWITCHES = [71, 72, 73, 74];
     // Unused game switches mirroring the door keys, read by the door choices of common event 63
-    const KING_UNLOCK_SWITCH_SHIFT = 190; // 71-74 -> 261-264, on while the door of that king can be opened
+    // Switches 185-190 are not used by the game, with or without its DLC (which took 261 and up for its quests)
+    const KING_UNLOCK_SWITCH_SHIFT = 114; // 71-74 -> 185-188, on while the door of that king can be opened
     // More unused game switches read by the door choices. MPP_ChoiceEX reads a choice condition up to its first
     // closing bracket, so a condition has to be made of plain switches.
-    const SWITCH_TURN_BACK = 265; // the doors offer "Turn Back"
-    const SWITCH_FREE_DOORS = 266; // the doors offer "Final Boss" and "Keep Going"
+    const SWITCH_TURN_BACK = 189; // the doors offer "Turn Back"
+    const SWITCH_FREE_DOORS = 190; // the doors offer "Final Boss" and "Keep Going"
     const SWITCH_KING_BATTLE = 63;
     const BOSS_FLOOR_INTERVAL = 20;
     const FREE_DOORS_FLOOR = 100;
@@ -134,7 +135,7 @@
         37: { "Water It": "Pretty Water" },
         38: { "Tell Her the Location of the Man's Grave": "having found the man in Collapse" },
         40: { "Pay -160 G": "MAG 15 or more" },
-        54: { "Bathe in the Water": "filth to wash off" },
+        54: { "Bathe in the Water": "filth to wash off", "Bathe in water": "filth to wash off" },
         56: { "I Came to See You": "having met him before" },
         57: {
             "Create White Key": "Music Box, Recovery Misanga, Moon Hair Ornament",
@@ -193,6 +194,8 @@
         [8, "[Hero of the Future] \u3010+STR\u3011\u3010+DEF\u3011\u3010+MAG\u3011\u3010+AGL\u3011\u3010-RP\u3011"],
         [9, "[Devil's Servant] \u3010+GOLD\u3011\u3010+FAITH\u3011\u3010-VIRTUE\u3011"],
     ];
+    // The DLC adds an origin for a cleared game ("I Desired Destruction"), listed when the opening has it
+    const DLC_ORIGIN = [99, "[The New Ruler]"];
 
     // Bonus id of the bonus shop (common event 418) -> name and the cards it hands out
     const STARTING_SETS = {
@@ -1110,16 +1113,14 @@
         title <= TITLE_COUNT &&
         !state().titles.includes(title);
 
-    // Replaces the "has armor n" condition of the title release events (common events 401-416)
-    AP.titleCondition = title => {
-        if (!$gameParty.hasItem($dataArmors[title], false)) {
+    // Guards the "has armor n" branch of the title release events (common events 401-416)
+    AP.titleLocked = title => {
+        if (!titleEffectMissing(title)) {
             return false;
         }
-        if (titleEffectMissing(title)) {
-            if (!$gameSwitches.value(TITLE_SWITCH_BASE + title)) {
-                SoundManager.playBuzzer();
-            }
-            return false;
+        // The condition is met and the title would be released now
+        if ($gameParty.hasItem($dataArmors[title], false) && !$gameSwitches.value(TITLE_SWITCH_BASE + title)) {
+            SoundManager.playBuzzer();
         }
         return true;
     };
@@ -1168,11 +1169,12 @@
         $gameMessage.setBackground(2);
         $gameMessage.setPositionType(1);
         $gameMessage.add("Choose your starting class......");
-        $gameMessage.setChoices(ORIGINS.map(origin => origin[1]), 0, -1);
+        const origins = AP.dlcOrigin ? ORIGINS.concat([DLC_ORIGIN]) : ORIGINS;
+        $gameMessage.setChoices(origins.map(origin => origin[1]), 0, -1);
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(1);
         limitChoiceRows();
-        $gameMessage.setChoiceCallback(index => $gameVariables.setValue(VARIABLE_ORIGIN, ORIGINS[index][0]));
+        $gameMessage.setChoiceCallback(index => $gameVariables.setValue(VARIABLE_ORIGIN, origins[index][0]));
         interpreter.setWaitMode("message");
     };
 
@@ -1465,12 +1467,30 @@
 
     const patchTitleReleases = () => {
         for (let title = 1; title <= TITLE_COUNT; title++) {
-            const condition = $dataCommonEvents[COMMON_EVENT_TITLE_RELEASE + title].list[0];
-            if (condition.code !== 111 || condition.parameters[0] !== 10 || condition.parameters[1] !== title) {
+            const list = $dataCommonEvents[COMMON_EVENT_TITLE_RELEASE + title].list;
+            const start = list.findIndex(item => {
+                const p = item.parameters;
+                return item.code === 111 && item.indent === 0 && p[0] === 10 && p[1] === title;
+            });
+            const end = start < 0 ? -1 : branchEnd(list, start);
+            if (end < 0) {
                 console.error("[AP] Common event " + (400 + title) + " has an unexpected layout, title is not patched");
                 continue;
             }
-            condition.parameters = [12, "LostChapterAP.titleCondition(" + title + ")"];
+            // The whole "has armor n" branch is skipped without the title effect. With the DLC that branch also
+            // holds the offer to release the title with a Mark of Attainer.
+            const release = list.slice(start, end + 1);
+            release.forEach(item => item.indent++);
+            list.splice(
+                start,
+                release.length,
+                command(111, 0, [12, "LostChapterAP.titleLocked(" + title + ")"]),
+                command(0, 1, []),
+                command(411, 0, []),
+                ...release,
+                command(0, 1, []),
+                command(412, 0, [])
+            );
         }
     };
 
@@ -1519,12 +1539,21 @@
         if (question < 1) {
             return;
         }
-        const reveal = list.findIndex((item, i) => i > question && item.indent === 0 && isMessage(item, "That's right"));
+        const reveal = list.findIndex((item, i) => i > question && isMessage(item, "That's right"));
         if (reveal < 0 || list[question - 1].code !== 101 || list[reveal - 1].code !== 101) {
             console.error("[AP] The opening has an unexpected layout, the origin list is not patched");
             return;
         }
-        overrideRange(list, question - 1, reveal - 2, [command(355, 0, ["LostChapterAP.chooseOrigin(this);"])]);
+        // With the DLC the reveal sits in a branch that words it differently for the origin of its own
+        let revealStart = reveal - 1;
+        while (list[revealStart].indent > 0) {
+            revealStart--;
+        }
+        AP.dlcOrigin = list.some(item => {
+            const p = item.parameters;
+            return item.code === 122 && p[0] === VARIABLE_ORIGIN && p[1] === VARIABLE_ORIGIN && p[4] === DLC_ORIGIN[0];
+        });
+        overrideRange(list, question - 1, revealStart - 1, [command(355, 0, ["LostChapterAP.chooseOrigin(this);"])]);
     };
 
     // Map001: the branch of the "Correct" choice that applies the origin
@@ -1677,7 +1706,7 @@
             item => item.code === 102 && item.parameters[0].some(text => String(text).includes(POND_BATHE_HIDDEN))
         );
         if (!choices) {
-            console.error("[AP] Common event 54 has an unexpected layout, bathing is not patched");
+            // The version of the game that comes with the DLC has this fixed
             return;
         }
         choices.parameters[0] = choices.parameters[0].map(text =>
