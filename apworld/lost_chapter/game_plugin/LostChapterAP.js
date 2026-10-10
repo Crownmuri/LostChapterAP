@@ -16,25 +16,48 @@
  * All Archipelago logic lives in the client; this plugin only reports what
  * happens in the game and applies received items.
  *
- * Game changes while a save is bound to a multiworld:
+ * The plugin only acts when the game was started from the client's "Launch
+ * game" button, which leaves a session file in the game folder. The game then
+ * keeps its save in a folder of its own for that multiworld slot. Started any
+ * other way, the game and its normal save are left alone.
+ *
+ * Game changes in such a session:
  *  - Every floor is a fight until floor events are unlocked. With unlocked
  *    events the player picks between a fight and up to two of them.
- *  - A Heavenly King can only be challenged with his boss unlock. A boss floor
- *    without an available king is played as a normal floor.
+ *  - A Heavenly King can only be challenged with his boss unlock, the other
+ *    doors are grayed out. The doors also offer to turn back, which repeats
+ *    the last 20 floors: the climb only goes on once a king is defeated.
  *  - Relics handed out by events become checks (relicsanity).
  *  - Meeting the condition of a title is a check. Releasing the title in the
- *    Title Collection also needs its title effect item.
+ *    Title Collection also needs its Unlock Title Effect item, unless the
+ *    shuffle_title_effects option is off.
  *  - A run starts on the standby screen instead of inside the first event.
  *  - The "Once upon a time" questions are replaced by a list of the origins.
+ *  - The game counts as cleared from the start: defeating the last boss is the
+ *    goal and the climb continues afterwards instead of rolling the ending.
+ *  - The bonus shop is skipped. Received starting sets are offered after the
+ *    origin is confirmed.
+ *  - Souls (the score the bonus shop used to spend) add up over all runs and
+ *    send checks at milestones. The standby screen shows the total.
+ *
+ * The title screen shows the state of the Archipelago connection in its
+ * bottom left corner.
+ *
+ * F7 toggles double speed.
+ *
+ * Dev commands come from the client (/dev, needs dev_mode in host.yaml) or
+ * from the console: LostChapterAP.dev("floor 19"), LostChapterAP.dev("help").
  */
 
 (() => {
     "use strict";
 
     const PLUGIN_NAME = "LostChapterAP";
-    const VERSION = "0.3.0";
+    const VERSION = "0.8.0";
     const PORT = Number(PluginManager.parameters(PLUGIN_NAME).port || 38472);
     const RECONNECT_MS = 3000;
+    const SESSION_FILE = "archipelago_session.json";
+    const MAP_TITLE = 3;
 
     // Keep in sync with apworld/lost_chapter/data.py
     const SWITCH_OFFSET = 1000;
@@ -44,18 +67,29 @@
     const EVENT_OFFSET = 5000;
     const BOSS_OFFSET = 6000;
     const TITLE_OFFSET = 7000;
+    const SET_OFFSET = 8000;
+    const SOUL_OFFSET = 10000;
 
-    const SWITCH_ENDING = 1;
-    const SWITCH_TRUE_ENDING = 200;
+    const SWITCH_CLEARED = 1;
     const SWITCH_BEFORE_BOSS = 62;
     const SWITCH_LAST_BOSS = 64;
     const SWITCH_FIGHT = 65;
+    const SWITCH_STANDBY_CONTROL = 89; // on while the standby screen takes input
+    const VARIABLE_LP = 42;
     const VARIABLE_FLOOR = 11;
     const VARIABLE_FLOOR_EVENT = 12;
     const VARIABLE_ORIGIN = 2;
+    const VARIABLE_PLAYTHROUGH = 67;
+    const VARIABLE_CLIMAX_COUNT = 232;
+    const VARIABLE_SCORE = 77;
+
+    const TROOP_LAST_BOSS = 30;
+    // The ending map plays its other ending from this climax count on, the TRUE END below it
+    const TRUE_END_CLIMAX_LIMIT = 21;
 
     const COMMON_EVENT_NEXT_FLOOR = 86;
     const COMMON_EVENT_STANDBY = 11;
+    const COMMON_EVENT_SCORE = 72;
     const COMMON_EVENT_TITLE_RELEASE = 400; // + title number
     const COMMON_EVENT_KING_BATTLE = 63;
     const LABEL_END = "終了";
@@ -63,14 +97,41 @@
     const KING_SWITCHES = [71, 72, 73, 74];
     // Unused game switches mirroring the boss unlocks, read by the door choices of common event 63
     const KING_UNLOCK_SWITCH_SHIFT = 190; // 71-74 -> 261-264
+    const SWITCH_BOUND = 265; // unused game switch, on while the save plays a multiworld (read by "Turn Back")
+    const BOSS_FLOOR_INTERVAL = 20;
+    const LABEL_TURN_BACK = "ArchipelagoTurnBack";
 
     const EVENT_MIN = 21;
-    const EVENT_MAX = 60;
-    const EVENT_PRISON = 61; // not shuffled, the game offers it after the first clear
+    const EVENT_MAX = 61;
     const FLOOR_EVENT_CHOICES = 2;
+    const CHOICE_MAX_ROWS = 5;
 
     const TITLE_COUNT = 16; // title n is held as armor n once its condition is met
     const TITLE_SWITCH_BASE = 200;
+    // Keep in sync with TITLES in apworld/lost_chapter/data.py (the armor names in the database differ)
+    const TITLE_NAMES = [
+        "Seed of Origin",
+        "Alice Idea",
+        "Another Sephira",
+        "Eternal Ruler",
+        "Nightlife Girl",
+        "Phoenix Knight",
+        "Einherjar Priestess",
+        "Crimson Mythology",
+        "Sun of Lonasanknez",
+        "The Naked One",
+        "Taygetus Summit",
+        "Minerva's Owl",
+        "Lanta Charis Spirit",
+        "Irminsul Drop",
+        "Star Cradle",
+        "Azure Philosophy",
+    ];
+    // The Title Collection (common event 419) writes the condition and effect of the selected title into this picture
+    const TITLE_TEXT_PICTURE = 51;
+    const VARIABLE_SCREEN = 97;
+    const SCREEN_TITLES = 11;
+    const VARIABLE_SELECTED = 85;
 
     // Origin number (variable 2) -> label, in the order they are listed
     const ORIGINS = [
@@ -85,6 +146,16 @@
         [9, "[Devil's Servant] \u3010+GOLD\u3011\u3010+FAITH\u3011\u3010-VIRTUE\u3011"],
     ];
 
+    // Bonus id of the bonus shop (common event 418) -> name and the cards it hands out
+    const STARTING_SETS = {
+        101: ["Boxer Set", [11, 19, 32]],
+        102: ["Fighter Set", [12, 20, 33]],
+        103: ["Mage Set", [25, 34, 27]],
+        104: ["Knight Set", [29, 29, 30]],
+        105: ["Merchant Set", [35, 35, 36]],
+        106: ["Succubus Set", [80, 80, 37]],
+    };
+
     const CHECK_SWITCHES = KING_SWITCHES.slice();
     for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
         CHECK_SWITCHES.push(eventId);
@@ -93,20 +164,69 @@
     const CHECK_FLOORS = [10, 20, 30, 40, 50, 60, 70, 80];
     const RELIC_WEAPONS = [29, 30, 33, 34, 36, 38, 42, 51, 58, 59];
     const GOLD_ITEMS = { 1: 100, 2: 300 };
+    const SOUL_MILESTONES = [50, 100, 200, 500, 1000, 2000];
+    const SOUL_UPDATE_FRAMES = 30;
+
+    const NOTICE_WIDTH = 640;
+    const NOTICE_FRAMES = 180;
+    const NOTICE_FADE_FRAMES = 30;
+    const NOTICE_BACKLOG = 4;
+    const NOTICE_SE = { name: "Item3", volume: 90, pitch: 100, pan: 0 };
+    const ITEM_FLAG_PROGRESSION = 1; // NetworkItem.flags
+    const RAINBOW_HUE_STEP = 14; // degrees between two letters
+    const RAINBOW_FRAMES = 3; // redrawn every this many frames
+    const RAINBOW_SPEED = 3; // degrees per frame
 
     const AP = {
         socket: null,
         slot: null, // last "Slot" message while a slot is connected
         items: [], // full received item list from the client
+        scouts: {}, // location id -> { item, player, flags } for the relic places
         granting: false,
+        wrongSlot: false, // the client is connected to another slot than the game was launched for
+        speed: 1,
+        god: false,
+        nextFloorEvent: 0, // dev: switch id forced on the next floor
+        chosenFloorEvent: 0, // switch id picked on the standby screen for the floor being entered
+        notices: [], // { text, rainbow } waiting to be shown
+        notice: { text: "", rainbow: false },
+        noticeFrames: 0, // frames the current notice stays up
+        noticeDrawn: true,
     };
     window.LostChapterAP = AP;
 
     //-------------------------------------------------------------------------
+    // Session
+
+    const gameFolder = () => require("path").dirname(process.mainModule.filename);
+
+    // {seed, slot, save} written by the client, or null when the game was started without it
+    const readSession = () => {
+        try {
+            const file = require("path").join(gameFolder(), SESSION_FILE);
+            const session = JSON.parse(require("fs").readFileSync(file, "utf8"));
+            return /^save_ap_[A-Za-z0-9_]+$/.test(session.save) ? session : null;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    const SESSION = readSession();
+    AP.session = SESSION;
+
+    if (SESSION) {
+        // Every multiworld slot saves into its own folder, the normal save folder is never opened
+        StorageManager.fileDirectoryPath = function() {
+            return require("path").join(gameFolder(), SESSION.save + "/");
+        };
+    }
+
+    //-------------------------------------------------------------------------
     // Persistent state (lives in the save file)
 
+    // null outside a session, so nothing is ever written into the normal save
     const state = () => {
-        if (!$gameSystem) {
+        if (!SESSION || !$gameSystem) {
             return null;
         }
         if (!$gameSystem._archipelago) {
@@ -118,6 +238,10 @@
                 relics: [],
                 events: [],
                 bosses: [],
+                sets: [],
+                souls: 0, // banked from finished runs
+                runSouls: 0, // best value of the current run
+                goal: null,
                 titles: [],
                 regrant: false,
                 holdFloor: false,
@@ -129,7 +253,7 @@
     // The save has been played in a multiworld. Stays true while offline.
     const bound = () => {
         const s = state();
-        return !!(s && s.seed !== null);
+        return !!(SESSION && s && s.seed !== null);
     };
     AP.bound = bound;
 
@@ -151,7 +275,7 @@
         const socket = new WebSocket("ws://127.0.0.1:" + PORT);
         AP.socket = socket;
 
-        socket.onopen = () => send({ cmd: "Hello", version: VERSION });
+        socket.onopen = () => send({ cmd: "Hello", version: VERSION, session: SESSION ? SESSION.save : null });
         socket.onmessage = event => onMessage(JSON.parse(event.data));
         socket.onclose = () => {
             AP.slot = null;
@@ -163,17 +287,30 @@
     const onMessage = message => {
         if (message.cmd === "Slot") {
             AP.slot = message.connected ? message : null;
+            AP.wrongSlot = false;
             AP.items = [];
+            AP.scouts = {};
             bindSave();
         } else if (message.cmd === "Items") {
             AP.items = message.items;
+        } else if (message.cmd === "Scouts") {
+            AP.scouts = message.locations;
+        } else if (message.cmd === "Speed") {
+            setSpeed(message.speed);
+        } else if (message.cmd === "Dev") {
+            send({ cmd: "DevResult", text: AP.dev(message.args) });
         }
     };
 
     // Ties the loaded save to the connected seed and reports what it already has
     const bindSave = () => {
         const s = state();
-        if (!AP.slot || !s) {
+        if (!SESSION || !AP.slot || !s) {
+            return;
+        }
+        if (AP.slot.seed !== SESSION.seed || AP.slot.slot !== SESSION.slot) {
+            AP.wrongSlot = true;
+            send({ cmd: "Error", text: "The game was launched for a different slot. Launch it again from the client." });
             return;
         }
         if (s.seed !== null && s.seed !== AP.slot.seed) {
@@ -211,14 +348,19 @@
     };
 
     const sendGoal = () => {
-        if (!active()) {
-            return;
+        if (active() && state().goal) {
+            send({ cmd: "Goal", kind: state().goal });
         }
-        if ($gameSwitches.value(SWITCH_TRUE_ENDING)) {
-            send({ cmd: "Goal", kind: "true_ending" });
-        } else if ($gameSwitches.value(SWITCH_ENDING)) {
-            send({ cmd: "Goal", kind: "ending" });
+    };
+
+    const lastBossDefeated = () => {
+        const s = state();
+        if ($gameVariables.value(VARIABLE_CLIMAX_COUNT) < TRUE_END_CLIMAX_LIMIT) {
+            s.goal = "ending_1";
+        } else if (!s.goal) {
+            s.goal = "ending_2";
         }
+        sendGoal();
     };
 
     const checkTitle = title => check(SWITCH_OFFSET + TITLE_SWITCH_BASE + title);
@@ -247,8 +389,6 @@
         }
         if (CHECK_SWITCHES.includes(switchId)) {
             check(SWITCH_OFFSET + switchId);
-        } else if (switchId === SWITCH_ENDING || switchId === SWITCH_TRUE_ENDING) {
-            sendGoal();
         }
     };
 
@@ -262,6 +402,8 @@
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
+            s.souls += s.runSouls;
+            s.runSouls = 0;
         }
         checkFloor(value);
         send({ cmd: "Status", floor: value });
@@ -272,6 +414,8 @@
         const troopId = $gameTroop._troopId;
         if (troopId >= 1 && troopId <= CHECK_TROOP_MAX) {
             check(TROOP_OFFSET + troopId);
+        } else if (troopId === TROOP_LAST_BOSS && state()) {
+            lastBossDefeated();
         }
         _BattleManager_processVictory.apply(this, arguments);
     };
@@ -289,6 +433,291 @@
             return;
         }
         _Game_Party_gainItem.apply(this, arguments);
+    };
+
+    // "Item for Player" for the multiworld item an event hands out in place of the relic, null when unknown
+    const relicLabel = weaponId => {
+        const scout = bound() && option("relicsanity") && AP.scouts[RELIC_OFFSET + weaponId];
+        // A backslash would start an escape code in a choice
+        return scout ? (scout.item + " for " + scout.player).replace(/\\/g, "") : null;
+    };
+
+    // The relic the branch of `choice` hands out, for the choices command at `start`
+    const branchRelic = (list, start, choice) => {
+        const indent = list[start].indent;
+        let inBranch = false;
+        for (let i = start + 1; i < list.length; i++) {
+            const item = list[i];
+            if (item.indent === indent) {
+                if (item.code !== 402 && item.code !== 403) {
+                    break;
+                }
+                inBranch = item.code === 402 && item.parameters[0] === choice;
+            } else if (inBranch && item.code === 127 && item.parameters[1] === 0) {
+                if (RELIC_WEAPONS.includes(item.parameters[0])) {
+                    return item.parameters[0];
+                }
+            }
+        }
+        return 0;
+    };
+
+    // "Take a Plushie" names what is really there
+    const _Game_Interpreter_setupChoices = Game_Interpreter.prototype.setupChoices;
+    Game_Interpreter.prototype.setupChoices = function(params) {
+        const list = this._list;
+        const start = this._index;
+        if (bound() && option("relicsanity") && list && list[start] && list[start].code === 102) {
+            const choices = params[0].map((text, choice) => {
+                const relic = branchRelic(list, start, choice);
+                const label = relic ? relicLabel(relic) : null;
+                return label ? String(text).replace($dataWeapons[relic].name, () => label) : text;
+            });
+            params = [choices].concat(params.slice(1));
+        }
+        _Game_Interpreter_setupChoices.call(this, params);
+    };
+
+    // The "Obtained" window of TinyGetInfoWndMZ draws the name and description of the weapon it is given
+    const _Spriteset_Base_addGetInfoWindow = Spriteset_Base.prototype.addGetInfoWindow;
+    if (_Spriteset_Base_addGetInfoWindow) {
+        Spriteset_Base.prototype.addGetInfoWindow = function(id, type, text, value, includeEquip) {
+            const label = type === 1 && value > 0 && RELIC_WEAPONS.includes(id) ? relicLabel(id) : null;
+            if (!label) {
+                _Spriteset_Base_addGetInfoWindow.apply(this, arguments);
+                return;
+            }
+            const weapon = $dataWeapons[id];
+            const original = { name: weapon.name, description: weapon.description, info: weapon.meta.info };
+            weapon.name = label;
+            weapon.description = "";
+            delete weapon.meta.info;
+            try {
+                _Spriteset_Base_addGetInfoWindow.call(this, id, type, "Found", value, includeEquip);
+            } finally {
+                weapon.name = original.name;
+                weapon.description = original.description;
+                if (original.info !== undefined) {
+                    weapon.meta.info = original.info;
+                }
+            }
+        };
+    }
+
+    //-------------------------------------------------------------------------
+    // Souls
+
+    // The part of common event 72 that adds up the score of the run, set when the data loads
+    let scoreCommands = null;
+
+    const compare = (left, right, operation) => {
+        switch (operation) {
+            case 0:
+                return left === right;
+            case 1:
+                return left >= right;
+            case 2:
+                return left <= right;
+            case 3:
+                return left > right;
+            case 4:
+                return left < right;
+            default:
+                return left !== right;
+        }
+    };
+
+    // null for a condition this evaluator does not know
+    const scoreCondition = p => {
+        switch (p[0]) {
+            case 0:
+                return $gameSwitches.value(p[1]) === (p[2] === 0);
+            case 1:
+                return compare($gameVariables.value(p[1]), p[2] === 0 ? p[3] : $gameVariables.value(p[3]), p[4]);
+            case 8:
+                return $gameParty.hasItem($dataItems[p[1]]);
+            case 9:
+                return $gameParty.hasItem($dataWeapons[p[1]], p[2]);
+            case 10:
+                return $gameParty.hasItem($dataArmors[p[1]], p[2]);
+            default:
+                return null;
+        }
+    };
+
+    // Evaluates the game's own score commands without touching any variable
+    const runScore = () => {
+        if (!scoreCommands) {
+            return null;
+        }
+        let score = 0;
+        let skipAbove = -1; // skipping everything nested deeper than this indent
+        const branchTaken = {};
+        for (const item of scoreCommands) {
+            const p = item.parameters;
+            if (skipAbove >= 0) {
+                if (item.indent > skipAbove) {
+                    continue;
+                }
+                skipAbove = -1;
+            }
+            if (item.code === 111) {
+                const result = scoreCondition(p);
+                if (result === null) {
+                    return null;
+                }
+                branchTaken[item.indent] = result;
+                if (!result) {
+                    skipAbove = item.indent;
+                }
+            } else if (item.code === 411) {
+                if (branchTaken[item.indent]) {
+                    skipAbove = item.indent;
+                }
+            } else if (item.code === 122 && p[0] === VARIABLE_SCORE && p[1] === VARIABLE_SCORE && p[3] <= 1) {
+                const value = p[3] === 0 ? p[4] : $gameVariables.value(p[4]);
+                score = Math.floor([value, score + value, score - value, score * value, score / value, score % value][p[2]]);
+            } else if (item.code !== 0 && item.code !== 412 && item.code !== 122) {
+                return null;
+            }
+        }
+        return score;
+    };
+
+    const soulTotal = () => state().souls + state().runSouls;
+
+    const updateSouls = () => {
+        const s = state();
+        const score = $gameVariables.value(VARIABLE_FLOOR) >= 1 ? runScore() : null;
+        if (score !== null) {
+            s.runSouls = Math.max(s.runSouls, score * (option("soul_multiplier") || 1));
+        }
+        for (const milestone of SOUL_MILESTONES) {
+            if (soulTotal() >= milestone && !s.checked.includes(SOUL_OFFSET + milestone)) {
+                check(SOUL_OFFSET + milestone);
+            }
+        }
+    };
+
+    const soulText = () => {
+        if (!bound()) {
+            return "";
+        }
+        const next = SOUL_MILESTONES.find(milestone => milestone > soulTotal());
+        return "Souls " + soulTotal() + (next ? " / " + next : "");
+    };
+
+    // A line of text drawn over the map scene, redrawn only when it changes
+    const createLabel = (scene, x, y, width, align) => {
+        const sprite = new Sprite(new Bitmap(width, 32));
+        sprite.x = x;
+        sprite.y = y;
+        sprite.visible = false;
+        sprite.bitmap.fontFace = $gameSystem.mainFontFace();
+        sprite.bitmap.fontSize = 22;
+        sprite._archipelagoAlign = align;
+        sprite._archipelagoText = "";
+        scene.addChild(sprite);
+        return sprite;
+    };
+
+    const updateLabel = (sprite, visible, text, color) => {
+        if (!sprite) {
+            return;
+        }
+        sprite.visible = visible;
+        if (visible && sprite._archipelagoText !== text) {
+            sprite._archipelagoText = text;
+            sprite.bitmap.clear();
+            sprite.bitmap.textColor = color || "#ffffff";
+            sprite.bitmap.drawText(text, 0, 0, sprite.bitmap.width, sprite.bitmap.height, sprite._archipelagoAlign);
+        }
+    };
+
+    const _Scene_Map_createDisplayObjects = Scene_Map.prototype.createDisplayObjects;
+    Scene_Map.prototype.createDisplayObjects = function() {
+        _Scene_Map_createDisplayObjects.apply(this, arguments);
+        this._archipelagoSouls = createLabel(this, Graphics.width - 336, 76, 320, "right");
+        this._archipelagoStatus = createLabel(this, 16, Graphics.height - 44, 720, "left");
+        this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
+    };
+
+    const updateSoulCounter = scene => {
+        updateLabel(scene._archipelagoSouls, bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL), soulText());
+    };
+
+    // [text, color] for the title screen
+    const connectionStatus = () => {
+        if (!SESSION) {
+            return ["Archipelago: off (normal game, normal save)", "#b0b0b0"];
+        }
+        if (!AP.socket || AP.socket.readyState !== WebSocket.OPEN) {
+            return ["Archipelago: waiting for the client...", "#ffd060"];
+        }
+        if (AP.wrongSlot) {
+            return ["Archipelago: the client is on a different slot, launch again from it", "#ff7070"];
+        }
+        if (!AP.slot) {
+            return ["Archipelago: client found, not connected to a server", "#ffd060"];
+        }
+        return ["Archipelago: connected as " + (AP.slot.name || "slot " + AP.slot.slot), "#80ff90"];
+    };
+
+    const updateConnectionStatus = scene => {
+        const status = connectionStatus();
+        updateLabel(scene._archipelagoStatus, $gameMap.mapId() === MAP_TITLE, status[0], status[1]);
+    };
+
+    // Received items, shown one at a time at the top of the screen
+    const notify = (text, rainbow) => {
+        AP.notices.push({ text: text, rainbow: !!rainbow });
+    };
+
+    // Every letter in its own hue, `shift` moves the colors along
+    const drawRainbow = (bitmap, text, shift) => {
+        bitmap.clear();
+        let x = Math.max(0, (bitmap.width - bitmap.measureTextWidth(text)) / 2);
+        Array.from(text).forEach((letter, index) => {
+            const width = bitmap.measureTextWidth(letter);
+            bitmap.textColor = "hsl(" + ((index * RAINBOW_HUE_STEP + shift) % 360) + ", 100%, 70%)";
+            bitmap.drawText(letter, x, 0, width + 8, bitmap.height, "left");
+            x += width;
+        });
+    };
+
+    const updateNotices = scene => {
+        if (AP.noticeFrames > 0) {
+            AP.noticeFrames--;
+        } else if (AP.notices.length > 0) {
+            if (AP.notices.length > NOTICE_BACKLOG) {
+                // A backlog (first connection, items sent while away) is summed up instead of played out
+                AP.notice = { text: "Received " + AP.notices.length + " items", rainbow: false };
+                AP.notices.length = 0;
+            } else {
+                AP.notice = AP.notices.shift();
+            }
+            AP.noticeFrames = NOTICE_FRAMES;
+            AP.noticeDrawn = false;
+            AudioManager.playSe(NOTICE_SE);
+        }
+        const sprite = scene._archipelagoNotice;
+        if (!sprite) {
+            return;
+        }
+        if (!AP.noticeDrawn) {
+            AP.noticeDrawn = true;
+            sprite._archipelagoText = "";
+        }
+        if (AP.noticeFrames > 0 && AP.notice.rainbow) {
+            sprite.visible = true;
+            if (sprite._archipelagoText !== AP.notice.text || Graphics.frameCount % RAINBOW_FRAMES === 0) {
+                sprite._archipelagoText = AP.notice.text;
+                drawRainbow(sprite.bitmap, AP.notice.text, Graphics.frameCount * RAINBOW_SPEED);
+            }
+        } else {
+            updateLabel(sprite, AP.noticeFrames > 0, AP.notice.text, "#ffffff");
+        }
+        sprite.opacity = Math.min(255, (AP.noticeFrames * 255) / NOTICE_FADE_FRAMES);
     };
 
     //-------------------------------------------------------------------------
@@ -311,7 +740,9 @@
 
     const applyItem = item => {
         const s = state();
-        if (item.id >= TITLE_OFFSET) {
+        if (item.id >= SET_OFFSET) {
+            remember(s.sets, item.id - SET_OFFSET);
+        } else if (item.id >= TITLE_OFFSET) {
             remember(s.titles, item.id - TITLE_OFFSET);
         } else if (item.id >= BOSS_OFFSET) {
             remember(s.bosses, item.id - BOSS_OFFSET);
@@ -324,10 +755,19 @@
             $gameParty.gainGold(GOLD_ITEMS[item.id]);
         }
         console.log("[AP] Received " + item.name + " from " + item.sender);
+        const own = AP.slot && item.sender === AP.slot.name;
+        notify("Received " + item.name + (own ? "" : " from " + item.sender), item.flags & ITEM_FLAG_PROGRESSION);
     };
 
     const updateItems = () => {
+        if (!SESSION) {
+            return;
+        }
         syncKingUnlockSwitches();
+        if (bound() && !$gameSwitches.value(SWITCH_CLEARED)) {
+            // With the game cleared, common event 64 continues the climb after the last boss
+            _Game_Switches_setValue.call($gameSwitches, SWITCH_CLEARED, true);
+        }
         if (!active() || $gameParty.inBattle()) {
             return;
         }
@@ -346,6 +786,12 @@
     Scene_Map.prototype.update = function() {
         _Scene_Map_update.apply(this, arguments);
         updateItems();
+        if (bound() && Graphics.frameCount % SOUL_UPDATE_FRAMES === 0) {
+            updateSouls();
+        }
+        updateSoulCounter(this);
+        updateConnectionStatus(this);
+        updateNotices(this);
     };
 
     // A save was loaded or a new game started
@@ -367,30 +813,44 @@
                 _Game_Switches_setValue.call($gameSwitches, unlockSwitch, kingUnlocked(kingSwitch));
             }
         }
+        if ($gameSwitches.value(SWITCH_BOUND) !== bound()) {
+            _Game_Switches_setValue.call($gameSwitches, SWITCH_BOUND, bound());
+        }
+    };
+
+    // Switch of the boss scene `floor` leads to, 0 when it is an ordinary floor
+    const bossFloorSwitch = floor => {
+        if (floor % BOSS_FLOOR_INTERVAL !== 0) {
+            return 0;
+        }
+        if (KING_SWITCHES.every(kingSwitch => $gameSwitches.value(kingSwitch))) {
+            return SWITCH_LAST_BOSS;
+        }
+        // The hallway also comes up without an open door: the way on is closed until a king falls
+        return SWITCH_BEFORE_BOSS;
+    };
+
+    // The "Turn Back" door choice: the floors since the last boss floor are climbed again
+    AP.turnBack = () => {
+        state().holdFloor = true;
+        $gameVariables.setValue(VARIABLE_FLOOR, $gameVariables.value(VARIABLE_FLOOR) - BOSS_FLOOR_INTERVAL + 1);
     };
 
     // Replaces the boss floor branch of common event 86. True when this floor is a boss floor.
     AP.bossFloor = () => {
         syncKingUnlockSwitches();
-        if ($gameVariables.value(VARIABLE_FLOOR) % 20 !== 0) {
-            return false;
+        const bossSwitch = bossFloorSwitch($gameVariables.value(VARIABLE_FLOOR));
+        if (bossSwitch) {
+            $gameSwitches.setValue(bossSwitch, true);
         }
-        if (KING_SWITCHES.every(kingSwitch => $gameSwitches.value(kingSwitch))) {
-            $gameSwitches.setValue(SWITCH_LAST_BOSS, true);
-            return true;
-        }
-        if (KING_SWITCHES.some(kingSwitch => !$gameSwitches.value(kingSwitch) && kingUnlocked(kingSwitch))) {
-            $gameSwitches.setValue(SWITCH_BEFORE_BOSS, true);
-            return true;
-        }
-        return false;
+        return bossSwitch !== 0;
     };
 
     const hasWeapons = weaponIds => weaponIds.every(weaponId => $gameParty.hasItem($dataWeapons[weaponId]));
 
-    // The game's own conditions for offering an event (common event 86)
-    const eventAvailable = eventId => {
-        if (eventId > 56 && $gameVariables.value(VARIABLE_FLOOR) <= 40) {
+    // The game's own conditions for offering an event on `floor` (common event 86)
+    const eventAvailable = (eventId, floor) => {
+        if (eventId > 56 && floor <= 40) {
             return false;
         }
         switch (eventId) {
@@ -400,8 +860,6 @@
                 return $gameActors.actor(1).isStateAffected(4);
             case 57: // Locksmith
                 return hasWeapons([34, 29, 41]) || hasWeapons([33, 36, 38]);
-            case EVENT_PRISON:
-                return $gameSwitches.value(SWITCH_ENDING);
             default:
                 return true;
         }
@@ -414,38 +872,90 @@
         $gameSwitches.setValue(switchId, true);
     };
 
-    // Replaces the fight / random event roll of common event 86
-    AP.chooseFloorEvent = interpreter => {
-        const pool = state().events.concat(EVENT_PRISON).filter(eventAvailable);
+    // Asks what `floor` holds and hands the switch id to `callback`. False when there is nothing to choose from.
+    const offerFloorEvents = (interpreter, floor, callback) => {
+        const pool = state().events.filter(eventId => eventAvailable(eventId, floor));
         const offered = [];
         while (offered.length < FLOOR_EVENT_CHOICES && pool.length > 0) {
             offered.push(pool.splice(Math.randomInt(pool.length), 1)[0]);
         }
         if (offered.length === 0) {
-            startFloorEvent(SWITCH_FIGHT);
-            return;
+            return false;
         }
         const switchIds = [SWITCH_FIGHT].concat(offered);
         const names = ["Battle"].concat(offered.map(eventId => $dataCommonEvents[eventId].name));
         $gameMessage.setChoices(names, 0, -1);
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
-        $gameMessage.setChoiceCallback(index => startFloorEvent(switchIds[index]));
+        $gameMessage.setChoiceCallback(index => callback(switchIds[index]));
         interpreter.setWaitMode("message");
+        return true;
     };
+
+    // Runs at the start of common event 86, while the standby screen is still shown
+    AP.prepareFloorEvent = interpreter => {
+        AP.chosenFloorEvent = 0;
+        // Without LP left the game over follows instead of a floor
+        if (!bound() || AP.nextFloorEvent || $gameVariables.value(VARIABLE_LP) <= 0) {
+            return;
+        }
+        const floor = $gameVariables.value(VARIABLE_FLOOR) + (state().holdFloor ? 0 : 1);
+        if (bossFloorSwitch(floor)) {
+            return;
+        }
+        offerFloorEvents(interpreter, floor, switchId => (AP.chosenFloorEvent = switchId));
+    };
+
+    // Replaces the fight / random event roll of common event 86
+    AP.chooseFloorEvent = interpreter => {
+        const forced = AP.nextFloorEvent || AP.chosenFloorEvent;
+        AP.nextFloorEvent = 0;
+        AP.chosenFloorEvent = 0;
+        if (forced) {
+            startFloorEvent(forced);
+            return;
+        }
+        if (!offerFloorEvents(interpreter, $gameVariables.value(VARIABLE_FLOOR), startFloorEvent)) {
+            startFloorEvent(SWITCH_FIGHT);
+        }
+    };
+
+    // Seeds from before the option existed have no value for it and shuffle the title effects
+    const titleEffectMissing = title =>
+        bound() &&
+        option("shuffle_title_effects") !== 0 &&
+        title >= 1 &&
+        title <= TITLE_COUNT &&
+        !state().titles.includes(title);
 
     // Replaces the "has armor n" condition of the title release events (common events 401-416)
     AP.titleCondition = title => {
         if (!$gameParty.hasItem($dataArmors[title], false)) {
             return false;
         }
-        if (bound() && !state().titles.includes(title)) {
+        if (titleEffectMissing(title)) {
             if (!$gameSwitches.value(TITLE_SWITCH_BASE + title)) {
                 SoundManager.playBuzzer();
             }
             return false;
         }
         return true;
+    };
+
+    // The Title Collection names the missing item under the condition and effect of the selected title
+    const _Game_Screen_showPicture = Game_Screen.prototype.showPicture;
+    Game_Screen.prototype.showPicture = function(pictureId) {
+        _Game_Screen_showPicture.apply(this, arguments);
+        const picture = this.picture(pictureId);
+        const title = $gameVariables.value(VARIABLE_SELECTED);
+        if (pictureId !== TITLE_TEXT_PICTURE || !picture || !picture.mzkp_text) {
+            return;
+        }
+        if ($gameVariables.value(VARIABLE_SCREEN) === SCREEN_TITLES && titleEffectMissing(title)) {
+            picture.mzkp_text +=
+                "\n\\c[18]Unlock Title Effect: " + TITLE_NAMES[title - 1] + " required to activate this bonus";
+            picture.mzkp_textChanged = true;
+        }
     };
 
     // Replaces the first floor advance of a run: wait on the standby screen at floor 1
@@ -464,16 +974,229 @@
         $gameVariables.setValue(VARIABLE_FLOOR, $gameVariables.value(VARIABLE_FLOOR) + 1);
     };
 
+    // The game's MPP_ChoiceEX decides how many choices are shown before the list scrolls
+    const limitChoiceRows = () => {
+        if ($gameMessage.setChoicePos) {
+            $gameMessage.setChoicePos(-1, -1, CHOICE_MAX_ROWS);
+        }
+    };
+
     // Replaces the "Once upon a time" questions of the opening
     AP.chooseOrigin = interpreter => {
         $gameMessage.setBackground(2);
         $gameMessage.setPositionType(1);
-        $gameMessage.add("You are a......");
+        $gameMessage.add("Choose your starting class......");
         $gameMessage.setChoices(ORIGINS.map(origin => origin[1]), 0, -1);
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(1);
+        limitChoiceRows();
         $gameMessage.setChoiceCallback(index => $gameVariables.setValue(VARIABLE_ORIGIN, ORIGINS[index][0]));
         interpreter.setWaitMode("message");
+    };
+
+    // Runs once the origin is confirmed
+    AP.chooseStartingSet = interpreter => {
+        if (!bound()) {
+            return;
+        }
+        const owned = state().sets.filter(setId => STARTING_SETS[setId]).sort((a, b) => a - b);
+        if (owned.length === 0) {
+            return;
+        }
+        const cardNames = setId => STARTING_SETS[setId][1].map(itemId => "\u3010" + $dataItems[itemId].name + "\u3011");
+        const names = owned.map(setId => "[" + STARTING_SETS[setId][0] + "] " + cardNames(setId).join(""));
+        $gameMessage.setBackground(2);
+        $gameMessage.setPositionType(1);
+        $gameMessage.add("You carry......");
+        $gameMessage.setChoices(names.concat("Nothing"), 0, -1);
+        $gameMessage.setChoiceBackground(0);
+        $gameMessage.setChoicePositionType(1);
+        limitChoiceRows();
+        $gameMessage.setChoiceCallback(index => {
+            if (index < owned.length) {
+                STARTING_SETS[owned[index]][1].forEach(itemId => $gameParty.gainItem($dataItems[itemId], 1));
+            }
+        });
+        interpreter.setWaitMode("message");
+    };
+
+    //-------------------------------------------------------------------------
+    // Speed
+
+    const setSpeed = speed => {
+        AP.speed = Math.min(Math.max(Math.floor(Number(speed)) || 1, 1), 4);
+        return AP.speed;
+    };
+
+    const _SceneManager_determineRepeatNumber = SceneManager.determineRepeatNumber;
+    SceneManager.determineRepeatNumber = function(deltaTime) {
+        return _SceneManager_determineRepeatNumber.apply(this, arguments) * AP.speed;
+    };
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "F7") {
+            setSpeed(AP.speed === 1 ? 2 : 1);
+        }
+    });
+
+    //-------------------------------------------------------------------------
+    // Dev mode
+
+    const DEV_PARAMS = ["maxlp", "maxrp", "str", "def", "mag", "agl", "faith", "virtue"];
+    const DEV_HELP = [
+        "floor N - set the current floor (the next one is N + 1)",
+        "event NAME|ID|fight - force the next floor's event",
+        "gold N - set gold",
+        "heal - restore LP and RP",
+        "stat " + DEV_PARAMS.join("|") + "|lewd N - set a stat",
+        "card NAME [COUNT] / relic NAME [COUNT] - give (negative COUNT takes away)",
+        "title N - meet the condition of title N",
+        "unlock - own every event, boss, title effect and starting set unlock",
+        "var ID [VALUE] / switch ID [on|off] - read or write game data",
+        "god [on|off] - LP and RP cannot go down",
+        "speed N - game speed 1-4",
+    ].join("\n");
+
+    // Damage goes through setHp/setMp, both in battle and from event commands
+    const guardSetter = (name, current) => {
+        const original = Game_BattlerBase.prototype[name];
+        Game_BattlerBase.prototype[name] = function(value) {
+            if (AP.god && this.isActor() && value < current(this)) {
+                return;
+            }
+            original.apply(this, arguments);
+        };
+    };
+    guardSetter("setHp", battler => battler.hp);
+    guardSetter("setMp", battler => battler.mp);
+
+    const findEntry = (table, text) => {
+        const lower = text.toLowerCase();
+        return table.find(entry => entry && entry.name && entry.name.toLowerCase() === lower) || table[Number(text)] || null;
+    };
+
+    // "Grand Strike 2" -> ["Grand Strike", 2]
+    const nameAndCount = words => {
+        const hasCount = words.length > 1 && /^-?\d+$/.test(words[words.length - 1]);
+        return [words.slice(0, hasCount ? -1 : undefined).join(" "), hasCount ? Number(words[words.length - 1]) : 1];
+    };
+
+    const onOff = (word, current) => (word === undefined ? !current : word === "on" || word === "1" || word === "true");
+
+    const devCommands = {
+        help: () => DEV_HELP,
+        floor: words => {
+            $gameVariables.setValue(VARIABLE_FLOOR, Number(words[0]));
+            return "Floor " + $gameVariables.value(VARIABLE_FLOOR);
+        },
+        event: words => {
+            const text = words.join(" ");
+            const entry = text.toLowerCase() === "fight" ? { id: SWITCH_FIGHT, name: "Fight" } : findEntry($dataCommonEvents, text);
+            if (!entry || (entry.id !== SWITCH_FIGHT && (entry.id < EVENT_MIN || entry.id > EVENT_MAX))) {
+                return "No floor event called " + text;
+            }
+            AP.nextFloorEvent = entry.id;
+            return "Next floor: " + entry.name;
+        },
+        gold: words => {
+            $gameParty.gainGold(Number(words[0]) - $gameParty.gold());
+            return "Gold " + $gameParty.gold();
+        },
+        heal: () => {
+            $gameActors.actor(1).recoverAll();
+            return "Recovered";
+        },
+        stat: words => {
+            const actor = $gameActors.actor(1);
+            const value = Number(words[1]);
+            if (words[0] === "lewd") {
+                $gameVariables.setValue(51, value);
+                return "LEWD " + value;
+            }
+            const paramId = DEV_PARAMS.indexOf(words[0]);
+            if (paramId < 0) {
+                return "Unknown stat " + words[0];
+            }
+            actor.addParam(paramId, value - actor.param(paramId));
+            return words[0] + " " + actor.param(paramId);
+        },
+        card: words => {
+            const [name, count] = nameAndCount(words);
+            const item = findEntry($dataItems, name);
+            if (!item) {
+                return "No card called " + name;
+            }
+            $gameParty.gainItem(item, count);
+            return item.name + " x" + $gameParty.numItems(item);
+        },
+        relic: words => {
+            const [name, count] = nameAndCount(words);
+            const weapon = findEntry($dataWeapons, name);
+            if (!weapon) {
+                return "No relic called " + name;
+            }
+            AP.granting = true;
+            $gameParty.gainItem(weapon, count);
+            AP.granting = false;
+            return weapon.name + " x" + $gameParty.numItems(weapon);
+        },
+        title: words => {
+            const armor = $dataArmors[Number(words[0])];
+            if (!armor || armor.id > TITLE_COUNT) {
+                return "Titles are numbered 1-" + TITLE_COUNT;
+            }
+            $gameParty.gainItem(armor, 1, true);
+            return "Condition met for title " + armor.id;
+        },
+        unlock: () => {
+            const s = state();
+            if (!s) {
+                return "Only in a game launched from the client";
+            }
+            for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
+                remember(s.events, eventId);
+            }
+            KING_SWITCHES.forEach(kingSwitch => remember(s.bosses, kingSwitch));
+            for (let title = 1; title <= TITLE_COUNT; title++) {
+                remember(s.titles, title);
+            }
+            Object.keys(STARTING_SETS).forEach(setId => remember(s.sets, Number(setId)));
+            return "Everything unlocked on this save";
+        },
+        var: words => {
+            if (words.length > 1) {
+                $gameVariables.setValue(Number(words[0]), Number(words[1]));
+            }
+            return "v[" + words[0] + "] = " + $gameVariables.value(Number(words[0]));
+        },
+        switch: words => {
+            if (words.length > 1) {
+                $gameSwitches.setValue(Number(words[0]), onOff(words[1], false));
+            }
+            return "s[" + words[0] + "] = " + ($gameSwitches.value(Number(words[0])) ? "on" : "off");
+        },
+        god: words => {
+            AP.god = onOff(words[0], AP.god);
+            return "God mode " + (AP.god ? "on" : "off");
+        },
+        speed: words => "Speed x" + setSpeed(words[0]),
+    };
+
+    // Takes "floor 19" or ["floor", "19"] and returns a line of text
+    AP.dev = input => {
+        const words = Array.isArray(input) ? input.map(String) : String(input).trim().split(/\s+/);
+        const handler = devCommands[(words[0] || "help").toLowerCase()];
+        if (!handler) {
+            return "Unknown dev command " + words[0] + ". Try: help";
+        }
+        if (!$gameParty) {
+            return "The game has not finished loading";
+        }
+        try {
+            return handler(words.slice(1));
+        } catch (error) {
+            return "Failed: " + error.message;
+        }
     };
 
     //-------------------------------------------------------------------------
@@ -539,6 +1262,17 @@
             "if (LostChapterAP.bossFloor()) { this.command119(['" + LABEL_END + "']); }"
         );
         list[increment] = command(355, list[increment].indent, ["LostChapterAP.advanceFloor();"]);
+        // The choice goes ahead of the transition that slides in over the standby screen
+        const transition = list.findIndex(item =>
+            item.code === 231 && item.indent === 0 && String(item.parameters[1]).startsWith("Transition")
+        );
+        if (transition >= 0 && transition < increment) {
+            let standbyEnd = transition;
+            while (standbyEnd > 0 && [355, 655].includes(list[standbyEnd - 1].code)) {
+                standbyEnd--;
+            }
+            list.splice(standbyEnd, 0, command(355, 0, ["LostChapterAP.prepareFloorEvent(this);"]));
+        }
     };
 
     const patchTitleReleases = () => {
@@ -550,6 +1284,22 @@
             }
             condition.parameters = [12, "LostChapterAP.titleCondition(" + title + ")"];
         }
+    };
+
+    // Common event 72: from the command that resets the score to the loop that animates its digits
+    const findScoreCommands = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_SCORE].list;
+        const isScore = (item, operation) => {
+            const p = item.parameters;
+            return item.code === 122 && p[0] === VARIABLE_SCORE && p[1] === VARIABLE_SCORE && p[2] === operation;
+        };
+        const start = list.findIndex(item => isScore(item, 0) && item.parameters[3] === 0 && item.parameters[4] === 0);
+        const end = list.findIndex((item, i) => i > start && item.code === 112);
+        if (start < 0 || end < 0) {
+            console.error("[AP] Common event 72 has an unexpected layout, souls are not counted");
+            return;
+        }
+        scoreCommands = list.slice(start, end);
     };
 
     const eventLists = map => {
@@ -589,6 +1339,24 @@
         overrideRange(list, question - 1, reveal - 2, [command(355, 0, ["LostChapterAP.chooseOrigin(this);"])]);
     };
 
+    // Map001: the branch of the "Correct" choice that applies the origin
+    const patchStartingSet = list => {
+        const correct = list.findIndex(item => item.code === 402 && item.parameters[1] === "Correct");
+        if (correct >= 0 && list.some(item => item.code === 401 && String(item.parameters[0]).startsWith("That's right"))) {
+            list.splice(correct + 1, 0, command(355, list[correct].indent + 1, ["LostChapterAP.chooseStartingSet(this);"]));
+        }
+    };
+
+    // Map003: a new run goes to the bonus shop (Map008) from the second playthrough on
+    const patchBonusShop = list => {
+        for (const item of list) {
+            const p = item.parameters;
+            if (item.code === 111 && p[0] === 1 && p[1] === VARIABLE_PLAYTHROUGH && p[3] === 2 && p[4] === 1) {
+                item.parameters = [12, "!LostChapterAP.bound() && $gameVariables.value(" + VARIABLE_PLAYTHROUGH + ") >= 2"];
+            }
+        }
+    };
+
     const patchMap = map => {
         if (map._archipelagoPatched) {
             return;
@@ -597,6 +1365,8 @@
         for (const list of eventLists(map)) {
             patchRunStart(list);
             patchOrigin(list);
+            patchStartingSet(list);
+            patchBonusShop(list);
         }
     };
 
@@ -613,15 +1383,50 @@
             const unlockSwitch = kingSwitch + KING_UNLOCK_SWITCH_SHIFT;
             return text.replace("(!s[" + kingSwitch + "]", "(s[" + unlockSwitch + "]&&!s[" + kingSwitch + "]");
         });
+        patchTurnBack(list, list.indexOf(choices));
+    };
+
+    // A fifth door choice that leads to the standby screen the way a victory does, without the fight
+    const patchTurnBack = (list, choices) => {
+        const indent = list[choices].indent;
+        const choicesEnd = list.findIndex((item, i) => i > choices && item.code === 404 && item.indent === indent);
+        const leave = list.findIndex(
+            (item, i) => i > choicesEnd && item.indent === 0 && item.code === 357 && item.parameters[1] === "clear"
+        );
+        if (choicesEnd < 0 || leave < 0) {
+            console.error("[AP] Common event 63 has an unexpected layout, the boss doors have no way back");
+            return;
+        }
+        const choice = list[choices].parameters[0].length;
+        // MPP_ChoiceEX reads the condition up to the first closing bracket, so it has to be a plain switch
+        const text = "Turn Backif(s[" + SWITCH_BOUND + "])";
+        // Later index first, so the earlier one stays valid
+        list.splice(leave, 0, command(118, 0, [LABEL_TURN_BACK]));
+        list.splice(
+            choicesEnd,
+            0,
+            command(402, indent, [choice, text]),
+            command(355, indent + 1, ["LostChapterAP.turnBack();"]),
+            command(101, indent + 1, ["", 0, 1, 2, ""]),
+            command(401, indent + 1, ["You turned back. The way on stays closed until a Heavenly King falls."]),
+            command(119, indent + 1, [LABEL_TURN_BACK]),
+            command(0, indent + 1, [])
+        );
+        list[choices].parameters[0].push(text);
     };
 
     const _DataManager_onLoad = DataManager.onLoad;
     DataManager.onLoad = function(object) {
         _DataManager_onLoad.apply(this, arguments);
-        if (object === $dataCommonEvents) {
+        if (!SESSION) {
+            return;
+        }
+        if (object === $dataCommonEvents && !object._archipelagoPatched) {
+            object._archipelagoPatched = true;
             patchNextFloor();
             patchKingDoors();
             patchTitleReleases();
+            findScoreCommands();
         } else if (object === $dataMap) {
             patchMap(object);
         }

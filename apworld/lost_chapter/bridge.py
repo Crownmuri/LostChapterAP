@@ -2,15 +2,19 @@
 Local WebSocket server the in-game plugin connects to.
 
 Game -> client:
-    {"cmd": "Hello", "version": str}
+    {"cmd": "Hello", "version": str, "session": str | None}   session is the save folder, None for a normal game
     {"cmd": "Checks", "locations": [int]}   full list of checked location ids, resent freely
-    {"cmd": "Goal", "kind": "ending" | "true_ending"}
+    {"cmd": "Goal", "kind": "ending_1" | "ending_2"}
+    {"cmd": "DevResult", "text": str}
     {"cmd": "Status", "floor": int}
     {"cmd": "Error", "text": str}
 
 Client -> game:
-    {"cmd": "Slot", "connected": bool, "seed": str, "slot": int, "slot_data": dict}
-    {"cmd": "Items", "items": [{"index": int, "id": int, "name": str, "sender": str}]}   always the full list
+    {"cmd": "Slot", "connected": bool, "seed": str, "slot": int, "name": str, "slot_data": dict}
+    {"cmd": "Items", "items": [{"index": int, "id": int, "name": str, "sender": str, "flags": int}]}   always the full list
+    {"cmd": "Scouts", "locations": {location id: {"item": str, "player": str, "flags": int}}}   what the relic places hold
+    {"cmd": "Speed", "speed": int}
+    {"cmd": "Dev", "args": [str]}
 """
 import asyncio
 import json

@@ -17,16 +17,28 @@ FLOOR_OFFSET = 4000   # location id = offset + floor number
 EVENT_OFFSET = 5000   # item id = offset + common event id (the first visit location uses SWITCH_OFFSET)
 BOSS_OFFSET = 6000    # item id = offset + the Heavenly King's switch id
 TITLE_OFFSET = 7000   # item id = offset + title number
+SET_OFFSET = 8000     # item id = offset + bonus id of the starting set
+SOUL_OFFSET = 10000   # location id = offset + soul milestone
 
 # Game variables
 VARIABLE_FLOOR = 11
 
-# A Heavenly King waits on every 20th floor (common event 86 "---Standby End---")
+# A Heavenly King waits on every 20th floor (common event 86 "---Standby End---"). The plugin only lets the climb
+# go on once one of them is defeated there, so every boss floor passed takes one more boss unlock.
+BOSS_FLOOR_INTERVAL = 20
 FLOOR_CHECKS = range(10, 81, 10)
 
+# Floor events from this common event id on are only offered above this floor (common event 86)
+LATE_EVENT_FIRST = 57
+LATE_EVENT_FLOOR = 41
+
+# Souls are the score the bonus shop spends. Common event 72 computes the score of a run:
+# (Max LP + Max RP + Gold + fluids) / 10 + STR + DEF + MAG + AGL + LEWD + Floor + counts, plus fixed amounts for
+# relics, quest flags and Heavenly Kings. The plugin adds up the best score of every run.
+SOUL_MILESTONES = (50, 100, 200, 500, 1000, 2000)
+
 # Game switches
-SWITCH_ENDING = 1         # set by the Ending map (Map011)
-SWITCH_TRUE_ENDING = 200  # set by the Ending map on the TRUE END page
+SWITCH_CLEARED = 1  # set by the Ending map (Map011). The plugin keeps it on, so the climb continues after the last boss
 
 # switch id -> boss name (set by common event 63 "Heavenly King Battle")
 HEAVENLY_KINGS: Dict[int, str] = {
@@ -40,23 +52,25 @@ HEAVENLY_KINGS: Dict[int, str] = {
 # Common event 420 hands out armor n once the condition of title n is met (that is the check). The player then
 # releases the title in the Title Collection (common event 400 + n), which grants the reward and sets switch 200 + n.
 # Titles and their armors are reset at the start of every run.
+# The names are the ones drawn on the Title Collection pictures (TC101-TC116). The armor names in the database
+# have 2/3 and 11/12 the other way around.
 TITLES: Dict[int, str] = {
-    1: "Seed of Origin",
-    2: "Another Sephira",
-    3: "Alice Idea",
-    4: "Eternal Ruler",
-    5: "Nightlife Girl",
-    6: "Phoenix Knight",
-    7: "Einherjar Priestess",
-    8: "Crimson Mythology",
-    9: "Sun of Lonasanknez",
-    10: "The Naked One",
-    11: "Minerva's Owl",
-    12: "Taygetus Summit",
-    13: "Lanta Charis Spirit",
-    14: "Irminsul Drop",
-    15: "Star Cradle",
-    16: "Azure Philosophy",
+    1: "Seed of Origin",  # Lose Virginity
+    2: "Alice Idea",  # FAITH is 30 or less
+    3: "Another Sephira",  # VIRTUE is 30 or less
+    4: "Eternal Ruler",  # Defeat the Gold Heavenly King
+    5: "Nightlife Girl",  # LEWD is 15 or more
+    6: "Phoenix Knight",  # LP lowers to 1
+    7: "Einherjar Priestess",  # Defeat the Crimson Heavenly King
+    8: "Crimson Mythology",  # Use 7 cards during 1 turn
+    9: "Sun of Lonasanknez",  # Be inflicted with 7 ailments simultaneously
+    10: "The Naked One",  # Defeat the Emerald Heavenly King
+    11: "Taygetus Summit",  # Possess 1000G
+    12: "Minerva's Owl",  # (Max LP + Max RP + LEWD) / 5 + STR + DEF + MAG + AGL is over 30
+    13: "Lanta Charis Spirit",  # Defeat the Azure Heavenly King
+    14: "Irminsul Drop",  # VIRTUE is 70 or more
+    15: "Star Cradle",  # FAITH is 70 or more
+    16: "Azure Philosophy",  # Possess 15 or more cards
 }
 TITLE_SWITCH_BASE = 200
 
@@ -94,7 +108,6 @@ ENEMIES: Dict[int, str] = {
 }
 
 # common event id -> floor event name. Event n runs while switch n is on (set by common event 86).
-# Left out on purpose: Prison (61), which the game only offers after the first clear.
 EVENTS: Dict[int, str] = {
     21: "Marsh",
     22: "Hot Spring",
@@ -136,6 +149,17 @@ EVENTS: Dict[int, str] = {
     58: "Corridor",
     59: "Throne",
     60: "Hill",
+    61: "Prison",  # the game only offers it once cleared, which the plugin makes true from the start
+}
+
+# bonus id of the bonus shop (common event 418) -> starting set. Each set is three cards.
+STARTING_SETS: Dict[int, str] = {
+    101: "Boxer Set",     # Strike, Grand Strike, Berserk
+    102: "Fighter Set",   # Shoot, Dusk Shoot, Fleet Footwork
+    103: "Mage Set",      # Witch Act, Sacrament, Over Release
+    104: "Knight Set",    # Shield Bash x2, Eminence Protect
+    105: "Merchant Set",  # Mammonite x2, Investment
+    106: "Succubus Set",  # Temptation x2, Levy Suit
 }
 
 # weapon id -> relic name. Only relics with a known event source are listed.

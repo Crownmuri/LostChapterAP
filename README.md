@@ -30,6 +30,8 @@ reports them. Everything Archipelago-related lives in the Python client, which:
 | `apworld/lost_chapter/game_install.py` | Steam lookup, plugin install/uninstall, launch |
 | `apworld/lost_chapter/game_plugin/LostChapterAP.js` | The in-game plugin (shipped inside the apworld) |
 | `tools/build_apworld.py` | Packs `build/lost_chapter.apworld` |
+| `docs/endings.md` | How the base game decides its endings |
+| `tools/dump_events.py` | Regenerates `docs/events.md`: every floor event, its decisions and what they change |
 | `tools/dump_game_data.py` | Dumps switch/variable/event outlines into `dump/` for reverse engineering |
 
 AP ids are derived from the game's database ids (`data.py`), mirrored by the constants at the top of the plugin.
@@ -40,10 +42,33 @@ AP ids are derived from the game's database ids (`data.py`), mirrored by the con
 python tools/build_apworld.py --install "D:\Games\Randomizer\Archipelago\custom_worlds"
 ```
 
-Restart the launcher, open **Lost Chapter Client**, press **Install plugin**, then **Launch game (Steam)**.
+Restart the launcher, open **Lost Chapter Client**, connect to a multiworld, then type `/run` (it installs
+the plugin if needed). `yaml/Lost Chapter.yaml` is a ready-made player file for testing.
 
 To get the Chromium devtools (F12) for plugin debugging, remove `--disable-devtools` from `chromium-args` in the
 game's `package.json`.
+
+### Dev mode
+
+Set `lost_chapter_options.dev_mode: true` in `host.yaml`, then type `/dev help` in the client while the game is
+connected. The same commands work in the game's console as `LostChapterAP.dev("floor 19")`.
+
+| Command | Effect |
+| --- | --- |
+| `/dev floor N` | Set the current floor. The next floor is N + 1, so `floor 19` puts a boss floor next |
+| `/dev event NAME` | Force the next floor's event (name, common event id, or `fight`) |
+| `/dev gold N`, `/dev heal` | Set gold, restore LP and RP |
+| `/dev stat NAME N` | Set `maxlp`, `maxrp`, `str`, `def`, `mag`, `agl`, `faith`, `virtue` or `lewd` |
+| `/dev card NAME [COUNT]`, `/dev relic NAME [COUNT]` | Give a card or relic, a negative count takes it away |
+| `/dev title N` | Meet the condition of title N |
+| `/dev unlock` | Own every event, boss, title effect and starting set unlock on this save |
+| `/dev var ID [VALUE]`, `/dev switch ID [on\|off]` | Read or write a game variable or switch |
+| `/dev god [on\|off]` | LP and RP cannot go down |
+| `/dev speed N` | Game speed 1-4 |
+
+Setting the floor, a title or a switch sends the matching checks like normal play would.
+
+Speed needs no dev mode: F7 in the game toggles 1x and 2x, and `/speed N` in the client sets 1-4.
 
 ## Game notes
 
@@ -53,7 +78,8 @@ Everything the game does runs through common events, switches and variables:
 | --- | --- |
 | Current floor | variable 11, advanced in common event 86. Every 20th floor is a Heavenly King |
 | Heavenly Kings defeated | switches 71-74, count in variable 68 (common event 63) |
-| Ending / TRUE END | switches 1 / 200, set by Map011 |
+| Game cleared / TRUE END | switches 1 / 200, set by the ending (Map011). With switch 1 on, common event 64 continues the climb after the last boss instead of rolling the ending. Map011 plays the TRUE END unless the climax count (variable 232) is 21 or more |
+| New run | Map003 (title) runs common event 430, then goes to the bonus shop (Map008) from the second playthrough on (variable 67), otherwise to the opening (Map001) |
 | Titles | common event 420 hands out armor n when the condition of title n is met. Releasing it in the Title Collection (common event 400+n) grants the reward and sets switch 200+n. Reset every run |
 | Origin ("You are a...") | variable 2 (1-9), asked and applied by Map001 |
 | Run start | Map004 (first playthrough) or Map006 calls common event 86 |
@@ -61,7 +87,9 @@ Everything the game does runs through common events, switches and variables:
 | Quest chain flags | switches 271-290, set by the floor events (common events 21-61) |
 | Regular fights | common event 65, troops 1-21 |
 | Bonus shop | Map009, executes common event 418 with the bonus id in variable 85 |
-| Bonus ids | 1-22 stat/card boosts, 101-116 starter packs and passive flags (switches 231-235) |
+| Bonus ids | 1-22 small boosts (stats, regen, gold, single cards, states). 101-106 starting sets of three cards: Boxer, Fighter, Mage, Knight, Merchant, Succubus. 108-116 rich bonuses: passive flags (switches 231-235), all stats +2, LP/RP +20, LEWD +10 |
+| Souls (score) | common event 72 computes the score of the run into variable 77. Game over (common event 66) adds it to the shop currency, variable 292 |
+| Forget-Me-Not | weapon 74 with its count in variable 74. Removes a card, usable from the standby screen |
 | New run reset | common event 430 "---Game Initialization---" |
 
 ## Status
@@ -70,34 +98,53 @@ Generates and fills; the client, installer and bridge are tested outside the gam
 real `CommonEvents.json` in a headless browser with a stubbed engine, but has not been run in the game yet.
 
 Checks: Heavenly Kings, title conditions, first victories, every 10th floor, first visit of each floor event,
-relics from events.
+relics from events, soul milestones.
 
-Items: floor event unlocks, boss unlocks, title effects, relics, gold.
+Items: floor event unlocks, boss unlocks, title effects, starting sets, relics, gold.
 
-Game changes on a save bound to a multiworld (the plugin patches the event data in memory at load, the game files
-stay untouched and other saves play as usual):
+The plugin only acts in a session: the client's `/run` writes `archipelago_session.json`
+into the game folder, and the plugin reads it at boot. In a session the game saves into `save_ap_<seed>_<slot>/`
+instead of `save/`. Without the file (game started from Steam, or the client closed) the plugin changes nothing and
+the normal save is used. The client removes the file when it closes.
+
+Game changes in a session (the plugin patches the event data in memory at load, the game files stay untouched):
 
 - Every floor is a fight until floor events are unlocked. With unlocked events the player picks between Battle and
   up to two random unlocked events. The game's own conditions for an event still apply (floor 41+ for Locksmith,
   Corridor, Throne and Hill, torn clothes for the Seamstress, ...).
-- The door of a Heavenly King only shows with his boss unlock. A boss floor with no available king is played as a
-  normal floor. The last boss still appears once all four are defeated.
+- The door of a Heavenly King is grayed out without his boss unlock. Every boss floor leads to the hallway, and
+  the doors also offer **Turn Back**, which repeats the last 20 floors: the climb only goes on once a king is
+  defeated there. The last boss still appears once all four are defeated.
 - Meeting the condition of a title sends its check. Releasing the title in the Title Collection, which is what
-  grants the reward and counts for the row and column bonuses, also needs its title effect item.
+  grants the reward and counts for the row and column bonuses, also needs its Unlock Title Effect item (the Title Collection names it under the description while it is
+  missing). The `shuffle_title_effects` option turns that off.
 - A run starts on the standby screen at floor 1 instead of inside the first event.
+- The game counts as cleared from the start. Defeating the last boss is the goal, and the climb continues
+  afterwards (the Heavenly Kings come back, as in the game's own later laps) instead of rolling the ending.
+  The Prison event is a normal event unlock and the Recollection menu is open.
+- The bonus shop and its currency are skipped. Received starting sets are offered in a menu right after the
+  origin is confirmed, one set per run.
+- Souls are counted live with the game's own score formula. The best score of every run adds up, times the
+  `soul_multiplier` option, and sends checks at 50, 100, 200, 500, 1000 and 2000. The standby screen shows the
+  total and the next milestone.
 - The "Once upon a time" questions are replaced by one list of the nine origins with their effects. The
   description and the Correct / Wrong confirmation are unchanged.
 
 Logic: first visits need the event unlock, kings and their four titles need the boss unlock, relics need their
-source events, the ending needs all four boss unlocks. Fights, floors and the other titles have no rules yet.
+source events, the ending needs all four boss unlocks. Every boss floor passed takes one more boss unlock: floors
+21-40 need one, 41-60 two, 61-80 three, which also applies to the floor 41+ events and their relics. Fights and the
+other titles have no rules yet.
 
 ## Roadmap
 
 1. Run the plugin in the game and confirm each hook fires (devtools console, `/game` in the client).
-2. Bonuses as items: an AP item sets variable 85 and runs common event 418 at the start of every run, replacing the
-   bonus shop (Map009) and its currency.
-3. Map which enemies appear when and give first victories real rules. Decide whether the stat-based titles need
+2. The remaining shop bonuses as items (stats, regen, passive flags), applied at the start of every run.
+3. An Archipelago inventory on the standby screen for consumable items such as Forget-Me-Nots (card removal),
+   claimed when the player wants them instead of on arrival.
+4. Rewards of event decisions (`docs/events.md`) as checks, with the reward moved into the item pool. Some as
+   run-only items, some as permanent stat increases.
+5. Map which enemies appear when and give first victories real rules. Decide whether the stat-based titles need
    rules.
-4. Quest chain rewards beyond relics, using switches 271-290.
-5. In-game notification for sent and received items.
-6. DLC and the separate patch as YAML options.
+6. Quest chain rewards beyond relics, using switches 271-290.
+7. In-game notification for sent and received items.
+8. DLC and the separate patch as YAML options.

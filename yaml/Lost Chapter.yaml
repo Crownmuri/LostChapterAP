@@ -1,0 +1,26 @@
+# Test player file for Lost Chapter. Copy it into the Players folder of your Archipelago install.
+name: LostChapter
+description: Lost Chapter test seed
+game: Lost Chapter
+requires:
+  version: 0.6.7
+
+Lost Chapter:
+  # ending: defeat the last boss
+  # ending_1: defeat the last boss with a climax count of 20 or less
+  goal: ending
+
+  # Relics found in events become checks and are shuffled into the pool
+  relicsanity: true
+
+  # The first win against each regular enemy is a check
+  first_victories: true
+
+  # Releasing a title also needs its Unlock Title Effect item. false: titles release as in the normal game
+  shuffle_title_effects: true
+
+  # 1-10. Souls add up over all runs and send checks at 50, 100, 200, 500, 1000 and 2000
+  soul_multiplier: 2
+
+  progression_balancing: 50
+  accessibility: full

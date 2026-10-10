@@ -1,13 +1,16 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import settings
 
-from BaseClasses import Item, ItemClassification, Location, Region, Tutorial
+from BaseClasses import CollectionState, Item, ItemClassification, Location, Region, Tutorial
 
 from worlds.AutoWorld import WebWorld, World
 
 from . import data
 from .options import LostChapterOptions
+
+
+SLOT_DATA_OPTIONS = ("goal", "relicsanity", "first_victories", "shuffle_title_effects", "soul_multiplier")
 
 
 def location_table() -> Dict[str, int]:
@@ -31,6 +34,9 @@ def location_table() -> Dict[str, int]:
     for event_id, name in data.EVENTS.items():
         table[f"First Visit: {name}"] = data.SWITCH_OFFSET + event_id
 
+    for milestone in data.SOUL_MILESTONES:
+        table[f"Souls: {milestone}"] = data.SOUL_OFFSET + milestone
+
     return table
 
 
@@ -47,7 +53,10 @@ def item_table() -> Dict[str, int]:
         table[f"Boss Unlock: {name}"] = data.BOSS_OFFSET + switch_id
 
     for number, name in data.TITLES.items():
-        table[f"Title Effect: {name}"] = data.TITLE_OFFSET + number
+        table[f"Unlock Title Effect: {name}"] = data.TITLE_OFFSET + number
+
+    for bonus_id, name in data.STARTING_SETS.items():
+        table[f"Starting {name}"] = data.SET_OFFSET + bonus_id
 
     return table
 
@@ -67,8 +76,12 @@ class LostChapterSettings(settings.Group):
     class BridgePort(int):
         """Local port the client listens on for the in-game plugin."""
 
+    class DevMode(settings.Bool):
+        """Allows the client's /dev commands: set the floor, stats and items, god mode."""
+
     game_path: GamePath = GamePath("")
     bridge_port: BridgePort = BridgePort(38472)
+    dev_mode: Union[DevMode, bool] = False
 
 
 class LostChapterWebWorld(WebWorld):
@@ -106,7 +119,8 @@ class LostChapterWorld(World):
         "Relics": set(data.RELICS.values()),
         "Events": {f"Event: {name}" for name in data.EVENTS.values()},
         "Boss Unlocks": {f"Boss Unlock: {name}" for name in data.HEAVENLY_KINGS.values()},
-        "Title Effects": {f"Title Effect: {name}" for name in data.TITLES.values()},
+        "Title Effects": {f"Unlock Title Effect: {name}" for name in data.TITLES.values()},
+        "Starting Sets": {f"Starting {name}" for name in data.STARTING_SETS.values()},
     }
     location_name_groups = {
         "Heavenly Kings": {f"Defeat {name}" for name in data.HEAVENLY_KINGS.values()},
@@ -115,6 +129,7 @@ class LostChapterWorld(World):
         "Relics": {f"Relic: {name}" for name in data.RELICS.values()},
         "Floors": {f"Reach Floor {floor}" for floor in data.FLOOR_CHECKS},
         "Events": {f"First Visit: {name}" for name in data.EVENTS.values()},
+        "Souls": {f"Souls: {milestone}" for milestone in data.SOUL_MILESTONES},
     }
 
     required_client_version = (0, 6, 7)
@@ -128,7 +143,7 @@ class LostChapterWorld(World):
         # Universal Tracker regenerates the world from slot data instead of a yaml
         passthrough: Dict[str, Any] = getattr(self.multiworld, "re_gen_passthrough", {}).get(self.game, {})
 
-        for option_name in ("goal", "relicsanity", "first_victories"):
+        for option_name in SLOT_DATA_OPTIONS:
             if option_name in passthrough:
                 getattr(self.options, option_name).value = passthrough[option_name]
 
@@ -158,13 +173,26 @@ class LostChapterWorld(World):
 
         self.multiworld.completion_condition[self.player] = lambda state: state.has(data.VICTORY, self.player)
 
+    def can_reach_floor(self, state: CollectionState, floor: int) -> bool:
+        # Every boss floor below takes a Heavenly King defeated there, each of them a boss unlock
+        return state.has_group("Boss Unlocks", self.player, (floor - 1) // data.BOSS_FLOOR_INTERVAL)
+
     def set_rules(self) -> None:
-        # Fights and floors have no rules yet. Titles only have rules where the condition is a Heavenly King.
+        # Fights have no rules yet. Titles only have rules where the condition is a Heavenly King.
         player = self.player
 
-        for name in data.EVENTS.values():
+        for floor in data.FLOOR_CHECKS:
+            self.get_location(f"Reach Floor {floor}").access_rule = (
+                lambda state, floor=floor: self.can_reach_floor(state, floor)
+            )
+
+        for event_id, name in data.EVENTS.items():
+            floor = data.LATE_EVENT_FLOOR if event_id >= data.LATE_EVENT_FIRST else 1
+
             self.get_location(f"First Visit: {name}").access_rule = (
-                lambda state, item=f"Event: {name}": state.has(item, player)
+                lambda state, item=f"Event: {name}", floor=floor: (
+                    state.has(item, player) and self.can_reach_floor(state, floor)
+                )
             )
 
         for name in data.HEAVENLY_KINGS.values():
@@ -178,11 +206,17 @@ class LostChapterWorld(World):
             )
 
         if self.options.relicsanity:
+            event_ids = {name: event_id for event_id, name in data.EVENTS.items()}
+
             for name, source in data.RELIC_SOURCES.items():
                 required = [f"Event: {event}" for event in source["events"]] + source["relics"]
+                late = any(event_ids[event] >= data.LATE_EVENT_FIRST for event in source["events"])
+                floor = data.LATE_EVENT_FLOOR if late else 1
 
                 self.get_location(f"Relic: {name}").access_rule = (
-                    lambda state, items=required: state.has_all(items, player)
+                    lambda state, items=required, floor=floor: (
+                        state.has_all(items, player) and self.can_reach_floor(state, floor)
+                    )
                 )
 
         # The last boss appears on a boss floor once all four Heavenly Kings are defeated
@@ -195,7 +229,7 @@ class LostChapterWorld(World):
 
         if name in data.FILLER.values():
             classification = ItemClassification.filler
-        elif name in self.item_name_groups["Title Effects"]:
+        elif name in self.item_name_groups["Title Effects"] | self.item_name_groups["Starting Sets"]:
             classification = ItemClassification.useful
 
         return LostChapterItem(name, classification, self.item_name_to_id[name], self.player)
@@ -204,14 +238,16 @@ class LostChapterWorld(World):
         return LostChapterItem(name, ItemClassification.progression, None, self.player)
 
     def create_items(self) -> None:
-        pool: List[LostChapterItem] = [
-            self.create_item(name)
-            for name in sorted(
-                self.item_name_groups["Events"]
-                | self.item_name_groups["Boss Unlocks"]
-                | self.item_name_groups["Title Effects"]
-            )
-        ]
+        names = (
+            self.item_name_groups["Events"]
+            | self.item_name_groups["Boss Unlocks"]
+            | self.item_name_groups["Starting Sets"]
+        )
+
+        if self.options.shuffle_title_effects:
+            names |= self.item_name_groups["Title Effects"]
+
+        pool: List[LostChapterItem] = [self.create_item(name) for name in sorted(names)]
 
         if self.options.relicsanity:
             pool += [self.create_item(name) for name in data.RELICS.values()]
@@ -225,7 +261,7 @@ class LostChapterWorld(World):
         return self.random.choices(list(data.FILLER.values()), weights=[3, 1])[0]
 
     def fill_slot_data(self) -> Dict[str, Any]:
-        return self.options.as_dict("goal", "relicsanity", "first_victories")
+        return self.options.as_dict(*SLOT_DATA_OPTIONS)
 
     @staticmethod
     def interpret_slot_data(slot_data: Dict[str, Any]) -> Dict[str, Any]:

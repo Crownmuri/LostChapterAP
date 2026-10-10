@@ -28,11 +28,11 @@ except ModuleNotFoundError:
 class LostChapterCommandProcessor(CommandProcessor):
     ctx: "LostChapterContext"
 
-    def _cmd_install(self) -> None:
+    def _cmd_patch(self) -> None:
         """Install the Archipelago plugin into the Lost Chapter folder."""
         self.ctx.install_plugin()
 
-    def _cmd_uninstall(self) -> None:
+    def _cmd_unpatch(self) -> None:
         """Remove the Archipelago plugin from the Lost Chapter folder."""
         game_path = self.ctx.game_path
 
@@ -43,9 +43,25 @@ class LostChapterCommandProcessor(CommandProcessor):
         game_install.uninstall_plugin(game_path)
         self.output("Plugin removed.")
 
-    def _cmd_launch(self) -> None:
-        """Launch Lost Chapter through Steam."""
+    def _cmd_run(self) -> None:
+        """Launch Lost Chapter for the connected slot, patching it first if needed."""
         self.ctx.launch_game()
+
+    def _cmd_speed(self, speed: str = "2") -> None:
+        """Set the game speed, 1 to 4. F7 in the game toggles between 1x and 2x."""
+        Utils.async_start(self.ctx.bridge.send({"cmd": "Speed", "speed": speed}))
+
+    def _cmd_dev(self, *args: str) -> None:
+        """Send a dev command to the game, /dev help lists them. Needs dev_mode in host.yaml."""
+        if not self.ctx.world_settings("dev_mode", False):
+            self.output("Dev commands are off. Set lost_chapter_options.dev_mode to true in host.yaml.")
+            return
+
+        if not self.ctx.bridge.is_game_connected:
+            self.output("The game is not connected.")
+            return
+
+        Utils.async_start(self.ctx.bridge.send({"cmd": "Dev", "args": list(args)}))
 
     def _cmd_game(self) -> None:
         """Show the state of the game connection."""
@@ -129,10 +145,35 @@ class LostChapterContext(Context):
     def launch_game(self) -> None:
         game_path = self.game_path
 
-        if game_path is not None and not game_install.is_plugin_installed(game_path):
+        if game_path is None:
+            CommonClient.logger.error(
+                "Lost Chapter install not found. Set lost_chapter_options.game_path in host.yaml."
+            )
+            return
+
+        if not self.slot or not self.seed_name:
+            CommonClient.logger.error("Connect to the multiworld first, /run launches the game for the connected slot.")
+            return
+
+        if not game_install.is_plugin_installed(game_path):
             self.install_plugin()
 
+        folder = game_install.write_session(game_path, self.seed_name, self.slot)
+        CommonClient.logger.info(f"Launching Lost Chapter with its own save for this slot ({folder}).")
+
         game_install.launch_game()
+
+    async def shutdown(self):
+        # Without the session file the game starts as the normal game with its normal save
+        game_path = self.game_path
+
+        if game_path is not None:
+            try:
+                game_install.clear_session(game_path)
+            except OSError:
+                pass
+
+        await super().shutdown()
 
     def make_gui(self):
         from .gui import bootstrap_client_gui
@@ -159,6 +200,14 @@ class LostChapterContext(Context):
                 self.send_msgs([{"cmd": "StatusUpdate", "status": CommonClient.ClientStatus.CLIENT_PLAYING}])
             )
             Utils.async_start(self.sync_game())
+
+            # The game shows what a relic's place holds instead of the relic
+            relic_locations = {data.RELIC_OFFSET + weapon_id for weapon_id in data.RELICS} & self.server_locations
+
+            if relic_locations:
+                Utils.async_start(self.send_msgs([{"cmd": "LocationScouts", "locations": sorted(relic_locations)}]))
+        elif cmd == "LocationInfo":
+            Utils.async_start(self.send_scouts())
         elif cmd == "ReceivedItems":
             Utils.async_start(self.send_items())
 
@@ -176,10 +225,29 @@ class LostChapterContext(Context):
             "connected": True,
             "seed": self.seed_name,
             "slot": self.slot,
+            "name": self.player_names.get(self.slot, ""),
             "slot_data": self.slot_data,
         })
 
         await self.send_items()
+        await self.send_scouts()
+
+    async def send_scouts(self) -> None:
+        if not self.slot or not self.locations_info:
+            return
+
+        scouts: Dict[str, Dict[str, Any]] = dict()
+
+        location: int
+        network_item: NetUtils.NetworkItem
+        for location, network_item in self.locations_info.items():
+            scouts[str(location)] = {
+                "item": self.item_names.lookup_in_slot(network_item.item, network_item.player),
+                "player": self.player_names.get(network_item.player, ""),
+                "flags": network_item.flags,
+            }
+
+        await self.bridge.send({"cmd": "Scouts", "locations": scouts})
 
     async def send_items(self) -> None:
         if not self.slot:
@@ -195,6 +263,7 @@ class LostChapterContext(Context):
                 "id": network_item.item,
                 "name": self.item_names.lookup_in_game(network_item.item),
                 "sender": self.player_names.get(network_item.player, "Server"),
+                "flags": network_item.flags,
             })
 
         await self.bridge.send({"cmd": "Items", "items": items})
@@ -202,20 +271,29 @@ class LostChapterContext(Context):
     async def on_game_message(self, message: Dict[str, Any]) -> None:
         cmd = message.get("cmd")
 
-        if cmd == "Checks":
+        if cmd == "Hello":
+            if not message.get("session"):
+                CommonClient.logger.warning(
+                    "Lost Chapter is running as the normal game with its normal save. "
+                    "Close it and type /run to play this multiworld."
+                )
+        elif cmd == "Checks":
             if self.slot:
                 await self.check_locations(message.get("locations", []))
         elif cmd == "Goal":
             if not self.slot or self.finished_game:
                 return
 
-            # The true ending also satisfies the plain ending goal
-            if self.slot_data.get("goal", 0) == 0 or message.get("kind") == "true_ending":
+            # Any win satisfies the plain ending goal
+            if self.slot_data.get("goal", 0) == 0 or message.get("kind") == "ending_1":
                 self.finished_game = True
 
                 await self.send_msgs([{"cmd": "StatusUpdate", "status": CommonClient.ClientStatus.CLIENT_GOAL}])
         elif cmd == "Status":
             self.floor = message.get("floor")
+        elif cmd == "DevResult":
+            for line in str(message.get("text", "")).split("\n"):
+                CommonClient.logger.info(f"[Dev] {line}")
         elif cmd == "Error":
             CommonClient.logger.error(f"[Game] {message.get('text')}")
 

@@ -1,4 +1,5 @@
 """Locating the Steam install, installing the in-game plugin and launching the game."""
+import json
 import os
 import pkgutil
 import re
@@ -12,6 +13,7 @@ from .data import STEAM_APP_ID
 PLUGIN_NAME = "LostChapterAP"
 PLUGIN_FILE = f"{PLUGIN_NAME}.js"
 BACKUP_SUFFIX = ".ap_backup"
+SESSION_FILE = "archipelago_session.json"
 
 _ENTRY_PATTERN = re.compile(r',?\r?\n\{"name":"' + PLUGIN_NAME + r'".*?\}\}(?=\r?\n)')
 
@@ -112,6 +114,40 @@ def uninstall_plugin(game_path: str) -> None:
 
     if os.path.exists(plugin_file):
         os.remove(plugin_file)
+
+    clear_session(game_path)
+
+
+def save_folder(seed: str, slot: int) -> str:
+    return f"save_ap_{re.sub(r'[^A-Za-z0-9]', '', str(seed))}_{slot}"
+
+
+def write_session(game_path: str, seed: str, slot: int) -> str:
+    """
+    Tells the plugin which multiworld slot the next game start belongs to. The game then saves into a folder of
+    its own for that slot instead of its normal save folder.
+    """
+    folder = save_folder(seed, slot)
+    save_path = os.path.join(game_path, folder)
+    os.makedirs(save_path, exist_ok=True)
+
+    # Carry the player's volume and other options over
+    config = os.path.join(game_path, "save", "config.rmmzsave")
+
+    if os.path.isfile(config) and not os.path.exists(os.path.join(save_path, "config.rmmzsave")):
+        shutil.copyfile(config, os.path.join(save_path, "config.rmmzsave"))
+
+    with open(os.path.join(game_path, SESSION_FILE), "w", encoding="utf-8") as f:
+        json.dump({"seed": seed, "slot": slot, "save": folder}, f)
+
+    return folder
+
+
+def clear_session(game_path: str) -> None:
+    session_file = os.path.join(game_path, SESSION_FILE)
+
+    if os.path.exists(session_file):
+        os.remove(session_file)
 
 
 def launch_game() -> None:
