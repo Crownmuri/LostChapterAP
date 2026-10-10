@@ -142,16 +142,16 @@
     // the latter are read from their condition.
     const CHOICE_REQUIREMENTS = {
         37: { "Water It": "Pretty Water" },
-        38: { "Tell Her the Location of the Man's Grave": "having found the man in Collapse" },
+        38: { "Tell Her the Location of the Man's Grave": "Collapse first" },
         40: { "Pay -160 G": "MAG 15 or more" },
         54: { "Bathe in the Water": "filth to wash off", "Bathe in water": "filth to wash off" },
-        56: { "I Came to See You": "having met him before" },
+        56: { "I Came to See You": "an earlier visit" },
         57: {
             "Create White Key": "Music Box, Recovery Misanga, Moon Hair Ornament",
             "Create Black Key": "Plushie, Clown Mask, Promise Pendant",
         },
         58: {
-            "Remove the Portrait": "having given all your gold to the beggars",
+            "Remove the Portrait": "the Beggar's treasury",
             "Use White Key": "White Key",
             "Use Black Key": "Black Key",
         },
