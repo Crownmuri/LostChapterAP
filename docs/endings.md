@@ -70,7 +70,8 @@ still off:
 - The plugin keeps "game cleared" on from the start, so no ending ever rolls from the last boss and every run is in
   the lap state described above.
 - The goal is sent when Magisdusk is defeated. `goal: normal_end` accepts any win. `goal: true_end` needs a win
-  with a climax count of 20 or less. `goal: virgin_end` needs a win with the Virginity state intact; under that
-  goal losing the state sets LP to 0, so the run ends the way it does without LP, and the "Lose Virginity" title
-  check only ever holds filler.
+  with a climax count of 20 or less. `goal: true_virgin` needs that same win with the Virginity state intact.
+  `goal: dlc_end` is a win over Magislilia and `goal: dlc_virgin` that win with the state intact. Under the two
+  virgin goals losing the state sets LP to 0, so the run ends the way it does without LP, and the "Lose Virginity"
+  title check only ever holds filler.
 - The Sea route still works and plays an ending, but it does not count as the goal.

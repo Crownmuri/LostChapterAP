@@ -285,21 +285,8 @@ class LostChapterContext(Context):
             if not self.slot or self.finished_game:
                 return
 
-            goal = self.slot_data.get("goal", 0)
-
-            # Any win is the normal end. "ending_1" is the win of the true end, a climax count of 20 or less.
-            reached = (
-                goal == 0
-                or (goal == 1 and message.get("kind") == "ending_1")
-                or (goal == 2 and message.get("virgin"))
-                or (goal == 3 and message.get("dlc"))
-            )
-
-            # A win over the last boss does not count for the DLC ending, and the other way around
-            if goal != 3 and not message.get("kind"):
-                reached = False
-
-            if reached:
+            # The game lists every goal its wins have reached, by the value of the goal option
+            if self.slot_data.get("goal", 0) in message.get("goals", []):
                 self.finished_game = True
 
                 await self.send_msgs([{"cmd": "StatusUpdate", "status": CommonClient.ClientStatus.CLIENT_GOAL}])

@@ -368,5 +368,9 @@ FINISHER = "Kick Balls"
 
 DLC_LAST_BOSS = "Magislilia"
 
+# Names of the goal option. The plugin reports the values of the goals a win reaches.
+DLC_GOALS = ("dlc_end", "dlc_virgin")
+VIRGIN_GOALS = ("true_virgin", "dlc_virgin")
+
 VICTORY = "Victory"
 ENDING_EVENT = "Reach the Ending"

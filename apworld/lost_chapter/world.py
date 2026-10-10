@@ -156,8 +156,10 @@ class LostChapterWorld(World):
             if option_name in passthrough:
                 getattr(self.options, option_name).value = passthrough[option_name]
 
-        if self.options.goal == "dlc_ending" and not self.options.include_dlc:
-            raise OptionError(f"{self.player_name}: the dlc_ending goal of Lost Chapter needs include_dlc")
+        if self.options.goal.current_key in data.DLC_GOALS and not self.options.include_dlc:
+            raise OptionError(
+                f"{self.player_name}: the {self.options.goal.current_key} goal of Lost Chapter needs include_dlc"
+            )
 
         if passthrough:
             # Seeds from before the starting events have none
@@ -303,8 +305,8 @@ class LostChapterWorld(World):
                 lambda state, item=door_keys[king]: state.has(item, player)
             )
 
-        # With the virgin end the "Lose Virginity" title costs a run, so nothing worth having is put there
-        if self.options.goal == "virgin_end":
+        # With a virgin goal the "Lose Virginity" title costs a run, so nothing worth having is put there
+        if self.options.goal.current_key in data.VIRGIN_GOALS:
             self.get_location(f"Title: {data.TITLES[data.TITLE_LOSE_VIRGINITY]}").progress_type = (
                 LocationProgressType.EXCLUDED
             )
@@ -324,7 +326,7 @@ class LostChapterWorld(World):
                     lambda state, key=data.DLC_BOSS_KEYS[switch_id]: self.has_relic(state, key)
                 )
 
-        if self.options.goal == "dlc_ending":
+        if self.options.goal.current_key in data.DLC_GOALS:
             # The last door of the DLC opens with both of its bosses defeated in the same run
             self.get_location(data.ENDING_EVENT).access_rule = (
                 lambda state: all(self.has_relic(state, key) for key in data.DLC_BOSS_KEYS.values())

@@ -91,7 +91,13 @@
     const TRUE_END_CLIMAX_LIMIT = 21;
     const STATE_VIRGINITY = 301;
     const TITLE_LOSE_VIRGINITY = 1;
-    const GOAL_VIRGIN_END = 2; // the goal option of apworld/lost_chapter/options.py
+    // The values of the goal option of apworld/lost_chapter/options.py
+    const GOAL_NORMAL_END = 0;
+    const GOAL_TRUE_END = 1;
+    const GOAL_TRUE_VIRGIN = 2;
+    const GOAL_DLC_END = 3;
+    const GOAL_DLC_VIRGIN = 4;
+    const VIRGIN_GOALS = [GOAL_TRUE_VIRGIN, GOAL_DLC_VIRGIN];
 
     const COMMON_EVENT_NEXT_FLOOR = 86;
     const COMMON_EVENT_STANDBY = 11;
@@ -328,7 +334,7 @@
                 sets: [],
                 souls: 0, // banked from finished runs
                 runSouls: 0, // best value of the current run
-                goal: null,
+                goals: [], // values of the goal option that wins have reached
                 titles: [],
                 regrant: false,
                 holdFloor: false,
@@ -434,35 +440,48 @@
         }
     };
 
+    // The goals the wins of this save have reached are kept, and sent again whenever the client connects
     const sendGoal = () => {
         const s = state();
-        if (active() && (s.goal || s.goalDlc)) {
-            send({ cmd: "Goal", kind: s.goal, virgin: !!s.goalVirgin, dlc: !!s.goalDlc });
+        if (active() && s.goals && s.goals.length > 0) {
+            send({ cmd: "Goal", goals: s.goals });
         }
     };
 
-    const lastBossDefeated = () => {
+    const reachGoals = goals => {
         const s = state();
-        if ($gameVariables.value(VARIABLE_CLIMAX_COUNT) < TRUE_END_CLIMAX_LIMIT) {
-            s.goal = "ending_1";
-        } else if (!s.goal) {
-            s.goal = "ending_2";
-        }
-        if ($gameActors.actor(1).isStateAffected(STATE_VIRGINITY)) {
-            s.goalVirgin = true;
-        }
+        s.goals = s.goals || [];
+        goals.forEach(goal => remember(s.goals, goal));
         sendGoal();
+    };
+
+    const isVirgin = () => $gameActors.actor(1).isStateAffected(STATE_VIRGINITY);
+
+    const lastBossDefeated = () => {
+        const goals = [GOAL_NORMAL_END];
+        // The ending map plays the TRUE END below this climax count
+        if ($gameVariables.value(VARIABLE_CLIMAX_COUNT) < TRUE_END_CLIMAX_LIMIT) {
+            goals.push(GOAL_TRUE_END);
+            if (isVirgin()) {
+                goals.push(GOAL_TRUE_VIRGIN);
+            }
+        }
+        reachGoals(goals);
+    };
+
+    const dlcLastBossDefeated = () => {
+        reachGoals(isVirgin() ? [GOAL_DLC_END, GOAL_DLC_VIRGIN] : [GOAL_DLC_END]);
     };
 
     const checkTitle = title => check(SWITCH_OFFSET + TITLE_SWITCH_BASE + title);
 
-    // Virgin end: losing the Virginity state ends the run the way running out of LP does. The fight is lost, or
+    // Virgin goals: losing the Virginity state ends the run the way running out of LP does. The fight is lost, or
     // the event plays out and the game over follows on the way to the next floor.
     const _Game_Battler_removeState = Game_Battler.prototype.removeState;
     Game_Battler.prototype.removeState = function(stateId) {
         const lost = stateId === STATE_VIRGINITY && this.isStateAffected(stateId) && this === $gameActors.actor(1);
         _Game_Battler_removeState.apply(this, arguments);
-        if (lost && bound() && option("goal") === GOAL_VIRGIN_END && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
+        if (lost && bound() && VIRGIN_GOALS.includes(option("goal")) && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             checkTitle(TITLE_LOSE_VIRGINITY);
             notify("Virginity lost, this run is over");
             this.setHp(0);
@@ -523,8 +542,7 @@
         } else if (troopId === TROOP_LAST_BOSS && state()) {
             lastBossDefeated();
         } else if (troopId === TROOP_DLC_LAST_BOSS && state()) {
-            state().goalDlc = true;
-            sendGoal();
+            dlcLastBossDefeated();
         }
         _BattleManager_processVictory.apply(this, arguments);
     };

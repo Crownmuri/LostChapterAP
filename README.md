@@ -173,7 +173,7 @@ an event from common event 86, so both follow the installed version.
 The White Door and the Black Door are at the doors of the kings for whoever holds the White Key or the Black Key,
 and again behind the hallway. There the game opens them without a key and walks away once both bosses are
 defeated, to start Magislilia on the next boss floor. In a multiworld the doors behind the hallway take their keys
-too and Magislilia is a third door there (**The Last Door**). Defeating her is the `dlc_ending` goal.
+too and Magislilia is a third door there (**The Last Door**). Defeating her is the `dlc_end` goal.
 
 `shuffle_keys` (needs relicsanity) makes the two keys items, and having the Locksmith make one a check.
 

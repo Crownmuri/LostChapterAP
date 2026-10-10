@@ -8,9 +8,10 @@ requires:
 Lost Chapter:
   # normal_end: defeat the last boss
   # true_end: defeat the last boss with a climax count of 20 or less
-  # virgin_end: defeat the last boss with the Virginity status intact, losing it ends the run.
+  # true_virgin: the true end with the Virginity status intact, losing it ends the run.
   #             No story difference, only for those who want the challenge
-  # dlc_ending: defeat Magislilia behind the last door of the DLC. Needs include_dlc
+  # dlc_end: defeat Magislilia behind the last door of the DLC. Needs include_dlc
+  # dlc_virgin: the DLC end with the Virginity status intact, losing it ends the run. Needs include_dlc
   goal: normal_end
 
   # Adds the DLC to the multiworld: checks for its monsters, events, titles and relics where applicable.
@@ -42,7 +43,14 @@ Lost Chapter:
   # Desert, Temple, Hot Spring, Market and Small Room are one unlock for two events each
   starting_event_count: 2
 
-  # Floor events unlocked from the start by name, e.g. ["Market", "Inn"]. They count towards the number above
+  # Floor events unlocked from the start by name, e.g. ["Market", "Inn"]. They count towards the number above.
+  #   Marsh, Hot Spring, Forest, Inn, Desert, Temple, Collapse, Beggar, Quarrel, Market, Small Room,
+  #   Amusement Center, Flower, Cherry Blossoms, Storage Room, Library, Girl, Battlefield, Dog, Cat, Camp,
+  #   Seamstress, River, Gold and Silver Treasures, Debauch, Sea, Snowy Mountain, Suspension Bridge, Pond, Highway,
+  #   Lake Shore, Locksmith, Corridor, Throne, Hill, Prison
+  # With include_dlc also:
+  #   Change to Swimsuit, Barracks, Farm Village, Old Woman, Checkpoint, Clinic, Slave Market, Graveyard,
+  #   Girl with Flower Crown, Sculptor, Treasury
   starting_events: []
 
   # 1-10. Souls add up over all runs and send checks at milestones from 50 to 2000

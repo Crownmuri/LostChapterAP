@@ -14,16 +14,20 @@ class Goal(Choice):
     Normal End: defeat the last boss.
     True End: defeat the last boss in a run that would get ENDING 1 "Beyond the Blue Sky", which takes a climax count
     of 20 or less.
-    Virgin End: defeat the last boss with the Virginity status intact. Losing it ends the run on the spot, like
-    running out of LP. This has no story difference, it is only there for those who want the challenge.
-    DLC Ending: defeat Magislilia, the last boss of the DLC, who waits behind the last door once Migwarners (White
+    True Virgin: the True End with the Virginity status intact.
+    DLC End: defeat Magislilia, the last boss of the DLC, who waits behind the last door once Migwarners (White
     Door) and Bordosegeia (Black Door) are defeated in the same run. Needs Include DLC.
+    DLC Virgin: the DLC End with the Virginity status intact.
+
+    With a Virgin goal, losing the Virginity status ends the run on the spot, like running out of LP. These two have
+    no story difference, they are only there for those who want the challenge.
     """
     display_name = "Goal"
     option_normal_end = 0
     option_true_end = 1
-    option_virgin_end = 2
-    option_dlc_ending = 3
+    option_true_virgin = 2
+    option_dlc_end = 3
+    option_dlc_virgin = 4
     default = 0
 
 
@@ -122,6 +126,14 @@ class StartingEvents(OptionSet):
     """
     Floor event unlocks you have from the start, by name: ["Market", "Inn"]. They count towards Starting Event
     Count, and all of them are given even when there are more of them than that.
+
+    The names: Marsh, Hot Spring, Forest, Inn, Desert, Temple, Collapse, Beggar, Quarrel, Market, Small Room,
+    Amusement Center, Flower, Cherry Blossoms, Storage Room, Library, Girl, Battlefield, Dog, Cat, Camp, Seamstress,
+    River, Gold and Silver Treasures, Debauch, Sea, Snowy Mountain, Suspension Bridge, Pond, Highway, Lake Shore,
+    Locksmith, Corridor, Throne, Hill, Prison.
+
+    With Include DLC also: Change to Swimsuit, Barracks, Farm Village, Old Woman, Checkpoint, Clinic, Slave Market,
+    Graveyard, Girl with Flower Crown, Sculptor, Treasury.
     """
     display_name = "Starting Events"
     valid_keys = frozenset(data.UNLOCK_EVENTS)
