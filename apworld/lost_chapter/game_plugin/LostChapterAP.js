@@ -1149,7 +1149,8 @@
             // With the game cleared, common event 64 continues the climb after the last boss
             _Game_Switches_setValue.call($gameSwitches, SWITCH_CLEARED, true);
         }
-        if (!active() || $gameParty.inBattle()) {
+        // Also during a fight: a trap that arrives in one goes off in it
+        if (!active()) {
             return;
         }
         const s = state();
@@ -1201,7 +1202,16 @@
     const _Scene_Battle_update = Scene_Battle.prototype.update;
     Scene_Battle.prototype.update = function() {
         _Scene_Battle_update.apply(this, arguments);
+        updateItems();
         applyTraps();
+        updateNotices(this);
+    };
+
+    // The notices of received items are shown during a fight too
+    const _Scene_Battle_createDisplayObjects = Scene_Battle.prototype.createDisplayObjects;
+    Scene_Battle.prototype.createDisplayObjects = function() {
+        _Scene_Battle_createDisplayObjects.apply(this, arguments);
+        this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
     };
 
     //-------------------------------------------------------------------------
