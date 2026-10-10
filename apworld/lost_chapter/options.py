@@ -19,8 +19,9 @@ class Goal(Choice):
     Door) and Bordosegeia (Black Door) are defeated in the same run. Needs Include DLC.
     DLC Virgin: the DLC End with the Virginity status intact.
 
-    With a Virgin goal, losing the Virginity status ends the run on the spot, like running out of LP. These two have
-    no story difference, they are only there for those who want the challenge.
+    With a Virgin goal, losing the Virginity status ends the run on the spot, like running out of LP, and the soul
+    checks take half the souls their names say. These two have no story difference, they are only there for those
+    who want the challenge.
     """
     display_name = "Goal"
     option_normal_end = 0

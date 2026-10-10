@@ -1054,6 +1054,9 @@
 
     const soulMilestones = () => option("soul_milestones") || LEGACY_SOUL_MILESTONES;
 
+    // The souls a milestone takes: half of its name with a virgin goal, where a run is over sooner
+    const soulsFor = milestone => (VIRGIN_GOALS.includes(option("goal")) ? Math.ceil(milestone / 2) : milestone);
+
     const updateSouls = () => {
         const s = state();
         const score = $gameVariables.value(VARIABLE_FLOOR) >= 1 ? runScore() : null;
@@ -1061,7 +1064,7 @@
             s.runSouls = Math.max(s.runSouls, (score - s.runBase) * (option("soul_multiplier") || 1));
         }
         for (const milestone of soulMilestones()) {
-            if (soulTotal() >= milestone && !s.checked.includes(SOUL_OFFSET + milestone)) {
+            if (soulTotal() >= soulsFor(milestone) && !s.checked.includes(SOUL_OFFSET + milestone)) {
                 check(SOUL_OFFSET + milestone);
             }
         }
@@ -1071,8 +1074,8 @@
         if (!bound()) {
             return "";
         }
-        const next = soulMilestones().find(milestone => milestone > soulTotal());
-        return soulTotal() + (next ? " / " + next : " souls");
+        const next = soulMilestones().find(milestone => soulsFor(milestone) > soulTotal());
+        return soulTotal() + (next ? " / " + soulsFor(next) : " souls");
     };
 
     // A line of text drawn over the map scene, redrawn only when it changes
@@ -1116,7 +1119,7 @@
         // Only on the standby screen itself, its Title Collection, deck and item screens have that corner in use
         const shown =
             bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL) && $gameVariables.value(VARIABLE_SCREEN) === 0;
-        const waiting = soulMilestones().some(milestone => milestone > soulTotal());
+        const waiting = soulMilestones().some(milestone => soulsFor(milestone) > soulTotal());
         updateLabel(scene._archipelagoSoulsTitle, shown, waiting ? "Next AP unlock" : "AP unlocks done", "#b0e0a0");
         updateLabel(scene._archipelagoSouls, shown, soulText());
     };
@@ -1370,9 +1373,9 @@
             interpreter.setWaitMode("message");
             return;
         }
-        const label = card => $dataItems[card.id].name + (cardCost(card) ? " (" + cardCost(card) + " souls)" : "");
+        const label = card => $dataItems[card.id].name + (cardCost(card) ? " (" + cardCost(card) + " G)" : "");
         $gameMessage.add("Which card from the multiworld do you look at? Each can be taken once a run.");
-        $gameMessage.add("You have " + soulTotal() + " souls.");
+        $gameMessage.add("You have " + $gameParty.gold() + " G.");
         $gameMessage.setChoices(cards.map(label).concat(["Not Now"]), 0, cards.length);
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
@@ -1391,11 +1394,11 @@
             return;
         }
         const cost = cardCost(card);
-        const affordable = soulTotal() >= cost;
+        const affordable = $gameParty.gold() >= cost;
         const y = CARD_PREVIEW_Y;
         $gameScreen.showPicture(PICTURE_CARD_PREVIEW, String(card.id), 1, CARD_PREVIEW_X, y, 100, 100, 255, 0);
         $gameScreen.showPicture(PICTURE_CARD_DESCRIPTION, card.id + "s", 1, CARD_DESCRIPTION_X, y, 100, 100, 255, 0);
-        $gameMessage.add($dataItems[card.id].name + (cost ? ": " + cost + " souls, you have " + soulTotal() + "." : ""));
+        $gameMessage.add($dataItems[card.id].name + (cost ? ": " + cost + " G, you have " + $gameParty.gold() + " G." : ""));
         $gameMessage.setChoices(["Add to Deck", "Back"], 0, 1);
         if ($gameMessage.setChoiceEnables) {
             $gameMessage.setChoiceEnables([affordable, true]);
@@ -1410,10 +1413,13 @@
                 return;
             }
             const s = state();
-            s.spent = (s.spent || 0) + cost;
             s.claimed = (s.claimed || []).concat([card.index]);
             AP.granting = true;
-            withoutSouls(() => $gameParty.gainItem($dataItems[card.id], 1));
+            // Neither the gold paid nor the card counts for the souls
+            withoutSouls(() => {
+                $gameParty.loseGold(cost);
+                $gameParty.gainItem($dataItems[card.id], 1);
+            });
             AP.granting = false;
         });
         interpreter.setWaitMode("message");
