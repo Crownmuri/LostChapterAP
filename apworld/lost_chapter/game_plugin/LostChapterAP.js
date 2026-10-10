@@ -270,6 +270,10 @@
 
     // The cards floor events hand out. Which of them are checks comes with the slot data.
     const CARD_ITEMS = [39, 40, 60, 71, 74, 76, 77, 78, 79, 80];
+    // What taking a received card into the deck costs in souls: 100 for Strip, 200 for the other lewd cards (Ride
+    // Back, Encase, Taunt, Candylick, Ride On, Projection, Temptation). Faithful Dog Lassi and Shadow Cat Assam
+    // cost nothing here, they only give up the score they would add (111 and 222).
+    const CARD_COSTS = { 77: 100, 60: 200, 71: 200, 74: 200, 76: 200, 78: 200, 79: 200, 80: 200 };
     // Deck screen (common events 73-77): received cards are taken into the deck from a button there
     const SCREEN_DECK = 21;
     const SCREEN_DECK_BUSY = 22;
@@ -840,7 +844,8 @@
         return score;
     };
 
-    const soulTotal = () => state().souls + state().runSouls;
+    // Souls spent on cards are gone, the milestones they reached before stay checked
+    const soulTotal = () => state().souls + state().runSouls - (state().spent || 0);
 
     const soulMilestones = () => option("soul_milestones") || LEGACY_SOUL_MILESTONES;
 
@@ -1121,14 +1126,21 @@
             interpreter.setWaitMode("message");
             return;
         }
+        const cost = card => CARD_COSTS[card.id] || 0;
+        const label = card => $dataItems[card.id].name + (cost(card) ? " (" + cost(card) + " souls)" : "");
         $gameMessage.add("Which card from the multiworld do you take? Each can be taken once a run.");
-        $gameMessage.setChoices(cards.map(card => $dataItems[card.id].name).concat(["Not Now"]), 0, cards.length);
+        $gameMessage.add("You have " + soulTotal() + " souls.");
+        $gameMessage.setChoices(cards.map(label).concat(["Not Now"]), 0, cards.length);
+        if ($gameMessage.setChoiceEnables) {
+            $gameMessage.setChoiceEnables(cards.map(card => soulTotal() >= cost(card)).concat([true]));
+        }
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
         limitChoiceRows();
         $gameMessage.setChoiceCallback(index => {
-            if (index < cards.length) {
+            if (index < cards.length && soulTotal() >= cost(cards[index])) {
                 const s = state();
+                s.spent = (s.spent || 0) + cost(cards[index]);
                 s.claimed = (s.claimed || []).concat([cards[index].index]);
                 AP.granting = true;
                 withoutSouls(() => $gameParty.gainItem($dataItems[cards[index].id], 1));
