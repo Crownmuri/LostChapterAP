@@ -859,7 +859,7 @@
         36: {"Bet on Heads": "heads: Gold +200, tails: LP +", "Bet on Tails": "tails: LP ++, heads: Gold +100", "Bet your life": "Clown Mask, Pieris"},
         37: {"Pick It Up": "LP -2, Forget-Me-Not", "Water It": "lose Pretty Water, all Stats +1"},
         38: {"Obtain": "Promise Pendant", "Overlook": "Promise Pendant", "Can't Do That": "LP damage, ends the Monster quest", "Tell Her the Location of the Man's Grave": "Promise Pendant"},
-        39: {"Rummage Through a Shelf %": "a find", "Search Under the Floor %": "a find"},
+        39: {"Rummage Through a Shelf %": "add a card", "Search Under the Floor %": "add a card"},
         40: {"Pay -40 G": "MAG +1, FAITH -5", "Pay -160 G": "MAG +2, FAITH -5", "Seduce ＜Levy Suit＞ Required": "MAG +1, FAITH -5, LEWD +2", "Refuse": "FAITH +5"},
         41: {"Yes": "Moon Hair Ornament, VIRTUE +5", "No": "FAITH -5", "Play With Her": "RP +5", "Dodge Her Question": "FAITH -5"},
         42: {"Leave him alone＜HEALING＞ Lost": "Dusk Ring, VIRTUE +5", "So Be It Lose ＜Healing＞": "Dusk Ring, VIRTUE +5", "Can't Do Anything": "Collar Key", "Free him from suffering": "Pieris", "Accept His Request": "Collar Key"},
@@ -890,7 +890,7 @@
         597: {"Sell your body": "Gold +100, LEWD +2", "Refuse": "LEWD -3", "Overlook": "Gold +300", "Give Judgment": "Pieris, ends Beastification", "Resist": "LP -8", "Accept the offer": "Beastification"},
         598: {"Offer a crown of Forget-Me-Not": "LP regen +5", "Offer a crown of Pieris": "RP regen +5", "Depart": "FAITH -5"},
         600: {"Do you know how to get out?": "FAITH +5", "What about you?": "VIRTUE +5", "You brought a tool": "VIRTUE +5"},
-        601: {"Explore the coffin %": "FAITH -5, a find", "Depart": "FAITH +5"},
+        601: {"Explore the coffin %": "FAITH -5, add a card", "Depart": "FAITH +5"},
     };
 
     const effectKey = text =>
@@ -1143,7 +1143,7 @@
         const dropping = bound() && $gameSwitches.value(SWITCH_DROP_CONTROL);
         const cost = dropping ? shopPrice("cards", $gameVariables.value(VARIABLE_FLOOR)) : 0;
         const affordable = dropping && soulTotal() >= cost;
-        const text = "[W] Other cards: " + cost + " souls (you have " + (dropping ? soulTotal() : 0) + ")";
+        const text = "[W] Reroll cards: " + cost + " souls (you have " + (dropping ? soulTotal() : 0) + ")";
         updateLabel(scene._archipelagoReroll, dropping, text, affordable ? "#b0e0a0" : "#909090");
         if (affordable && Input.isTriggered(REROLL_KEY)) {
             spendSouls(cost);
