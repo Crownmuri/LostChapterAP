@@ -581,6 +581,8 @@
         if (lost && bound() && VIRGIN_GOALS.includes(option("goal")) && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             checkTitle(TITLE_LOSE_VIRGINITY);
             notify("Virginity lost, this run is over");
+            // An event can go on to heal the player (a night at the Inn), so the run is marked as over as well
+            state().runOver = true;
             this.setHp(0);
         }
     };
@@ -655,6 +657,7 @@
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
+            s.runOver = false;
             s.claimed = [];
             // The souls of the run that ended are kept, the next one adds to them
             s.souls = (s.souls || 0) + (s.runSouls || 0);
@@ -1721,6 +1724,10 @@
     // Runs at the start of common event 86, while the standby screen is still shown
     AP.prepareFloorEvent = interpreter => {
         AP.chosenFloorEvent = 0;
+        if (bound() && state().runOver) {
+            $gameActors.actor(1).setHp(0);
+            $gameVariables.setValue(VARIABLE_LP, 0);
+        }
         // Without LP left the game over follows instead of a floor
         if (!bound() || AP.nextFloorEvent || $gameVariables.value(VARIABLE_LP) <= 0) {
             return;
