@@ -33,6 +33,8 @@ reports them. Everything Archipelago-related lives in the Python client, which:
 | `docs/endings.md` | How the base game decides its endings |
 | `tools/dump_events.py` | Regenerates `docs/events.md`: every floor event, its decisions and what they change |
 | `tools/dump_game_data.py` | Dumps switch/variable/event outlines into `dump/` for reverse engineering |
+| `tools/snapshot_game_data.py` | Copies the game's data files into `dump/<name>/`, one copy for each version of the game |
+| `tools/check_patches.py` | Runs the plugin's data patches against every such copy and lists what failed |
 
 AP ids are derived from the game's database ids (`data.py`), mirrored by the constants at the top of the plugin.
 
@@ -151,8 +153,9 @@ requires instead of being hidden.
 
 ### DLC
 
-The plugin works on the game with and without its DLC: every patch is checked against both sets of event data
-(`dump/base` is a copy of the data from before the DLC, see `tools/dump_game_data.py`). The DLC took the switches
+The plugin works on the game with and without its DLC: every patch is checked against a copy of the event data of
+each version. `tools/snapshot_game_data.py` keeps such a copy in `dump/<name>/` and `tools/check_patches.py` runs
+the plugin's patches against all of them. The DLC took the switches
 261 and up for its quests, so the plugin's own scratch switches are 182-190 and 193, which neither version uses.
 
 `include_dlc` adds the DLC to a seed:
