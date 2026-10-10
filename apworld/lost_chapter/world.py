@@ -7,18 +7,21 @@ from BaseClasses import CollectionState, Item, ItemClassification, Location, Loc
 from worlds.AutoWorld import WebWorld, World
 
 from . import data
+from Options import OptionError
+
 from .options import LostChapterOptions
 
 
 SLOT_DATA_OPTIONS = (
-    "goal", "relicsanity", "first_victories", "shuffle_title_effects", "finisher_move", "soul_multiplier"
+    "goal", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
+    "finisher_move", "soul_multiplier",
 )
 
 
 def location_table() -> Dict[str, int]:
     table: Dict[str, int] = {}
 
-    for switch_id, name in data.HEAVENLY_KINGS.items():
+    for switch_id, name in list(data.HEAVENLY_KINGS.items()) + list(data.DLC_BOSSES.items()):
         table[f"Defeat {name}"] = data.SWITCH_OFFSET + switch_id
 
     for number, name in data.TITLES.items():
@@ -48,6 +51,8 @@ def item_table() -> Dict[str, int]:
 
     for weapon_id, name in data.RELICS.items():
         table[name] = data.RELIC_OFFSET + weapon_id
+
+    table[data.WHITE_KEY] = data.RELIC_OFFSET + data.WHITE_KEY_ID
 
     for unlock, event_ids in data.UNLOCK_EVENTS.items():
         table[f"Event: {unlock}"] = data.EVENT_OFFSET + event_ids[0]
@@ -121,7 +126,7 @@ class LostChapterWorld(World):
     location_name_to_id = location_table()
 
     item_name_groups = {
-        "Relics": set(data.RELICS.values()),
+        "Relics": set(data.RELICS.values()) | {data.WHITE_KEY},
         "Events": {f"Event: {unlock}" for unlock in data.UNLOCK_EVENTS},
         "Door Keys": set(data.DOOR_KEYS.values()),
         "Title Effects": {f"Unlock Title Effect: {name}" for name in data.TITLES.values()},
@@ -129,6 +134,7 @@ class LostChapterWorld(World):
     }
     location_name_groups = {
         "Heavenly Kings": {f"Defeat {name}" for name in data.HEAVENLY_KINGS.values()},
+        "DLC Bosses": {f"Defeat {name}" for name in data.DLC_BOSSES.values()},
         "Titles": {f"Title: {name}" for name in data.TITLES.values()},
         "First Victories": {f"First Victory: {name}" for name in data.ENEMIES.values()},
         "Relics": {f"Relic: {name}" for name in data.RELICS.values()},
@@ -152,37 +158,96 @@ class LostChapterWorld(World):
             if option_name in passthrough:
                 getattr(self.options, option_name).value = passthrough[option_name]
 
+        if self.options.goal == "dlc_ending" and not self.options.include_dlc:
+            raise OptionError(f"{self.player_name}: the dlc_ending goal of Lost Chapter needs include_dlc")
+
         if passthrough:
             # Seeds from before the starting events have none
             self.starting_events = list(passthrough.get("starting_events", []))
         else:
             self.starting_events = self.pick_starting_events()
 
+    def events(self) -> Dict[int, str]:
+        """The floor events of this seed."""
+        return {
+            event_id: name for event_id, name in data.EVENTS.items()
+            if self.options.include_dlc or event_id not in data.DLC_EVENTS
+        }
+
+    def unlocks(self) -> List[str]:
+        """The names of the event unlocks of this seed."""
+        return [unlock for unlock, event_ids in data.UNLOCK_EVENTS.items() if event_ids[0] in self.events()]
+
+    def enemies(self) -> Dict[int, str]:
+        """The enemies whose first victory is a check."""
+        if not self.options.first_victories:
+            return {}
+
+        return {
+            troop_id: name for troop_id, name in data.ENEMIES.items()
+            if self.options.include_dlc or troop_id not in data.DLC_ENEMIES
+        }
+
+    def relic_locations(self) -> Dict[int, str]:
+        """The relics whose place in an event is a check."""
+        if not self.options.relicsanity:
+            return {}
+
+        relics = {
+            weapon_id: name for weapon_id, name in data.RELICS.items()
+            if self.options.include_dlc or weapon_id not in data.DLC_RELICS
+        }
+
+        if not self.options.shuffle_keys:
+            del relics[data.BLACK_KEY_ID]
+
+        return relics
+
+    def relic_items(self) -> List[str]:
+        """The relics that are items. The White Key is one without a place of its own."""
+        relics = list(self.relic_locations().values())
+
+        if self.options.relicsanity and self.options.shuffle_keys and self.options.include_dlc:
+            relics.append(data.WHITE_KEY)
+
+        return relics
+
     def pick_starting_events(self) -> List[str]:
         """The named starting unlocks, filled up with random early ones to the starting event count."""
         events: List[str] = sorted(self.options.starting_events.value)
+        unlocks = self.unlocks()
+
+        for event in events:
+            if event not in unlocks:
+                raise OptionError(f"{self.player_name}: the starting event {event} of Lost Chapter needs include_dlc")
 
         def early(event_id: int) -> bool:
             return event_id < data.LATE_EVENT_FIRST and event_id not in data.CONDITIONAL_EVENTS
 
         candidates = [
-            unlock for unlock, event_ids in data.UNLOCK_EVENTS.items()
-            if unlock not in events and any(early(event_id) for event_id in event_ids)
+            unlock for unlock in unlocks
+            if unlock not in events and any(early(event_id) for event_id in data.UNLOCK_EVENTS[unlock])
         ]
         missing = max(0, self.options.starting_event_count.value - len(events))
 
         return events + self.random.sample(candidates, min(missing, len(candidates)))
 
     def included_locations(self) -> Dict[str, int]:
-        excluded: set = set()
+        included: set = set(self.location_name_to_id)
 
-        if not self.options.relicsanity:
-            excluded |= self.location_name_groups["Relics"]
+        included -= self.location_name_groups["Relics"]
+        included |= {f"Relic: {name}" for name in self.relic_locations().values()}
 
-        if not self.options.first_victories:
-            excluded |= self.location_name_groups["First Victories"]
+        included -= self.location_name_groups["First Victories"]
+        included |= {f"First Victory: {name}" for name in self.enemies().values()}
 
-        return {name: loc_id for name, loc_id in self.location_name_to_id.items() if name not in excluded}
+        included -= self.location_name_groups["Events"]
+        included |= {data.first_visit(event_id) for event_id in self.events()}
+
+        if not self.options.include_dlc:
+            included -= self.location_name_groups["DLC Bosses"]
+
+        return {name: loc_id for name, loc_id in self.location_name_to_id.items() if name in included}
 
     def create_regions(self) -> None:
         menu = Region("Menu", self.player, self.multiworld)
@@ -210,11 +275,10 @@ class LostChapterWorld(World):
         # Fights only have a rule for the floor the enemy shows up on, not for how hard they are
         player = self.player
 
-        if self.options.first_victories:
-            for troop_id, name in data.ENEMIES.items():
-                self.get_location(f"First Victory: {name}").access_rule = (
-                    lambda state, floor=data.ENEMY_FLOORS[troop_id]: self.can_reach_floor(state, floor)
-                )
+        for troop_id, name in self.enemies().items():
+            self.get_location(f"First Victory: {name}").access_rule = (
+                lambda state, floor=data.ENEMY_FLOORS[troop_id]: self.can_reach_floor(state, floor)
+            )
 
         for floor in data.FLOOR_CHECKS:
             self.get_location(f"Reach Floor {floor}").access_rule = (
@@ -226,7 +290,7 @@ class LostChapterWorld(World):
                 lambda state, floor=floor: self.can_reach_floor(state, floor)
             )
 
-        for event_id, name in data.EVENTS.items():
+        for event_id, name in self.events().items():
             floor = data.LATE_EVENT_FLOOR if event_id >= data.LATE_EVENT_FIRST else 1
 
             self.get_location(data.first_visit(event_id)).access_rule = (
@@ -257,22 +321,43 @@ class LostChapterWorld(World):
                 lambda state, items=[data.event_item(event) for event in events]: state.has_any(items, player)
             )
 
-        if self.options.relicsanity:
-            for name, source in data.RELIC_SOURCES.items():
-                required = [data.event_item(event) for event in source["events"]] + source["relics"]
-                late = any(data.EVENT_IDS[event] >= data.LATE_EVENT_FIRST for event in source["events"])
-                floor = data.LATE_EVENT_FLOOR if late else 1
+        for name in self.relic_locations().values():
+            self.get_location(f"Relic: {name}").access_rule = lambda state, name=name: self.can_find_relic(state, name)
 
-                self.get_location(f"Relic: {name}").access_rule = (
-                    lambda state, items=required, floor=floor: (
-                        state.has_all(items, player) and self.can_reach_floor(state, floor)
-                    )
+        if self.options.include_dlc:
+            for switch_id, name in data.DLC_BOSSES.items():
+                self.get_location(f"Defeat {name}").access_rule = (
+                    lambda state, key=data.DLC_BOSS_KEYS[switch_id]: self.has_relic(state, key)
                 )
 
-        # The last boss appears on a boss floor once all four Heavenly Kings are defeated
-        self.get_location(data.ENDING_EVENT).access_rule = (
-            lambda state: state.has_group("Door Keys", player, len(data.HEAVENLY_KINGS))
+        if self.options.goal == "dlc_ending":
+            # The last door of the DLC opens with both of its bosses defeated in the same run
+            self.get_location(data.ENDING_EVENT).access_rule = (
+                lambda state: all(self.has_relic(state, key) for key in data.DLC_BOSS_KEYS.values())
+            )
+        else:
+            # The last boss is one of the doors of floor 100, which takes all four Heavenly Kings defeated
+            self.get_location(data.ENDING_EVENT).access_rule = (
+                lambda state: state.has_group("Door Keys", player, len(data.HEAVENLY_KINGS))
+            )
+
+    def can_find_relic(self, state: CollectionState, name: str) -> bool:
+        """The place of a relic can be reached: its events, the floor they come up on and what it is traded for."""
+        source = data.RELIC_SOURCES[name]
+        late = any(data.EVENT_IDS[event] >= data.LATE_EVENT_FIRST for event in source["events"])
+
+        return (
+            state.has_all([data.event_item(event) for event in source["events"]], self.player)
+            and self.can_reach_floor(state, data.LATE_EVENT_FLOOR if late else 1)
+            and all(self.has_relic(state, relic) for relic in source["relics"])
         )
+
+    def has_relic(self, state: CollectionState, name: str) -> bool:
+        """A relic can be held: as the item it is in this seed, or picked up in the game where it is not one."""
+        if name in self.relic_items():
+            return state.has(name, self.player)
+
+        return self.can_find_relic(state, name)
 
     def create_item(self, name: str) -> LostChapterItem:
         classification = ItemClassification.progression
@@ -292,11 +377,8 @@ class LostChapterWorld(World):
         return LostChapterItem(name, ItemClassification.progression, None, self.player)
 
     def create_items(self) -> None:
-        names = set(
-            self.item_name_groups["Events"]
-            | self.item_name_groups["Door Keys"]
-            | self.item_name_groups["Starting Sets"]
-        )
+        names = set(self.item_name_groups["Door Keys"] | self.item_name_groups["Starting Sets"])
+        names |= {f"Event: {unlock}" for unlock in self.unlocks()}
 
         if self.options.shuffle_title_effects:
             names |= self.item_name_groups["Title Effects"]
@@ -310,8 +392,7 @@ class LostChapterWorld(World):
 
         pool: List[LostChapterItem] = [self.create_item(name) for name in sorted(names)]
 
-        if self.options.relicsanity:
-            pool += [self.create_item(name) for name in data.RELICS.values()]
+        pool += [self.create_item(name) for name in self.relic_items()]
 
         while len(pool) < len(self.included_locations()):
             pool.append(self.create_filler())
@@ -326,6 +407,8 @@ class LostChapterWorld(World):
         slot_data["soul_milestones"] = list(data.SOUL_MILESTONES)
         slot_data["starting_events"] = self.starting_events
         slot_data["event_groups"] = data.EVENT_GROUPS
+        slot_data["events"] = sorted(self.events())
+        slot_data["relics"] = sorted(self.relic_locations())
 
         return slot_data
 

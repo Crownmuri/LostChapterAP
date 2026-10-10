@@ -125,8 +125,10 @@
     const FREE_DOORS_FLOOR = 100;
     const LABEL_LEAVE_DOORS = "ArchipelagoLeaveDoors";
 
-    const EVENT_MIN = 21;
-    const EVENT_MAX = 61;
+    // The id of a floor event is the switch that runs it. In the base game that is also the id of its common event
+    // (21-61), the events of the DLC are common events 591-601 on switches 161-171.
+    const EVENT_RANGES = [[21, 61], [161, 171]];
+    const LEGACY_EVENTS = Array.from({ length: 41 }, (_, i) => 21 + i);
     const FLOOR_EVENT_CHOICES = 2;
     // Floor event -> choice (as written in the event, without its condition and colors) -> what it takes.
     // Choices that already name a card they need, and the ones about FAITH, VIRTUE and LEWD, are not listed:
@@ -207,9 +209,41 @@
         106: ["Succubus Set", [80, 80, 37]],
     };
 
-    const CHECK_TROOP_MAX = 21;
+    const CHECK_TROOP_MAX = 24; // 22-24 are the enemies of the DLC
     const CHECK_FLOORS = [10, 20, 30, 40, 50, 60, 70, 80];
-    const RELIC_WEAPONS = [29, 30, 33, 34, 36, 38, 42, 51, 58, 59];
+    // The relics that are checks in a seed from before the slot data listed them
+    const LEGACY_RELIC_WEAPONS = [29, 30, 33, 34, 36, 38, 42, 51, 58, 59];
+    // Every relic that can be a check: the ones above and those of the DLC
+    const RELIC_WEAPONS = LEGACY_RELIC_WEAPONS.concat([23, 24, 76, 77]);
+
+    // DLC: the bosses behind the White Door and the Black Door, and Magislilia behind the last door
+    const DLC_BOSS_SWITCHES = [278, 279];
+    const TROOP_DLC_LAST_BOSS = 33;
+    const SWITCH_DLC_LAST_BOSS = 69;
+    const SWITCH_BEHIND = 154; // on while the player stands at the doors behind the hallway
+    const WEAPON_WHITE_KEY = 57;
+    const WEAPON_BLACK_KEY = 58;
+    // More unused switches for the doors behind the hallway
+    const SWITCH_WHITE_DOOR = 182; // the White Door there can be opened
+    const SWITCH_BLACK_DOOR = 183;
+    const SWITCH_LAST_DOOR = 193; // both are defeated, the last door is offered
+
+    // event id -> id of the common event that runs it, for the floor events this version of the game has
+    const eventCommon = {};
+    const mapEvents = () => {
+        for (const commonEvent of $dataCommonEvents) {
+            const id = commonEvent ? commonEvent.switchId : 0;
+            if (commonEvent && commonEvent.trigger === 1 && EVENT_RANGES.some(range => id >= range[0] && id <= range[1])) {
+                eventCommon[id] = commonEvent.id;
+            }
+        }
+    };
+    const allEvents = () => Object.keys(eventCommon).map(Number);
+    const eventData = eventId => $dataCommonEvents[eventCommon[eventId]];
+    // The floor events of the seed, as far as this version of the game has them
+    const eventIds = () => (option("events") || LEGACY_EVENTS).filter(eventId => eventCommon[eventId]);
+    // The relics whose place in an event is a check
+    const relicChecks = () => option("relics") || (option("relicsanity") ? LEGACY_RELIC_WEAPONS : []);
     const GOLD_ITEMS = { 1: 100, 2: 300 };
     // The milestones come with the slot data. Seeds from before that have these.
     const LEGACY_SOUL_MILESTONES = [50, 100, 200, 500, 1000, 2000];
@@ -396,8 +430,9 @@
     };
 
     const sendGoal = () => {
-        if (active() && state().goal) {
-            send({ cmd: "Goal", kind: state().goal, virgin: !!state().goalVirgin });
+        const s = state();
+        if (active() && (s.goal || s.goalDlc)) {
+            send({ cmd: "Goal", kind: s.goal, virgin: !!s.goalVirgin, dlc: !!s.goalDlc });
         }
     };
 
@@ -436,7 +471,7 @@
                 checkTitle(title);
             }
         }
-        for (const switchId of KING_SWITCHES) {
+        for (const switchId of KING_SWITCHES.concat(DLC_BOSS_SWITCHES)) {
             if ($gameSwitches.value(switchId)) {
                 check(SWITCH_OFFSET + switchId);
             }
@@ -449,9 +484,9 @@
     Game_Switches.prototype.setValue = function(switchId, value) {
         const wasOn = this.value(switchId);
         _Game_Switches_setValue.apply(this, arguments);
-        if (value && KING_SWITCHES.includes(switchId)) {
+        if (value && (KING_SWITCHES.includes(switchId) || DLC_BOSS_SWITCHES.includes(switchId))) {
             check(SWITCH_OFFSET + switchId);
-        } else if (!value && wasOn && switchId >= EVENT_MIN && switchId <= EVENT_MAX) {
+        } else if (!value && wasOn && eventCommon[switchId]) {
             // A floor event runs while its switch is on and ends in the standby screen, which turns it off. The
             // first visit is only sent then, when the player has seen which event it was.
             check(SWITCH_OFFSET + switchId);
@@ -482,6 +517,9 @@
             check(TROOP_OFFSET + troopId);
         } else if (troopId === TROOP_LAST_BOSS && state()) {
             lastBossDefeated();
+        } else if (troopId === TROOP_DLC_LAST_BOSS && state()) {
+            state().goalDlc = true;
+            sendGoal();
         }
         _BattleManager_processVictory.apply(this, arguments);
     };
@@ -494,7 +532,7 @@
         }
         const isRelicGain =
             item && amount > 0 && DataManager.isWeapon(item) && RELIC_WEAPONS.includes(item.id);
-        if (isRelicGain && !AP.granting && option("relicsanity")) {
+        if (isRelicGain && !AP.granting && relicChecks().includes(item.id)) {
             check(RELIC_OFFSET + item.id);
             return;
         }
@@ -504,7 +542,7 @@
     // Replaces "has relic n" in the event that hands the relic out. There the game asks whether the relic was
     // already taken, which in a multiworld is whether its check was sent: the relic itself can come from anywhere.
     AP.relicTaken = (weaponId, includeEquip) => {
-        if (bound() && option("relicsanity")) {
+        if (bound() && relicChecks().includes(weaponId)) {
             return state().checked.includes(RELIC_OFFSET + weaponId);
         }
         return $gameParty.hasItem($dataWeapons[weaponId], includeEquip);
@@ -512,7 +550,7 @@
 
     // "Item for Player" for the multiworld item an event hands out in place of the relic, null when unknown
     const relicLabel = weaponId => {
-        const scout = bound() && option("relicsanity") && AP.scouts[RELIC_OFFSET + weaponId];
+        const scout = bound() && relicChecks().includes(weaponId) && AP.scouts[RELIC_OFFSET + weaponId];
         // A backslash would start an escape code in a choice
         return scout ? (scout.item + " for " + scout.player).replace(/\\/g, "") : null;
     };
@@ -529,7 +567,7 @@
                 }
                 inBranch = item.code === 402 && item.parameters[0] === choice;
             } else if (inBranch && item.code === 127 && item.parameters[1] === 0) {
-                if (RELIC_WEAPONS.includes(item.parameters[0])) {
+                if (relicChecks().includes(item.parameters[0])) {
                     return item.parameters[0];
                 }
             }
@@ -580,12 +618,7 @@
     };
 
     const floorEventOf = list => {
-        for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
-            if ($dataCommonEvents[eventId].list === list) {
-                return eventId;
-            }
-        }
-        return 0;
+        return allEvents().find(eventId => eventData(eventId).list === list) || 0;
     };
 
     const _Game_Interpreter_setupChoices = Game_Interpreter.prototype.setupChoices;
@@ -610,7 +643,7 @@
     const _Spriteset_Base_addGetInfoWindow = Spriteset_Base.prototype.addGetInfoWindow;
     if (_Spriteset_Base_addGetInfoWindow) {
         Spriteset_Base.prototype.addGetInfoWindow = function(id, type, text, value, includeEquip) {
-            const label = type === 1 && value > 0 && RELIC_WEAPONS.includes(id) ? relicLabel(id) : null;
+            const label = type === 1 && value > 0 && relicChecks().includes(id) ? relicLabel(id) : null;
             if (!label) {
                 _Spriteset_Base_addGetInfoWindow.apply(this, arguments);
                 return;
@@ -963,6 +996,10 @@
         }
         mirrorSwitch(SWITCH_TURN_BACK, bound() && !freeDoors());
         mirrorSwitch(SWITCH_FREE_DOORS, freeDoors());
+        const hasKey = weaponId => !bound() || $gameParty.hasItem($dataWeapons[weaponId], false);
+        mirrorSwitch(SWITCH_WHITE_DOOR, hasKey(WEAPON_WHITE_KEY));
+        mirrorSwitch(SWITCH_BLACK_DOOR, hasKey(WEAPON_BLACK_KEY));
+        mirrorSwitch(SWITCH_LAST_DOOR, bound() && DLC_BOSS_SWITCHES.every(switchId => $gameSwitches.value(switchId)));
     };
 
     // Switch of the boss scene `floor` leads to, 0 when it is an ordinary floor
@@ -994,23 +1031,86 @@
         return bossSwitch !== 0;
     };
 
-    const hasWeapons = weaponIds => weaponIds.every(weaponId => $gameParty.hasItem($dataWeapons[weaponId]));
+    // Common event 86 rolls an event and rolls again when the block it has for that event says so: the Seamstress
+    // without torn clothes, the Locksmith without the relics for a key, an event whose character has died, ...
+    // The blocks are read from the event itself, so they are the ones of the installed version of the game.
+    const rerollBlocks = {};
+    const collectRerollBlocks = list => {
+        list.forEach((item, i) => {
+            const p = item.parameters;
+            if (item.code === 111 && p[0] === 1 && p[1] === VARIABLE_FLOOR_EVENT && p[2] === 0 && p[4] === 0) {
+                const end = branchEnd(list, i);
+                if (end > i) {
+                    rerollBlocks[p[3]] = list.slice(i + 1, end);
+                }
+            }
+        });
+    };
 
-    // The game's own conditions for offering an event on `floor` (common event 86)
+    // A conditional branch of such a block. null for a kind of condition this does not know.
+    const blockCondition = (p, scratch) => {
+        const actor = p[0] === 4 ? $gameActors.actor(p[1]) : null;
+        switch (p[0]) {
+            case 0:
+                return (p[1] in scratch ? scratch[p[1]] : $gameSwitches.value(p[1])) === (p[2] === 0);
+            case 1: {
+                const a = $gameVariables.value(p[1]);
+                const b = p[2] === 0 ? p[3] : $gameVariables.value(p[3]);
+                return [a === b, a >= b, a <= b, a > b, a < b, a !== b][p[4]];
+            }
+            case 4:
+                if (p[2] === 0) {
+                    return !!actor && $gameParty.members().includes(actor);
+                }
+                return p[2] === 6 ? !!actor && actor.isStateAffected(p[3]) : null;
+            case 9:
+                return $gameParty.hasItem($dataWeapons[p[1]], p[2]);
+            default:
+                return null;
+        }
+    };
+
+    // True when the block ends in the jump that rolls again. Switches it sets are its own scratch values.
+    const rerolls = block => {
+        const scratch = {};
+        const taken = {};
+        let skipAbove = Infinity;
+        for (const item of block) {
+            if (item.indent > skipAbove) {
+                continue;
+            }
+            skipAbove = Infinity;
+            const p = item.parameters;
+            if (item.code === 111) {
+                const result = blockCondition(p, scratch);
+                if (result === null) {
+                    return false;
+                }
+                taken[item.indent] = result;
+                if (!result) {
+                    skipAbove = item.indent;
+                }
+            } else if (item.code === 411) {
+                if (taken[item.indent]) {
+                    skipAbove = item.indent;
+                }
+            } else if (item.code === 121) {
+                for (let switchId = p[0]; switchId <= p[1]; switchId++) {
+                    scratch[switchId] = p[2] === 0;
+                }
+            } else if (item.code === 119) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // The game's own conditions for offering an event on `floor`
     const eventAvailable = (eventId, floor) => {
         if (eventId > 56 && floor <= 40) {
             return false;
         }
-        switch (eventId) {
-            case 46: // Seamstress
-                return $gameVariables.value(208) !== 0;
-            case 52: // Small Room 2
-                return $gameActors.actor(1).isStateAffected(4);
-            case 57: // Locksmith
-                return hasWeapons([34, 29, 41]) || hasWeapons([33, 36, 38]);
-            default:
-                return true;
-        }
+        return !rerollBlocks[eventId] || !rerolls(rerollBlocks[eventId]);
     };
 
     // { name, events } of the pair `eventId` belongs to (slot data "event_groups"), null for an event on its own
@@ -1023,7 +1123,7 @@
     // What the floor choice calls an event: a pair goes by the name of its unlock, which hides which one it is
     const eventName = eventId => {
         const group = eventGroup(eventId);
-        return group ? group.name : $dataCommonEvents[eventId].name;
+        return group ? group.name : eventData(eventId).name;
     };
 
     const startFloorEvent = switchId => {
@@ -1040,7 +1140,7 @@
         const unlocked = eventId => state().events.includes(eventId);
         const canGray = !!$gameMessage.setChoiceEnables; // MPP_ChoiceEX
         const pool = [];
-        for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
+        for (const eventId of eventIds()) {
             if (eventAvailable(eventId, floor) && (canGray || unlocked(eventId))) {
                 pool.push(eventId);
             }
@@ -1230,6 +1330,7 @@
     const DEV_HELP = [
         "floor N - set the current floor (the next one is N + 1)",
         "event NAME|ID|fight - force the next floor's event",
+        "events [FLOOR] - the events the game would offer on a floor right now",
         "gold N - set gold",
         "heal - restore LP and RP",
         "stat " + DEV_PARAMS.join("|") + "|lewd N - set a stat",
@@ -1273,20 +1374,23 @@
             $gameVariables.setValue(VARIABLE_FLOOR, Number(words[0]));
             return "Floor " + $gameVariables.value(VARIABLE_FLOOR);
         },
+        events: words => {
+            const floor = Number(words[0]) || $gameVariables.value(VARIABLE_FLOOR);
+            const names = allEvents()
+                .filter(eventId => eventAvailable(eventId, floor))
+                .map(eventId => eventData(eventId).name);
+            return "Floor " + floor + " can hold: " + names.join(", ");
+        },
         event: words => {
             const text = words.join(" ");
-            const alias = EVENT_ALIASES[text.toLowerCase()];
-            const entry =
-                text.toLowerCase() === "fight"
-                    ? { id: SWITCH_FIGHT, name: "Fight" }
-                    : alias
-                    ? { id: alias, name: text }
-                    : findEntry($dataCommonEvents, text);
-            if (!entry || (entry.id !== SWITCH_FIGHT && (entry.id < EVENT_MIN || entry.id > EVENT_MAX))) {
+            const lower = text.toLowerCase();
+            const named = eventId => eventData(eventId).name.toLowerCase() === lower || String(eventId) === text;
+            const eventId = lower === "fight" ? SWITCH_FIGHT : EVENT_ALIASES[lower] || allEvents().find(named);
+            if (!eventId) {
                 return "No floor event called " + text;
             }
-            AP.nextFloorEvent = entry.id;
-            return "Next floor: " + entry.name;
+            AP.nextFloorEvent = eventId;
+            return "Next floor: " + (eventId === SWITCH_FIGHT ? "Fight" : eventData(eventId).name);
         },
         gold: words => {
             $gameParty.gainGold(Number(words[0]) - $gameParty.gold());
@@ -1343,9 +1447,7 @@
             if (!s) {
                 return "Only in a game launched from the client";
             }
-            for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
-                remember(s.events, eventId);
-            }
+            allEvents().forEach(eventId => remember(s.events, eventId));
             KING_SWITCHES.forEach(kingSwitch => remember(s.bosses, kingSwitch));
             for (let title = 1; title <= TITLE_COUNT; title++) {
                 remember(s.titles, title);
@@ -1444,6 +1546,7 @@
             console.error("[AP] Common event 86 has an unexpected layout, floor events are not patched");
             return;
         }
+        collectRerollBlocks(list);
         // Later branch first, so the earlier index stays valid
         overrideBranch(list, eventBranch, "LostChapterAP.chooseFloorEvent(this);");
         overrideBranch(
@@ -1647,6 +1750,53 @@
         // Later index first, so the earlier one stays valid
         list.splice(leave, 0, command(118, 0, [LABEL_LEAVE_DOORS]));
         list.splice(choicesEnd, 0, ...branches);
+        patchDlcDoors(list);
+    };
+
+    // DLC: behind the hallway are the White Door and the Black Door again, there without their keys, and the game
+    // walks away from them once both are defeated: Magislilia then takes the place of the next boss floor.
+    // In a multiworld the two doors take their keys there as well, and Magislilia is a third door behind them.
+    const patchDlcDoors = list => {
+        const isBehind = text => String(text).startsWith("White Doorif(!s[");
+        const choices = list.findIndex(item => item.code === 102 && item.parameters[0].some(isBehind));
+        if (choices < 0) {
+            return;
+        }
+        const indent = list[choices].indent;
+        const at = (code, from, test) =>
+            list.findIndex((item, i) => i > from && item.indent === indent && item.code === code && (!test || test(item)));
+        const cancel = at(403, choices);
+        const walkAway = list.findIndex((item, i) => {
+            const p = item.parameters;
+            return i < choices && item.indent === indent && item.code === 111 && p[0] === 0 && p[1] === DLC_BOSS_SWITCHES[0];
+        });
+        const leave = list.findIndex(
+            (item, i) => i > choices && item.indent === 0 && item.code === 357 && item.parameters[1] === "clear"
+        );
+        const transfer = list.findIndex((item, i) => i > leave && item.indent === 0 && item.code === 201);
+        if (cancel < 0 || walkAway < 0 || leave < 0 || transfer < 0) {
+            console.error("[AP] Common event 63 has an unexpected layout, the doors of the DLC are not patched");
+            return;
+        }
+        list[walkAway].parameters = [
+            12,
+            "!LostChapterAP.bound() && $gameSwitches.value(" + DLC_BOSS_SWITCHES[0] + ")",
+        ];
+        const lastDoor = "The Last Doorif(s[" + SWITCH_LAST_DOOR + "])";
+        const branch = [command(402, indent, [list[choices].parameters[0].length, lastDoor]), command(221, 0, [])]
+            .concat(list.slice(leave, transfer + 1).map(item => Object.assign({}, item)), [
+                command(121, 0, [SWITCH_BEHIND, SWITCH_BEHIND, 1]),
+                command(121, 0, [SWITCH_KING_BATTLE, SWITCH_KING_BATTLE, 1]),
+                command(121, 0, [SWITCH_DLC_LAST_BOSS, SWITCH_DLC_LAST_BOSS, 0]),
+                command(119, 0, [LABEL_END]),
+                command(0, 0, []),
+            ]);
+        branch.slice(1).forEach(item => (item.indent = indent + 1));
+        list[choices].parameters[0] = list[choices].parameters[0]
+            .map(text => String(text).replace("White Door", "White Dooren(s[" + SWITCH_WHITE_DOOR + "])"))
+            .map(text => text.replace("Black Door", "Black Dooren(s[" + SWITCH_BLACK_DOOR + "])"))
+            .concat([lastDoor]);
+        list.splice(cancel, 0, ...branch);
     };
 
     // Replaces "the enemy is in its Refractory Period" where the turn start draws Kick Balls
@@ -1678,8 +1828,8 @@
 
     // A floor event that hands out a relic asks "has relic n" to tell whether that already happened
     const patchRelicConditions = () => {
-        for (let eventId = EVENT_MIN; eventId <= EVENT_MAX; eventId++) {
-            const list = $dataCommonEvents[eventId].list;
+        for (const eventId of allEvents()) {
+            const list = eventData(eventId).list;
             const handedOut = RELIC_WEAPONS.filter(weaponId =>
                 list.some(item => item.code === 127 && item.parameters[0] === weaponId && item.parameters[1] === 0)
             );
@@ -1722,6 +1872,7 @@
         }
         if (object === $dataCommonEvents && !object._archipelagoPatched) {
             object._archipelagoPatched = true;
+            mapEvents();
             patchNextFloor();
             patchKingDoors();
             patchTitleReleases();

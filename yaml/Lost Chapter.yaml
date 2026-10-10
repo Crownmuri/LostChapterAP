@@ -10,7 +10,15 @@ Lost Chapter:
   # true_end: defeat the last boss with a climax count of 20 or less
   # virgin_end: defeat the last boss with the Virginity status intact, losing it ends the run.
   #             No story difference, only for those who want the challenge
+  # dlc_ending: defeat Magislilia behind the last door of the DLC. Needs include_dlc
   goal: normal_end
+
+  # Adds the DLC to the multiworld: checks for its monsters, events, titles and relics where applicable.
+  # Only turn this on when you own the DLC
+  include_dlc: false
+
+  # The White Key and Black Key are shuffled as relics (needs relicsanity). false: made at the Locksmith as usual
+  shuffle_keys: true
 
   # Relics found in events become checks and are shuffled into the pool
   relicsanity: true

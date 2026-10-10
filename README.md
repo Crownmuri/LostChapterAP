@@ -149,6 +149,32 @@ what sets the two apart ("First Visit: Desert - Heal" and "First Visit: Desert -
 sent when the event ends. A choice inside an event whose condition is not met is shown grayed out with what it
 requires instead of being hidden.
 
+### DLC
+
+The plugin works on the game with and without its DLC: every patch is checked against both sets of event data
+(`dump/base` is a copy of the data from before the DLC, see `tools/dump_game_data.py`). The DLC took the switches
+261 and up for its quests, so the plugin's own scratch switches are 182-190 and 193, which neither version uses.
+
+`include_dlc` adds the DLC to a seed:
+
+- its eleven floor events (switches 161-171, common events 591-601, floor 41 and up), each with an unlock and a
+  first visit,
+- the first victories over Stubborn, Integrity and Transgression (floor 161 and up),
+- "Defeat Migwarners" and "Defeat Bordosegeia", the bosses behind the White Door and the Black Door,
+- the relics Old Iron Hammer, Memento Chisel, Crown of Forget-Me-Not and Crown of Pieris.
+
+Without it the floor events of the DLC are not offered, whether it is installed or not. Which events and relics a
+seed has travels in its slot data (`events`, `relics`), and the plugin reads the game's own conditions for offering
+an event from common event 86, so both follow the installed version.
+
+The White Door and the Black Door are at the doors of the kings for whoever holds the White Key or the Black Key,
+and again behind the hallway. There the game opens them without a key and walks away once both bosses are
+defeated, to start Magislilia on the next boss floor. In a multiworld the doors behind the hallway take their keys
+too and Magislilia is a third door there (**The Last Door**). Defeating her is the `dlc_ending` goal.
+
+`shuffle_keys` (needs relicsanity) makes the two keys items. Making the Black Key at the Locksmith is then a
+check; the White Key has no check, because making it takes a Moon Hair Ornament, a rare drop.
+
 `finisher_move` decides about Kick Balls, the card drawn the turn after the enemy climaxes: `vanilla`, `shuffle`
 (only once the useful item Kick Balls is found) or `remove`.
 

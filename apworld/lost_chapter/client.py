@@ -292,7 +292,12 @@ class LostChapterContext(Context):
                 goal == 0
                 or (goal == 1 and message.get("kind") == "ending_1")
                 or (goal == 2 and message.get("virgin"))
+                or (goal == 3 and message.get("dlc"))
             )
+
+            # A win over the last boss does not count for the DLC ending, and the other way around
+            if goal != 3 and not message.get("kind"):
+                reached = False
 
             if reached:
                 self.finished_game = True

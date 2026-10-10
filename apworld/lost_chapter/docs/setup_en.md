@@ -3,7 +3,7 @@
 ## Required Software
 
 - [Archipelago](https://github.com/ArchipelagoMW/Archipelago/releases) 0.6.7 or later
-- Lost Chapter on Steam (Windows), without the DLC and the separate patch
+- Lost Chapter on Steam (Windows), with or without its DLC. Turn the `include_dlc` option on only when you own it
 - `lost_chapter.apworld`
 - Optional: [Universal Tracker](https://github.com/FarisTheAncient/Archipelago/releases) for the in-logic counts in
   the client tab

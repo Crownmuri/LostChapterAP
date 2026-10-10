@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from Options import Choice, DefaultOnToggle, OptionSet, PerGameCommonOptions, Range
+from Options import Choice, DefaultOnToggle, OptionSet, PerGameCommonOptions, Range, Toggle
 
 from . import data
 
@@ -16,14 +16,43 @@ class Goal(Choice):
     of 20 or less.
     Virgin End: defeat the last boss with the Virginity status intact. Losing it ends the run on the spot, like
     running out of LP. This has no story difference, it is only there for those who want the challenge.
+    DLC Ending: defeat Magislilia, the last boss of the DLC, who waits behind the last door once Migwarners (White
+    Door) and Bordosegeia (Black Door) are defeated in the same run. Needs Include DLC.
     """
     display_name = "Goal"
     option_normal_end = 0
     option_true_end = 1
     option_virgin_end = 2
+    option_dlc_ending = 3
     alias_ending = 0
     alias_ending_1 = 1
     default = 0
+
+
+class IncludeDLC(Toggle):
+    """
+    Adds the content of the DLC to the multiworld. Only turn this on when you own the DLC.
+
+    This includes checks for the monsters, events, titles and relics of the DLC where applicable: the first visits
+    and unlocks of its floor events, the first victories over its enemies, its two door bosses and the relics its
+    events hand out.
+
+    When off, the floor events of the DLC are not offered even if it is installed.
+    """
+    display_name = "Include DLC"
+
+
+class ShuffleKeys(DefaultOnToggle):
+    """
+    The White Key and the Black Key are shuffled into the multiworld as relics. Having the Locksmith make the Black
+    Key is a check. The White Key is only an item, and only with Include DLC, where it opens the White Door.
+
+    When off, the keys are made at the Locksmith as in the normal game. The White Key then takes a Moon Hair
+    Ornament, a rare drop that logic cannot promise.
+
+    Needs Relicsanity, the keys are always made at the Locksmith without it.
+    """
+    display_name = "Shuffle Keys"
 
 
 class Relicsanity(DefaultOnToggle):
@@ -101,7 +130,9 @@ class SoulMultiplier(Range):
 @dataclass
 class LostChapterOptions(PerGameCommonOptions):
     goal: Goal
+    include_dlc: IncludeDLC
     relicsanity: Relicsanity
+    shuffle_keys: ShuffleKeys
     first_victories: FirstVictories
     shuffle_title_effects: ShuffleTitleEffects
     finisher_move: FinisherMove

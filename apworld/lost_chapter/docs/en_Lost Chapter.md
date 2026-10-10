@@ -42,6 +42,9 @@ Defeating the last boss, which needs all four Heavenly Kings defeated first. The
 
 - `normal_end`: any win over the last boss.
 - `true_end`: a win in a run that would get ENDING 1, which takes a climax count of 20 or less.
+- `dlc_ending`: defeat Magislilia, the last boss of the DLC. She waits behind **The Last Door**, behind the hallway
+  of a boss floor, once Migwarners (White Door, takes the White Key) and Bordosegeia (Black Door, takes the Black
+  Key) are both defeated in the same run. Needs the `include_dlc` option.
 - `virgin_end`: a win with the Virginity status intact. Losing it ends the run on the spot, and the "Lose Virginity"
   title check only holds filler. There is no story difference, it is only for those who want the challenge.
 

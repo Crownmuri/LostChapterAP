@@ -4,7 +4,8 @@ Local WebSocket server the in-game plugin connects to.
 Game -> client:
     {"cmd": "Hello", "version": str, "session": str | None}   session is the save folder, None for a normal game
     {"cmd": "Checks", "locations": [int]}   full list of checked location ids, resent freely
-    {"cmd": "Goal", "kind": "ending_1" | "ending_2", "virgin": bool}   the last boss is defeated
+    {"cmd": "Goal", "kind": "ending_1" | "ending_2" | None, "virgin": bool, "dlc": bool}
+        kind and virgin: the last boss is defeated, dlc: the last boss of the DLC is
     {"cmd": "DevResult", "text": str}
     {"cmd": "Status", "floor": int}
     {"cmd": "Error", "text": str}

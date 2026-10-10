@@ -28,7 +28,7 @@ VARIABLE_FLOOR = 11
 BOSS_FLOOR_INTERVAL = 20
 FLOOR_CHECKS = range(10, 81, 10)
 
-# Floor events from this common event id on are only offered above this floor (common event 86)
+# Floor events from this id on are only offered above this floor (common event 86)
 LATE_EVENT_FIRST = 57
 LATE_EVENT_FLOOR = 41
 
@@ -150,6 +150,32 @@ ENEMIES: Dict[int, str] = {
 #   81-100: 13-15         101-120: 16-18  121+: 19-21
 ENEMY_FLOORS: Dict[int, int] = {troop_id: 1 + BOSS_FLOOR_INTERVAL * ((troop_id - 1) // 3) for troop_id in ENEMIES}
 
+# The enemies of the DLC join the roll on floors 161-180, where half of the fights come from troops 13-24, and stay
+# in it from then on. Only part of a seed with include_dlc.
+DLC_ENEMIES: Dict[int, str] = {
+    22: "Stubborn",
+    23: "Integrity",
+    24: "Transgression",
+}
+ENEMIES.update(DLC_ENEMIES)
+ENEMY_FLOORS.update({troop_id: 161 for troop_id in DLC_ENEMIES})
+
+# switch id -> boss of the DLC behind the White Door and the Black Door (common event 63). The doors are in the
+# hallway of every boss floor: at the doors of the kings with the matching key, and behind the player ("towards the
+# camera") from the first boss floor on. With both defeated in one run the last door of the DLC opens (Magislilia,
+# common event 69).
+DLC_BOSSES: Dict[int, str] = {
+    278: "Migwarners",
+    279: "Bordosegeia",
+}
+# switch id of the DLC boss -> the relic that opens its door
+DLC_BOSS_KEYS: Dict[int, str] = {
+    278: "White Key",
+    279: "Black Key",
+}
+WHITE_KEY_ID = 57
+BLACK_KEY_ID = 58
+
 # common event id -> floor event name. Event n runs while switch n is on (set by common event 86).
 EVENTS: Dict[int, str] = {
     21: "Marsh",
@@ -194,6 +220,23 @@ EVENTS: Dict[int, str] = {
     60: "Hill",
     61: "Prison",  # the game only offers it once cleared, which the plugin makes true from the start
 }
+
+# The floor events of the DLC "Dark Abyss" content. They run while switch n is on like the others, but their common
+# events are 591-601. All of them are only offered from floor 41 on. Only part of a seed with include_dlc.
+DLC_EVENTS: Dict[int, str] = {
+    161: "Change to Swimsuit",
+    162: "Barracks",
+    163: "Farm Village",
+    164: "Old Woman",
+    165: "Checkpoint",
+    166: "Clinic",
+    167: "Slave Market",
+    168: "Graveyard",
+    169: "Girl with Flower Crown",
+    170: "Sculptor",
+    171: "Treasury",
+}
+EVENTS.update(DLC_EVENTS)
 
 # Events that only come up in a state a fresh run is not in (torn clothes, Lust). Not handed out as random
 # starting events.
@@ -257,8 +300,10 @@ STARTING_SETS: Dict[int, str] = {
 }
 
 # weapon id -> relic name. Only relics with a known event source are listed.
-# Left out on purpose: Moon Hair Ornament (41, never handed out by an event command), White Key (57, crafted
-# from the Moon Hair Ornament) and the counted flowers Forget-Me-Not (74) / Rocket Larkspur (75).
+# Left out on purpose: Moon Hair Ornament (41, only a rare drop of fights), the counted flowers Forget-Me-Not (74)
+# and Pieris (75), and what is used up on the spot (Mark of Attainer 80, 5000 lux 5).
+# The White Key (57) is made from the Moon Hair Ornament, so making it is not a check. It is an item when the
+# keys are shuffled in a seed with the DLC, where it opens the White Door.
 RELICS: Dict[int, str] = {
     29: "Recovery Misanga",
     30: "Dusk Ring",
@@ -272,9 +317,25 @@ RELICS: Dict[int, str] = {
     59: "Aetolus Flag",
 }
 
+# Relics the DLC adds, handed out by base events it extends (Marsh) and by its own. Only with include_dlc.
+DLC_RELICS: Dict[int, str] = {
+    23: "Old Iron Hammer",
+    24: "Memento Chisel",
+    76: "Crown of Forget-Me-Not",
+    77: "Crown of Pieris",
+}
+RELICS.update(DLC_RELICS)
+
+WHITE_KEY = "White Key"
+BLACK_KEY = "Black Key"
+
 # relic name -> what it takes to find it: the floor events and the relics it is traded for.
 # First pass read from the event commands, not yet confirmed in play.
 RELIC_SOURCES: Dict[str, Dict[str, List[str]]] = {
+    "Old Iron Hammer": {"events": ["Marsh"], "relics": []},
+    "Memento Chisel": {"events": ["Checkpoint"], "relics": []},
+    "Crown of Forget-Me-Not": {"events": ["Girl with Flower Crown"], "relics": []},
+    "Crown of Pieris": {"events": ["Girl with Flower Crown"], "relics": []},
     "Recovery Misanga": {"events": ["Collapse", "Cherry Blossoms"], "relics": []},
     "Dusk Ring": {"events": ["Battlefield"], "relics": []},
     "Plushie": {"events": ["Market"], "relics": []},
@@ -284,7 +345,9 @@ RELIC_SOURCES: Dict[str, Dict[str, List[str]]] = {
     "Collar Key": {"events": ["Battlefield"], "relics": []},
     "Pretty Water": {"events": ["Pond"], "relics": []},
     "Black Key": {"events": ["Locksmith"], "relics": ["Plushie", "Clown Mask", "Promise Pendant"]},
-    "Aetolus Flag": {"events": ["Throne"], "relics": []},
+    # Also takes the Moon Hair Ornament, a rare drop of fights that logic cannot promise
+    "White Key": {"events": ["Locksmith"], "relics": ["Music Box", "Recovery Misanga"]},
+    "Aetolus Flag": {"events": ["Throne"], "relics": ["Dusk Ring"]},
 }
 
 # item id -> name. Ids below SWITCH_OFFSET are plugin-defined effects.
@@ -297,6 +360,8 @@ FILLER: Dict[int, str] = {
 # With the finisher_move option on "shuffle" it only shows up once this item is found.
 FINISHER_ID = 10
 FINISHER = "Kick Balls"
+
+DLC_LAST_BOSS = "Magislilia"
 
 VICTORY = "Victory"
 ENDING_EVENT = "Reach the Ending"

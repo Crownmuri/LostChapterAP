@@ -98,8 +98,22 @@ class LostChapterTabLayout(BoxLayout):
         received = {network_item.item for network_item in ctx.items_received}
         unlocked_count = 0
 
+        # A seed without the DLC has no use for its events. Older seeds do not list theirs.
+        seed_events = ctx.slot_data.get("events")
+        unlock_total = 0
+
         for unlock, label in self.event_labels.items():
             event_ids = data.UNLOCK_EVENTS[unlock]
+
+            if seed_events is not None and event_ids[0] not in seed_events:
+                label.text = ""
+                continue
+
+            if seed_events is None and event_ids[0] in data.DLC_EVENTS:
+                label.text = ""
+                continue
+
+            unlock_total += 1
 
             # A seed from before the pairs has an unlock for each of the two events
             unlocked = any(data.EVENT_OFFSET + event_id in received for event_id in event_ids)
@@ -114,7 +128,7 @@ class LostChapterTabLayout(BoxLayout):
 
             label.text = f"[color={color}]{unlock}[/color]  {checks}"
 
-        self.events_label.text = f"Events unlocked: {unlocked_count}/{len(self.event_labels)}"
+        self.events_label.text = f"Events unlocked: {unlocked_count}/{unlock_total}"
 
     def update(self, *_) -> None:
         ctx = self.ctx
