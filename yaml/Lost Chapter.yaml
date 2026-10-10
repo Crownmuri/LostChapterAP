@@ -40,7 +40,7 @@ Lost Chapter:
   final_boss_floor: 100
 
   # 0-100. How much of the filler is traps. The rest is gold and one-time stat boosts for the current run
-  trap_percentage: 10
+  trap_percentage: 20
 
   # 0-100 each. How the traps are split between the five kinds, compared with each other. 0 leaves a kind out
   climax_trap_weight: 20      # forces a climax on your next turn

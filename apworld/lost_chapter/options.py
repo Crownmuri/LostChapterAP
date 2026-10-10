@@ -124,7 +124,7 @@ class TrapPercentage(Range):
     display_name = "Trap Percentage"
     range_start = 0
     range_end = 100
-    default = 10
+    default = 20
 
 
 class TrapWeight(Range):
