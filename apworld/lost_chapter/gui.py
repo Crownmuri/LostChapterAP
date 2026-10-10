@@ -214,7 +214,7 @@ class LostChapterTabLayout(BoxLayout):
 
         # The second line is what the title "Minerva's Owl" adds up, which also counts a fifth of Max LP + Max RP
         self.run_label.text = "\n".join([
-            "    ".join([value("Floor", "floor"), value("FAITH", "faith"), value("VIRTUE", "virtue")]),
+            "    ".join([value("Floor", "floor"), value("FAITH", "faith"), value("VIRTUE", "virtue"), value("Souls", "souls")]),
             "    ".join([
                 value("STR", "str"),
                 value("DEF", "def"),

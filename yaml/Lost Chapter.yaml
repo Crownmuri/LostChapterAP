@@ -24,10 +24,6 @@ Lost Chapter:
   # Relics found in events become checks and are shuffled into the pool
   relicsanity: true
 
-  # Completing a big quest is a check: Memory of Moon, Memory of Regret, End of Monster, and with the DLC
-  # Footsteps of the Night
-  quest_checks: true
-
   # The first win against each regular enemy is a check
   first_victories: true
 

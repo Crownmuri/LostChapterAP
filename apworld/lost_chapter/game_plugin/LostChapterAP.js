@@ -75,7 +75,6 @@
     const SET_OFFSET = 8000;
     const CARD_OFFSET = 9000;
     const SOUL_OFFSET = 10000;
-    const QUEST_OFFSET = 11000;
 
     const SWITCH_CLEARED = 1;
     const SWITCH_BEFORE_BOSS = 62;
@@ -151,7 +150,13 @@
     const FLOOR_EVENT_CHOICES = 2;
     const LABEL_STANDBY = "ArchipelagoStandby";
     // The soul shop of the standby screen. The prices double with every 20 floors.
-    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 30, pieris: 40, heal: 20 };
+    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 30, pieris: 40, heal: 20, cards: 20 };
+    // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
+    // common event 16 takes the choice while its switch is on
+    const SWITCH_DROP_CONTROL = 16;
+    const SWITCH_DROP_START = 17;
+    const REROLL_KEY = "pagedown"; // W
+    const REROLL_Y = 520;
     const SHOP_HEAL = 10;
     const WEAPON_FORGET_ME_NOT = 74;
     const WEAPON_PIERIS = 75;
@@ -264,6 +269,9 @@
     const MARKET_RELICS = [33, 34];
     const SWITCH_MARKET_THANKS = 157; // both checks are sent, the merchant can be thanked
     const COMMON_EVENT_CAT = 44;
+    const COMMON_EVENT_MARSH = 21;
+    const WEAPON_OLD_IRON_HAMMER = 23;
+    const ITEM_LASSI = 40;
     const WEAPON_DUSK_RING = 30;
     const WEAPON_COLLAR_KEY = 42;
     const CAT_LEWD = 10; // from here on the Cat hands out a card when patted
@@ -627,10 +635,6 @@
             }
             AP.deathReceived = false;
         }
-        if (value && !wasOn && (option("quests") || []).includes(switchId)) {
-            // A big quest that is completed (slot data "quests")
-            check(QUEST_OFFSET + switchId);
-        }
         if (value && (KING_SWITCHES.includes(switchId) || DLC_BOSS_SWITCHES.includes(switchId))) {
             check(SWITCH_OFFSET + switchId);
         } else if (!value && wasOn && eventCommon[switchId]) {
@@ -663,6 +667,7 @@
                 actor.param(2) + actor.param(3) + actor.param(4) + actor.param(5),
             gold: $gameParty.gold(),
             cards: $gameVariables.value(VARIABLE_DECK_COUNT),
+            souls: state() ? soulTotal() : 0,
         };
         const text = JSON.stringify(status);
         if (text !== AP.lastStatus) {
@@ -897,6 +902,12 @@
     // `text` with what the choice does behind it, in front of its conditions
     const withEffect = (eventId, original, text) => {
         let effect = (CHOICE_EFFECTS[eventData(eventId).id] || {})[effectKey(original)];
+        const hammer = WEAPON_OLD_IRON_HAMMER;
+        if (effect && eventData(eventId).id === COMMON_EVENT_MARSH && relicChecks().includes(hammer)) {
+            if (!state().checked.includes(RELIC_OFFSET + hammer)) {
+                effect = effect.replace("Forget-Me-Not", $dataWeapons[hammer].name);
+            }
+        }
         if (!effect || text.includes("\\c[18]")) {
             return text;
         }
@@ -1124,9 +1135,26 @@
         this._archipelagoStatus = createLabel(this, 16, Graphics.height - 44, 720, "left");
         this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
         this._archipelagoCards = createCardButton(this);
+        this._archipelagoReroll = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, REROLL_Y, NOTICE_WIDTH, "center");
+    };
+
+    // While the cards of a won fight are up, souls buy three new ones
+    const updateCardReroll = scene => {
+        const dropping = bound() && $gameSwitches.value(SWITCH_DROP_CONTROL);
+        const cost = dropping ? shopPrice("cards", $gameVariables.value(VARIABLE_FLOOR)) : 0;
+        const affordable = dropping && soulTotal() >= cost;
+        const text = "[W] Other cards: " + cost + " souls (you have " + (dropping ? soulTotal() : 0) + ")";
+        updateLabel(scene._archipelagoReroll, dropping, text, affordable ? "#b0e0a0" : "#909090");
+        if (affordable && Input.isTriggered(REROLL_KEY)) {
+            spendSouls(cost);
+            SoundManager.playOk();
+            $gameSwitches.setValue(SWITCH_DROP_CONTROL, false);
+            $gameSwitches.setValue(SWITCH_DROP_START, true);
+        }
     };
 
     const updateSoulCounter = scene => {
+        updateCardReroll(scene);
         // Only on the standby screen itself, its Title Collection, deck and item screens have that corner in use
         const shown =
             bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL) && $gameVariables.value(VARIABLE_SCREEN) === 0;
@@ -2771,6 +2799,28 @@
         return bound() && cards.length > 0 && cards.every(itemId => state().checked.includes(CARD_OFFSET + itemId));
     };
 
+    // Marsh: the Old Iron Hammer is only found by a player with the dog in the deck, or who laid it to rest. In a
+    // multiworld the first find that succeeds is the hammer while its check is open.
+    AP.marshHammer = () => {
+        if (bound() && relicChecks().includes(WEAPON_OLD_IRON_HAMMER)) {
+            return true;
+        }
+        return $gameParty.hasItem($dataItems[ITEM_LASSI]);
+    };
+
+    const patchMarsh = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_MARSH].list;
+        const gains = (item, weaponId) => item && item.code === 127 && item.parameters[0] === weaponId;
+        const at = list.findIndex((item, i) => {
+            const p = item.parameters;
+            return item.code === 111 && p[0] === 8 && p[1] === ITEM_LASSI && gains(list[i + 1], WEAPON_OLD_IRON_HAMMER);
+        });
+        if (at >= 0) {
+            // Only the version of the game that comes with the DLC has the hammer
+            list[at].parameters = [12, "LostChapterAP.marshHammer()"];
+        }
+    };
+
     // Girl: the patch of the game that restores its cut content has her give the Moon Hair Ornament to a player in
     // the Regression State. In the game without it there is neither the state nor the gift, and with it no White
     // Key. In a multiworld she hands the ornament out on any visit while its check is open, in every version.
@@ -2897,6 +2947,7 @@
             patchKingDoors();
             patchTitleReleases();
             patchGirl();
+            patchMarsh();
             patchMarket();
             patchConclusions();
             patchStandbyVerse();

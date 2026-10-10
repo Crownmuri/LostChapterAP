@@ -7,7 +7,7 @@ Game -> client:
     {"cmd": "Goal", "goals": [int]}   the values of the goal option that the wins of this save have reached
     {"cmd": "DevResult", "text": str}
     {"cmd": "Status", "floor": int, "faith": int, "virtue": int, "lewd": int, "str": int, "def": int, "mag": int,
-     "agi": int, "stats": int, "gold": int, "cards": int}
+     "agi": int, "stats": int, "gold": int, "cards": int, "souls": int}
         the run as it stands, for the tracker. stats is what the title "Minerva's Owl" asks to be over 30:
         (Max LP + Max RP + LEWD) / 5 + STR + DEF + MAG + AGL
     {"cmd": "Error", "text": str}

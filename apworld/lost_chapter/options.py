@@ -69,15 +69,6 @@ class Relicsanity(DefaultOnToggle):
     display_name = "Relicsanity"
 
 
-class QuestChecks(DefaultOnToggle):
-    """
-    Completing one of the big quests is a check: Memory of Moon (the door of the Corridor with the White Key),
-    Memory of Regret (the same door with the Black Key), End of Monster (the quest that starts in the Prison and
-    ends at the Sea) and, with Include DLC, Footsteps of the Night (the door with the White Key as The New Ruler).
-    """
-    display_name = "Quest Checks"
-
-
 class FirstVictories(DefaultOnToggle):
     """The first win against each regular enemy is a check."""
     display_name = "First Victories"
@@ -233,7 +224,6 @@ class LostChapterOptions(PerGameCommonOptions):
     relicsanity: Relicsanity
     shuffle_keys: ShuffleKeys
     first_victories: FirstVictories
-    quest_checks: QuestChecks
     shuffle_title_effects: ShuffleTitleEffects
     finisher_move: FinisherMove
     field_exploration: FieldExploration

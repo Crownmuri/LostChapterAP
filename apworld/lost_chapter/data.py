@@ -40,30 +40,6 @@ LATE_EVENT_FLOOR = 41
 # Souls no longer send checks, they are spent in the soul shop of the standby screen (the plugin's SHOP_PRICES).
 # Archived: the checks were at 25, 50, 100, 200 (floor 20), 300, 400 (40), 500, 600 (60), 800 (80) and 1000 (100).
 
-# Quest flags that are checks with the quest_checks option: game switch -> name. The second lot only exists with
-# the DLC, whose origin The New Ruler is the one that reaches it.
-QUEST_OFFSET = 11000
-QUESTS: Dict[int, str] = {
-    271: "Memory of Moon",
-    272: "Memory of Regret",
-    276: "End of Monster",
-}
-DLC_QUESTS: Dict[int, str] = {
-    277: "Footsteps of the Night",
-}
-# quest -> the floor events and the keys it takes. All of them need the floors of the late events.
-QUEST_EVENTS: Dict[int, List[str]] = {
-    271: ["Corridor"],
-    272: ["Corridor"],
-    276: ["Prison", "Lake Shore", "Throne", "Sea"],
-    277: ["Corridor"],
-}
-QUEST_RELICS: Dict[int, List[str]] = {
-    271: ["White Key"],
-    272: ["Black Key"],
-    276: ["White Key", "Black Key"],
-    277: ["White Key"],
-}
 
 # Game switches
 SWITCH_CLEARED = 1  # set by the Ending map (Map011). The plugin keeps it on, so the climb continues after the last boss
