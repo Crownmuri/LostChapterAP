@@ -363,6 +363,7 @@
                 sets: [],
                 souls: 0, // banked from finished runs
                 runSouls: 0, // best value of the current run
+                runBase: null, // score the current run started with, which does not count
                 goals: [], // values of the goal option that wins have reached
                 titles: [],
                 regrant: false,
@@ -559,6 +560,7 @@
             s.claimed = [];
             s.souls += s.runSouls;
             s.runSouls = 0;
+            s.runBase = null;
         }
         checkFloor(value);
         send({ cmd: "Status", floor: value });
@@ -843,8 +845,8 @@
     const updateSouls = () => {
         const s = state();
         const score = $gameVariables.value(VARIABLE_FLOOR) >= 1 ? runScore() : null;
-        if (score !== null) {
-            s.runSouls = Math.max(s.runSouls, score * (option("soul_multiplier") || 1));
+        if (score !== null && s.runBase != null) {
+            s.runSouls = Math.max(s.runSouls, (score - s.runBase) * (option("soul_multiplier") || 1));
         }
         for (const milestone of soulMilestones()) {
             if (soulTotal() >= milestone && !s.checked.includes(SOUL_OFFSET + milestone)) {
@@ -1040,6 +1042,11 @@
         if (s.regrant && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             s.regrant = false;
             s.relics.forEach(grantRelic);
+        }
+        // Every run starts at 0 souls: what the origin, the starting set and the relics from the multiworld are worth
+        // in the score is taken off. The DLC's origin alone would start a run at 115.
+        if (s.runBase == null && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
+            s.runBase = runScore();
         }
         while (s.itemIndex < AP.items.length) {
             const item = AP.items[s.itemIndex];

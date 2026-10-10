@@ -63,7 +63,7 @@ Lost Chapter:
   #   Girl with Flower Crown, Sculptor, Treasury
   starting_events: []
 
-  # 1-10. Souls add up over all runs and send checks at milestones from 200 to 2000
+  # 1-10. Souls add up over all runs and send checks at milestones from 50 to 2000
   soul_multiplier: 2
 
   progression_balancing: 50
