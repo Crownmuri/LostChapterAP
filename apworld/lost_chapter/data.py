@@ -414,6 +414,12 @@ FILLER: Dict[int, str] = {
 }
 
 # Filler that raises a stat of the run it arrives in, once. Stats start over with every run.
+# Restores LP or RP in the current run, without raising the maximum
+RESTORE_FILLER: Dict[int, str] = {
+    26: "+5 LP",
+    27: "+5 RP",
+}
+
 STAT_FILLER: Dict[int, str] = {
     20: "+5 Max LP",
     21: "+5 Max RP",

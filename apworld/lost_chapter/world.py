@@ -51,6 +51,7 @@ def location_table() -> Dict[str, int]:
 def item_table() -> Dict[str, int]:
     table: Dict[str, int] = {name: item_id for item_id, name in data.FILLER.items()}
     table.update({name: item_id for item_id, name in data.STAT_FILLER.items()})
+    table.update({name: item_id for item_id, name in data.RESTORE_FILLER.items()})
     table.update({name: item_id for item_id, name in data.TRAPS.items()})
     table[data.FINISHER] = data.FINISHER_ID
     table[data.EXPLORATION] = data.EXPLORATION_ID
@@ -410,7 +411,9 @@ class LostChapterWorld(World):
 
         if name in data.TRAPS.values():
             classification = ItemClassification.trap
-        elif name in data.FILLER.values() or name in data.STAT_FILLER.values() or name in self.item_name_groups["Cards"]:
+        elif name in self.item_name_groups["Cards"] or name in (
+            list(data.FILLER.values()) + list(data.STAT_FILLER.values()) + list(data.RESTORE_FILLER.values())
+        ):
             classification = ItemClassification.filler
         elif name in self.item_name_groups["Door Keys"]:
             classification = ItemClassification.progression | ItemClassification.useful
@@ -464,10 +467,10 @@ class LostChapterWorld(World):
         self.multiworld.itempool += pool
 
     def get_filler_item_name(self) -> str:
-        # 100 Gold, 300 Gold, then the six stat boosts, of which Max LP and Max RP come first and weigh more
-        names = list(data.FILLER.values()) + list(data.STAT_FILLER.values())
+        # 100 Gold, 300 Gold, +5 LP, +5 RP, then the six stat boosts
+        names = list(data.FILLER.values()) + list(data.RESTORE_FILLER.values()) + list(data.STAT_FILLER.values())
 
-        return self.random.choices(names, weights=[3, 1, 3, 3] + [1] * (len(data.STAT_FILLER) - 2))[0]
+        return self.random.choices(names, weights=[3, 1, 2, 2] + [1] * len(data.STAT_FILLER))[0]
 
     def fill_slot_data(self) -> Dict[str, Any]:
         slot_data = self.options.as_dict(*SLOT_DATA_OPTIONS)

@@ -132,8 +132,8 @@ class TrapPercentage(Range):
     How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap and Acid Trap. A trap
     goes off in the fight it arrives in, or in the next one. The weight options below set how the traps are split.
 
-    The rest of the filler is gold and one-time stat boosts for the current run (+5 Max LP, +5 Max RP, +1 STR, MAG,
-    DEF or AGL).
+    The rest of the filler is gold, +5 LP or +5 RP restored, and one-time stat boosts for the current run (+5 Max
+    LP, +5 Max RP, +1 STR, MAG, DEF or AGL).
     """
     display_name = "Trap Percentage"
     range_start = 0

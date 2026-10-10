@@ -115,6 +115,10 @@
     const STATE_REFRACTORY = 16;
     const ITEM_FINISHER = 10; // FINISHER_ID of apworld/lost_chapter/data.py
     const ITEM_EXPLORATION = 11; // EXPLORATION_ID of apworld/lost_chapter/data.py, one more event to choose from
+    // RESTORE_FILLER of apworld/lost_chapter/data.py
+    const ITEM_RESTORE_LP = 26;
+    const ITEM_RESTORE_RP = 27;
+    const RESTORE_AMOUNT = 5;
     const FINISHER_SHUFFLE = 1; // the finisher_move option
     const FINISHER_REMOVE = 2;
     const COMMON_EVENT_POND = 54;
@@ -1227,6 +1231,10 @@
             s.exploration = (s.exploration || 0) + 1;
         } else if (GOLD_ITEMS[item.id]) {
             $gameParty.gainGold(GOLD_ITEMS[item.id]);
+        } else if (item.id === ITEM_RESTORE_LP) {
+            $gameActors.actor(1).gainHp(RESTORE_AMOUNT);
+        } else if (item.id === ITEM_RESTORE_RP) {
+            $gameActors.actor(1).gainMp(RESTORE_AMOUNT);
         } else if (STAT_ITEMS[item.id]) {
             $gameActors.actor(1).addParam(STAT_ITEMS[item.id][0], STAT_ITEMS[item.id][1]);
         } else if (item.id === ITEM_CLIMAX_TRAP || TRAP_STATES[item.id]) {
@@ -1263,7 +1271,8 @@
         while (s.itemIndex < AP.items.length) {
             const item = AP.items[s.itemIndex];
             // A stat boost only lasts for the run it arrives in, so it waits for one
-            if (STAT_ITEMS[item.id] && $gameVariables.value(VARIABLE_FLOOR) < 1) {
+            const forRun = STAT_ITEMS[item.id] || item.id === ITEM_RESTORE_LP || item.id === ITEM_RESTORE_RP;
+            if (forRun && $gameVariables.value(VARIABLE_FLOOR) < 1) {
                 break;
             }
             withoutSouls(() => applyItem(item));
