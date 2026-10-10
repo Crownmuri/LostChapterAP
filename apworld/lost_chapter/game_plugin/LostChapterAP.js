@@ -114,6 +114,7 @@
     const CARD_FINISHER = 93;
     const STATE_REFRACTORY = 16;
     const ITEM_FINISHER = 10; // FINISHER_ID of apworld/lost_chapter/data.py
+    const ITEM_EXPLORATION = 11; // EXPLORATION_ID of apworld/lost_chapter/data.py, one more event to choose from
     const FINISHER_SHUFFLE = 1; // the finisher_move option
     const FINISHER_REMOVE = 2;
     const COMMON_EVENT_POND = 54;
@@ -249,16 +250,9 @@
     const COMMON_EVENT_MARKET = 33;
     const MARKET_RELICS = [33, 34];
     const SWITCH_MARKET_THANKS = 157; // both checks are sent, the merchant can be thanked
-    // Throne (59), Battlefield (42) and Cat (44), see their patches
-    const COMMON_EVENT_THRONE = 59;
-    const COMMON_EVENT_BATTLEFIELD = 42;
     const COMMON_EVENT_CAT = 44;
-    const WEAPON_AETOLUS_FLAG = 59;
     const WEAPON_DUSK_RING = 30;
     const WEAPON_COLLAR_KEY = 42;
-    const SWITCH_BONFIRE = 156; // the soldier of the Battlefield was saved once, his bonfire can be sat at
-    const LABEL_THRONE_REST = "ArchipelagoThroneRest";
-    const LABEL_BONFIRE = "ArchipelagoBonfire";
     const CAT_LEWD = 10; // from here on the Cat hands out a card when patted
     const LABEL_MARKET_THANKS = "\u6607\u5929";
 
@@ -657,7 +651,6 @@
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
-            s.runTaken = [];
             s.claimed = [];
             // Souls are counted for one run at a time
             s.souls = 0;
@@ -691,7 +684,6 @@
         const isRelicGain =
             item && amount > 0 && DataManager.isWeapon(item) && RELIC_WEAPONS.includes(item.id);
         if (isRelicGain && !AP.granting && relicChecks().includes(item.id)) {
-            remember(runTaken(), item.id);
             check(RELIC_OFFSET + item.id);
             return;
         }
@@ -705,25 +697,12 @@
 
     // Replaces "has relic n" in the event that hands the relic out. There the game asks whether the relic was
     // already taken, which in a multiworld is whether its check was sent: the relic itself can come from anywhere.
-    // "Taken" is taken in this run, as in the game, where every run starts without relics: the event then plays the
-    // same on every run, with its relic to pick up first and what follows that afterwards. The check behind the
-    // relic is only sent the first time, later runs pick up nothing there.
-    const runTaken = () => {
-        const s = state();
-        s.runTaken = s.runTaken || [];
-        return s.runTaken;
-    };
-
     AP.relicTaken = (weaponId, includeEquip) => {
         if (bound() && relicChecks().includes(weaponId)) {
-            return runTaken().includes(weaponId);
+            return state().checked.includes(RELIC_OFFSET + weaponId);
         }
         return $gameParty.hasItem($dataWeapons[weaponId], includeEquip);
     };
-
-    // The check of a relic was sent, in this run or an earlier one
-    AP.relicSent = weaponId =>
-        bound() && relicChecks().includes(weaponId) && state().checked.includes(RELIC_OFFSET + weaponId);
 
     // Change Items of a floor event: gainItem above is told where the card comes from
     const _Game_Interpreter_command126 = Game_Interpreter.prototype.command126;
@@ -837,6 +816,10 @@
                 const relic = option("relicsanity") ? branchRelic(list, start, choice) : 0;
                 const label = relic ? relicLabel(relic) : null;
                 const named = label ? String(text).replace($dataWeapons[relic].name, () => label) : String(text);
+                const conclusion = conclusionChoice(String(text));
+                if (conclusion) {
+                    return conclusion;
+                }
                 const lewd = $gameVariables.value(VARIABLE_LEWD);
                 if (eventId === COMMON_EVENT_CAT && named === "Pat" && lewd >= CAT_LEWD && AP.catDone()) {
                     return "Pat \\c[18](all cards found)\\c[0]en(0)";
@@ -1158,6 +1141,8 @@
             grantRelic(item.id - RELIC_OFFSET);
         } else if (item.id === ITEM_FINISHER) {
             s.finisher = true;
+        } else if (item.id === ITEM_EXPLORATION) {
+            s.exploration = (s.exploration || 0) + 1;
         } else if (GOLD_ITEMS[item.id]) {
             $gameParty.gainGold(GOLD_ITEMS[item.id]);
         } else if (STAT_ITEMS[item.id]) {
@@ -1455,7 +1440,6 @@
         mirrorSwitch(SWITCH_FINAL_BOSS, $gameVariables.value(VARIABLE_FLOOR) >= finalBossFloor());
         const sent = weaponId => state().checked.includes(RELIC_OFFSET + weaponId);
         mirrorSwitch(SWITCH_MARKET_THANKS, AP.marketMenu() && MARKET_RELICS.every(sent));
-        mirrorSwitch(SWITCH_BONFIRE, AP.relicSent(WEAPON_DUSK_RING));
         const hasKey = weaponId => !bound() || $gameParty.hasItem($dataWeapons[weaponId], false);
         mirrorSwitch(SWITCH_WHITE_DOOR, hasKey(WEAPON_WHITE_KEY));
         mirrorSwitch(SWITCH_BLACK_DOOR, hasKey(WEAPON_BLACK_KEY));
@@ -1614,7 +1598,8 @@
             return pool.splice(index < 0 ? pool.length - 1 : index, 1)[0];
         };
         const offered = [];
-        while (offered.length < FLOOR_EVENT_CHOICES && pool.length > 0) {
+        const choices = FLOOR_EVENT_CHOICES + (state().exploration || 0);
+        while (offered.length < choices && pool.length > 0) {
             const eventId = draw();
             const group = eventGroup(eventId);
             offered.push(eventId);
@@ -2361,79 +2346,116 @@
         );
     };
 
-    // An event that plays a short scene instead of itself once its relic is in the bag ("the king's flag is
-    // carried: he wishes the player well, LP +10") keeps the player out of the rest of it, a choice only made there
-    // for one. Where the relic is a check that scene is not played by itself.
-    AP.sceneFor = (weaponId, includeEquip) => {
-        if (bound() && relicChecks().includes(weaponId)) {
-            return false;
-        }
-        return $gameParty.hasItem($dataWeapons[weaponId], includeEquip);
+    // An event whose relic or card was found plays one short scene from then on instead of itself, which in a
+    // multiworld would be for good: the check stays sent. There the player is asked on every visit instead, to see
+    // that scene (revisit) or the event as it was before (reset). `kind` is that of the "has ..." question the
+    // event asks at its top level, 9 for a relic and 8 for a card. A scene without a label is never played.
+    const bonfireLabel = () => {
+        const open = relicChecks().includes(WEAPON_COLLAR_KEY) && !state().checked.includes(RELIC_OFFSET + WEAPON_COLLAR_KEY);
+        return "LP +" + Math.floor($gameVariables.value(VARIABLE_FLOOR) / 4) + (open ? ", full LP: Collar Key" : "");
     };
 
-    // The top level "has relic" branch of an event: its index, or -1
-    const relicBranch = (list, weaponId, from) =>
-        list.findIndex((item, i) => {
-            const p = item.parameters;
-            return i >= (from || 0) && item.code === 111 && item.indent === 0 && p[0] === 9 && p[1] === weaponId;
-        });
+    const CONCLUSIONS = {
+        // Collapse
+        30: { scenes: [{ kind: 9, id: 29, label: "Gold" }], reset: "VIRTUE -5, his grave: FAITH +5" },
+        // Amusement Center
+        36: { scenes: [{ kind: 9, id: 36, label: "STR, DEF, MAG or AGL +1" }], reset: "coin toss: Gold or LP" },
+        // Girl, who only asks in the versions of the game that have her gift
+        41: { scenes: [{ kind: 9, id: 41, label: "Max RP +5", optional: true }], reset: "RP +5 / FAITH -5" },
+        // Battlefield: the regrets the Collar Key brings (LP -3), then the bonfire of the soldier who gave his ring
+        42: {
+            scenes: [{ kind: 9, id: WEAPON_COLLAR_KEY, label: null }, { kind: 9, id: WEAPON_DUSK_RING, label: bonfireLabel }],
+            reset: "Healing: VIRTUE +5",
+        },
+        // Cat, whose own card only exists with the DLC
+        44: { scenes: [{ kind: 8, id: 39, label: "Max RP +5", optional: true }], reset: "LEWD +2 / Bosom Enlargement" },
+        // Throne
+        59: { scenes: [{ kind: 9, id: 59, label: "LP +10" }], reset: "Seduce the King" },
+    };
+    const REVISIT_CHOICE = "ArchipelagoRevisit:";
+    const RESET_CHOICE = "ArchipelagoReset:";
 
-    const sceneCondition = item => {
-        item.parameters = [12, "LostChapterAP.sceneFor(" + item.parameters[1] + ", " + !!item.parameters[2] + ")"];
+    const sceneIsCheck = scene => bound() && (scene.kind === 9 ? relicChecks() : cardChecks()).includes(scene.id);
+
+    const sceneOffered = scene =>
+        !!scene.label &&
+        sceneIsCheck(scene) &&
+        state().checked.includes((scene.kind === 9 ? RELIC_OFFSET : CARD_OFFSET) + scene.id);
+
+    // Asked before the first of the scenes: is there one to revisit? Also forgets the answer of the last visit.
+    AP.concluded = eventId => {
+        AP.revisit = 0;
+        return CONCLUSIONS[eventId].scenes.some(sceneOffered);
     };
 
-    // Throne: the king is always there to talk to. "Show Ring" hands the flag over once, and from then on brings
-    // the scene the flag used to bring by itself.
-    const patchThrone = () => {
-        const list = $dataCommonEvents[COMMON_EVENT_THRONE].list;
-        const rest = relicBranch(list, WEAPON_AETOLUS_FLAG);
-        const show = list.findIndex(item => item.code === 402 && String(item.parameters[1]).startsWith("Show Ring"));
-        if (rest < 0 || show < rest) {
-            console.error("[AP] Common event 59 has an unexpected layout, the Throne is not patched");
-            return;
+    // Replaces "has relic n" and "has card n" in front of a scene: the player asked for it
+    AP.revisits = (eventId, index) => {
+        const scene = CONCLUSIONS[eventId].scenes[index];
+        if (!sceneIsCheck(scene)) {
+            return $gameParty.hasItem((scene.kind === 9 ? $dataWeapons : $dataItems)[scene.id], scene.equip);
         }
-        const indent = list[show].indent + 1;
-        // Later index first, so the earlier one stays valid
-        list.splice(
-            show + 1,
-            0,
-            command(111, indent, [12, "LostChapterAP.relicSent(" + WEAPON_AETOLUS_FLAG + ")"]),
-            command(119, indent + 1, [LABEL_THRONE_REST]),
-            command(0, indent + 1, []),
-            command(412, indent, [])
-        );
-        sceneCondition(list[rest]);
-        list.splice(rest + 1, 0, command(118, 1, [LABEL_THRONE_REST]));
+        return AP.revisit === index + 1;
     };
 
-    // Battlefield: the wounded soldier is always there. Healing him is worth VIRTUE every time and his ring the
-    // first, and once he was saved his bonfire is a choice of its own: a rest, or with full LP his request and the
-    // Collar Key. The two scenes the relics used to bring by themselves (LP -3, the bonfire) are not played.
-    const patchBattlefield = () => {
-        const list = $dataCommonEvents[COMMON_EVENT_BATTLEFIELD].list;
-        const key = relicBranch(list, WEAPON_COLLAR_KEY);
-        const bonfire = relicBranch(list, WEAPON_DUSK_RING, key);
-        const choices = list.findIndex(
-            item => item.code === 102 && item.parameters[0].some(text => String(text).startsWith("Can't Do Anything"))
-        );
-        const indent = choices < 0 ? 0 : list[choices].indent;
-        const choicesEnd = list.findIndex((item, i) => i > choices && item.code === 404 && item.indent === indent);
-        if (key < 0 || bonfire < key || choices < bonfire || choicesEnd < 0) {
-            console.error("[AP] Common event 42 has an unexpected layout, the Battlefield is not patched");
-            return;
+    // What a choice of the question is called, null for any other choice
+    const conclusionChoice = text => {
+        const parts = String(text).split(":");
+        const event = CONCLUSIONS[Number(parts[1])];
+        if (text.startsWith(RESET_CHOICE)) {
+            return "Reset Event (" + event.reset + ")";
         }
-        const text = "Sit at His Bonfireif(s[" + SWITCH_BONFIRE + "])";
-        list.splice(
-            choicesEnd,
-            0,
-            command(402, indent, [list[choices].parameters[0].length, text]),
-            command(119, indent + 1, [LABEL_BONFIRE]),
-            command(0, indent + 1, [])
-        );
-        list[choices].parameters[0].push(text);
-        sceneCondition(list[bonfire]);
-        list.splice(bonfire + 1, 0, command(118, 1, [LABEL_BONFIRE]));
-        sceneCondition(list[key]);
+        if (!text.startsWith(REVISIT_CHOICE)) {
+            return null;
+        }
+        const label = event.scenes[Number(parts[2])].label;
+        return "Revisit Event (" + (typeof label === "function" ? label() : label) + ")";
+    };
+
+    const patchConclusions = () => {
+        for (const eventId of Object.keys(CONCLUSIONS).map(Number)) {
+            const event = CONCLUSIONS[eventId];
+            const list = $dataCommonEvents[eventId].list;
+            let first = -1;
+            event.scenes.forEach((scene, index) => {
+                const at = list.findIndex(item => {
+                    const p = item.parameters;
+                    return item.code === 111 && item.indent === 0 && p[0] === scene.kind && p[1] === scene.id;
+                });
+                if (at < 0) {
+                    scene.label = null;
+                    if (!scene.optional) {
+                        console.error("[AP] Common event " + eventId + " has an unexpected layout, it cannot be reset");
+                    }
+                    return;
+                }
+                scene.equip = !!list[at].parameters[2];
+                list[at].parameters = [12, "LostChapterAP.revisits(" + eventId + ", " + index + ")"];
+                first = first < 0 ? at : Math.min(first, at);
+            });
+            const answers = event.scenes
+                .map((scene, index) => [REVISIT_CHOICE + eventId + ":" + index, index + 1, scene.label])
+                .filter(answer => answer[2])
+                .concat([[RESET_CHOICE + eventId, -1]]);
+            if (first < 0 || answers.length < 2) {
+                continue;
+            }
+            const question = [
+                command(111, 0, [12, "LostChapterAP.concluded(" + eventId + ")"]),
+                command(101, 1, ["", 0, 1, 2, ""]),
+                command(401, 1, ["This event has reached its conclusion."]),
+                command(401, 1, ["Revisit or reset the event?"]),
+                command(102, 1, [answers.map(answer => answer[0]), -1, 0, 2, 0]),
+            ];
+            answers.forEach((answer, index) => {
+                question.push(
+                    command(402, 1, [index, answer[0]]),
+                    command(355, 2, ["LostChapterAP.revisit = " + answer[1] + ";"]),
+                    command(0, 2, [])
+                );
+            });
+            question.push(command(404, 1, []), command(0, 1, []), command(412, 0, []));
+            list.splice(first, 0, ...question);
+        }
     };
 
     // Cat: patting it hands out its cards one after the other from LEWD 10 on. With all of them found there is
@@ -2505,10 +2527,7 @@
             }
             for (const item of list) {
                 const p = item.parameters;
-                // The Cat's first question is whether its own card is in the deck, which stays what it is: the
-                // menu with its other choices is only skipped for a player who really carries the cat
-                const skipped = eventId === COMMON_EVENT_CAT && item.indent === 0;
-                if (item.code === 111 && p[0] === 8 && handedOut.includes(p[1]) && !skipped) {
+                if (item.code === 111 && p[0] === 8 && handedOut.includes(p[1])) {
                     item.parameters = [12, "LostChapterAP.cardTaken(" + p[1] + ")"];
                 }
             }
@@ -2573,8 +2592,7 @@
             patchTitleReleases();
             patchGirl();
             patchMarket();
-            patchThrone();
-            patchBattlefield();
+            patchConclusions();
             patchStandbyVerse();
             patchCardConditions();
             createCardEvent();

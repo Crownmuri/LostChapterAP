@@ -459,6 +459,12 @@ TITLE_LEWD = 5
 FINISHER_ID = 10
 FINISHER = "Kick Balls"
 
+# One more floor event to choose from on every floor, next to the two the choice starts with. The field_exploration
+# option says how many there are, and the climb expects one of them by each of these floors.
+EXPLORATION_ID = 11
+EXPLORATION = "Progressive Field Exploration"
+EXPLORATION_FLOORS = (41, 61, 81, 101)
+
 DLC_LAST_BOSS = "Magislilia"
 
 # Names of the goal option. The plugin reports the values of the goals a win reaches.

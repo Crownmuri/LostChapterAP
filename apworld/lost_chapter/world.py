@@ -14,7 +14,7 @@ from .options import LostChapterOptions
 
 SLOT_DATA_OPTIONS = (
     "goal", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
-    "finisher_move", "final_boss_floor", "soul_multiplier",
+    "finisher_move", "field_exploration", "final_boss_floor", "soul_multiplier",
 )
 
 
@@ -53,6 +53,7 @@ def item_table() -> Dict[str, int]:
     table.update({name: item_id for item_id, name in data.STAT_FILLER.items()})
     table.update({name: item_id for item_id, name in data.TRAPS.items()})
     table[data.FINISHER] = data.FINISHER_ID
+    table[data.EXPLORATION] = data.EXPLORATION_ID
 
     for item_id, name in data.CARDS.items():
         table[f"Card: {name}"] = data.CARD_OFFSET + item_id
@@ -285,8 +286,14 @@ class LostChapterWorld(World):
         # Every boss floor below takes a Heavenly King defeated there, each of them a door key. From floor 100 on
         # the doors no longer hold the climb up.
         keys = min((floor - 1) // data.BOSS_FLOOR_INTERVAL, len(data.DOOR_KEYS))
+        # Nothing in the game asks for these, they are expected so the events of the later floors can be found
+        exploration = min(
+            sum(floor >= expected for expected in data.EXPLORATION_FLOORS), self.options.field_exploration.value
+        )
 
-        return state.has_group("Door Keys", self.player, keys)
+        return state.has_group("Door Keys", self.player, keys) and state.has(
+            data.EXPLORATION, self.player, exploration
+        )
 
     def set_rules(self) -> None:
         # Fights only have a rule for the floor the enemy shows up on, not for how hard they are
@@ -431,6 +438,7 @@ class LostChapterWorld(World):
 
         pool: List[LostChapterItem] = [self.create_item(name) for name in sorted(names)]
 
+        pool += [self.create_item(data.EXPLORATION) for _ in range(self.options.field_exploration.value)]
         pool += [self.create_item(name) for name in self.relic_items()]
         pool += [self.create_item(f"Card: {name}") for name in self.cards().values()]
 

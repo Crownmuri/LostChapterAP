@@ -99,6 +99,20 @@ class FinisherMove(Choice):
     default = 0
 
 
+class FieldExploration(Range):
+    """
+    How many Progressive Field Exploration items are shuffled into the multiworld. Each one adds a floor event to
+    the two you get to choose from on every floor, which makes it easier to find the event you are after.
+
+    The climb expects one of them by floor 41, two by floor 61, three by floor 81 and four by floor 101, as far as
+    there are that many.
+    """
+    display_name = "Field Exploration"
+    range_start = 0
+    range_end = len(data.EXPLORATION_FLOORS)
+    default = 0
+
+
 class FinalBossFloor(Range):
     """
     The floor you have to reach before the final boss can be challenged. He is one of the doors of a boss floor, and
@@ -212,6 +226,7 @@ class LostChapterOptions(PerGameCommonOptions):
     first_victories: FirstVictories
     shuffle_title_effects: ShuffleTitleEffects
     finisher_move: FinisherMove
+    field_exploration: FieldExploration
     final_boss_floor: FinalBossFloor
     trap_percentage: TrapPercentage
     climax_trap_weight: ClimaxTrapWeight

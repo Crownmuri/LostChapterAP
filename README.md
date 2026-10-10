@@ -196,6 +196,14 @@ the White Key are relics like the others in every seed, and there is no option f
 `finisher_move` decides about Kick Balls, the card drawn the turn after the enemy climaxes: `vanilla`, `shuffle`
 (only once the useful item Kick Balls is found) or `remove`.
 
+`field_exploration` (0 to 4) puts that many Progressive Field Exploration items into the pool. Each adds a floor
+event to the two a floor lets you choose from. Logic expects one by floor 41, two by 61, three by 81 and four by
+101; nothing in the game holds the climb up for them.
+
+An event that plays one short scene from then on once its relic or card is found (Collapse, Amusement Center, Girl,
+Battlefield, Cat, Throne) asks on every later visit instead: "Revisit Event" for that scene, "Reset Event" for the
+event as it was before. Both choices say what they are worth.
+
 A seed starts with `starting_event_count` floor events unlocked (2 by default), random ones from the first 40
 floors on top of the ones named in `starting_events`.
 

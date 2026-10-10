@@ -90,16 +90,14 @@ try {
             lines.push("market memory: " + command.parameters[1]);
         }
     });
-    // The Throne (59) and the Battlefield (42): the scenes their relics bring, and the choices that lead there
-    [59, 42].forEach(function(id) {
+    // The events that ask "revisit or reset" once their relic or card is found: the question and its scenes
+    [30, 36, 41, 42, 44, 59].forEach(function(id) {
         var list = $dataCommonEvents[id].list;
         lines.push($dataCommonEvents[id].name + ": " + list.filter(function(command) {
-            return (command.code === 111 && /sceneFor|relicSent/.test(command.parameters[1])) ||
-                (command.code === 118 && /^Archipelago/.test(command.parameters[0])) ||
-                (command.code === 119 && /^Archipelago/.test(command.parameters[0])) ||
-                (command.code === 102 && /Show Ring|Can't Do Anything/.test(command.parameters[0].join()));
+            return (command.code === 111 && /concluded|revisits/.test(command.parameters[1])) ||
+                (command.code === 102 && /^ArchipelagoRe/.test(command.parameters[0][0]));
         }).map(function(command) {
-            return command.code + " " + (command.code === 102 ? command.parameters[0].join(" | ") : command.parameters.slice(-1)[0]);
+            return command.code === 102 ? command.parameters[0].join(" | ") : command.parameters[1].replace("LostChapterAP.", "");
         }).join(" ; "));
     });
     // The verse of the standby screen that lost a line break in one version of the game
