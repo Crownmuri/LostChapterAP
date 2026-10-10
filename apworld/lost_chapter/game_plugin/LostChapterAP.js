@@ -277,9 +277,11 @@
     const COMMON_EVENT_DECK_DISPLAY = 75;
     const VARIABLE_DECK_COUNT = 81;
     const DECK_LIMIT = 30;
-    const CARD_BUTTON_X = 24;
-    const CARD_BUTTON_Y = 610;
-    const CARD_BUTTON_SIZE = 48;
+    const CARD_BUTTON_X = 930;
+    const CARD_BUTTON_Y = 560;
+    const CARD_BUTTON_WIDTH = 345;
+    const CARD_BUTTON_HEIGHT = 36;
+    const CARD_BUTTON_KEY = "pageup"; // Q and Page Up
     // The Archipelago icon, 48x48
     const AP_ICON = "data:image/png;base64,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";
     // The milestones come with the slot data. Seeds from before that have these.
@@ -1144,9 +1146,17 @@
         });
     };
 
+    const takeCards = () => {
+        if (!$gameMessage.isBusy() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK && waitingCards().length > 0) {
+            SoundManager.playOk();
+            $gameTemp.reserveCommonEvent(AP.cardEvent);
+        }
+    };
+
+    // A line above the Forget-Me-Not and Pieris counts of the deck screen, in their style
     const createCardButton = scene => {
         const button = new Sprite_Clickable();
-        button.bitmap = new Bitmap(CARD_BUTTON_SIZE + 48, CARD_BUTTON_SIZE);
+        button.bitmap = new Bitmap(CARD_BUTTON_WIDTH, CARD_BUTTON_HEIGHT);
         button.x = CARD_BUTTON_X;
         button.y = CARD_BUTTON_Y;
         button.visible = false;
@@ -1157,32 +1167,37 @@
             button._archipelagoCount = -1;
         };
         icon.src = AP_ICON;
-        button.onClick = () => {
-            if (!$gameMessage.isBusy() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK) {
-                SoundManager.playOk();
-                $gameTemp.reserveCommonEvent(AP.cardEvent);
-            }
-        };
+        button.onClick = takeCards;
         scene.addChild(button);
         return button;
     };
 
-    // Shown on the deck screen while there are received cards to take: the icon and how many
+    // Shown on the deck screen: the icon, how many received cards wait to be taken and the key that takes one
     const updateCardButton = scene => {
         const button = scene._archipelagoCards;
         if (!button) {
             return;
         }
-        const onDeck = bound() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK;
-        const count = onDeck ? waitingCards().length : 0;
-        button.visible = count > 0;
-        if (button.visible && button._archipelagoIcon && button._archipelagoCount !== count) {
+        button.visible = bound() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK;
+        if (!button.visible) {
+            return;
+        }
+        const count = waitingCards().length;
+        if (Input.isTriggered(CARD_BUTTON_KEY)) {
+            takeCards();
+        }
+        if (button._archipelagoIcon && button._archipelagoCount !== count) {
+            const bitmap = button.bitmap;
+            const size = CARD_BUTTON_HEIGHT - 6;
             button._archipelagoCount = count;
-            button.bitmap.clear();
-            button.bitmap.context.drawImage(button._archipelagoIcon, 0, 0, CARD_BUTTON_SIZE, CARD_BUTTON_SIZE);
-            button.bitmap.fontFace = $gameSystem.mainFontFace();
-            button.bitmap.fontSize = 22;
-            button.bitmap.drawText("x" + count, CARD_BUTTON_SIZE + 6, 0, 42, CARD_BUTTON_SIZE, "left");
+            bitmap.clear();
+            bitmap.context.drawImage(button._archipelagoIcon, 0, 3, size, size);
+            bitmap.fontFace = $gameSystem.mainFontFace();
+            bitmap.fontSize = 24;
+            bitmap.textColor = "#b0e0a0";
+            bitmap.drawText("Archipelago", size + 12, 0, 150, CARD_BUTTON_HEIGHT, "left");
+            bitmap.textColor = "#ffffff";
+            bitmap.drawText(":  " + count + " Pcs.  [Q]", size + 166, 0, 170, CARD_BUTTON_HEIGHT, "left");
         }
     };
 
