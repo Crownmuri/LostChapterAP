@@ -103,6 +103,7 @@
 
     const COMMON_EVENT_NEXT_FLOOR = 86;
     const COMMON_EVENT_STANDBY = 11;
+    const COMMON_EVENT_STANDBY_START = 87;
     const COMMON_EVENT_SCORE = 72;
     const COMMON_EVENT_TITLE_RELEASE = 400; // + title number
     const COMMON_EVENT_KING_BATTLE = 63;
@@ -2246,6 +2247,18 @@
         }
     };
 
+    // One of the verses of the standby screen (common event 87) runs off the screen in the patched DLC version
+    // of the game, where a line break of it went missing
+    const patchStandbyVerse = () => {
+        const long = "overflow. When the light goes out, I will regain";
+        for (const item of $dataCommonEvents[COMMON_EVENT_STANDBY_START].list) {
+            const args = item.code === 357 && item.parameters[0] === "TextPicture" ? item.parameters[3] : null;
+            if (args && String(args.text).includes(long)) {
+                args.text = args.text.replace(long, long.replace(". When", ".\nWhen"));
+            }
+        }
+    };
+
     // A floor event that hands out a card asks "has card n" the same way
     const patchCardConditions = () => {
         for (const eventId of allEvents()) {
@@ -2319,6 +2332,7 @@
             patchKingDoors();
             patchTitleReleases();
             patchGirl();
+            patchStandbyVerse();
             patchCardConditions();
             createCardEvent();
             patchRelicConditions();

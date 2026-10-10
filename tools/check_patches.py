@@ -78,6 +78,13 @@ try {
             scripts.map(function(command) { return command.parameters[1]; }).join(" ; ") +
             " | hands out weapons " + gains.map(function(command) { return command.parameters[0]; }).join(","));
     });
+    // The verse of the standby screen that lost a line break in one version of the game
+    $dataCommonEvents[87].list.forEach(function(command) {
+        var text = command.code === 357 && command.parameters[3] ? String(command.parameters[3].text) : "";
+        if (text.indexOf("When the light goes out") >= 0) {
+            lines.push("verse: " + JSON.stringify(text.slice(text.indexOf("that the tears"))));
+        }
+    });
     // The opening: what follows the list of origins the plugin puts in place of the questions
     MAPS["Map001.json"].events.forEach(function(event) {
         (event ? event.pages : []).forEach(function(page) {
