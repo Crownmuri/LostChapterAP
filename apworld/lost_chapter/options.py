@@ -129,7 +129,8 @@ class FinalBossFloor(Range):
 
 class TrapPercentage(Range):
     """
-    How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap and Acid Trap. A trap
+    How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap, Acid Trap and
+    Ecstasy Trap. A trap
     goes off in the fight it arrives in, or in the next one. The weight options below set how the traps are split.
 
     The rest of the filler is gold, +5 LP or +5 RP restored, and one-time stat boosts for the current run (+5 Max
@@ -149,30 +150,40 @@ class TrapWeight(Range):
 
 class ClimaxTrapWeight(TrapWeight):
     """
-    How likely a trap is a Climax Trap, which forces a climax on your next turn. The five trap weights are compared
+    How likely a trap is a Climax Trap, which forces a climax on your next turn. The six trap weights are compared
     with each other: with all of them the same, every kind is as likely. 0 leaves a kind out.
     """
     display_name = "Climax Trap Weight"
 
 
 class ConfusionTrapWeight(TrapWeight):
-    """How likely a trap is a Confusion Trap, which confuses you."""
+    """
+    How likely a trap is a Confusion Trap, which confuses you: a card of the Confused State lands in your discard
+    pile.
+    """
     display_name = "Confusion Trap Weight"
 
 
 class StickyTrapWeight(TrapWeight):
-    """How likely a trap is a Sticky Trap, which covers you in sticky fluid."""
+    """How likely a trap is a Sticky Trap, which covers you in sticky fluid and lowers your AGL."""
     display_name = "Sticky Trap Weight"
 
 
 class ParalysisTrapWeight(TrapWeight):
-    """How likely a trap is a Paralysis Trap, which paralyzes you."""
+    """How likely a trap is a Paralysis Trap, which paralyzes you. This can decide a fight."""
     display_name = "Paralysis Trap Weight"
 
 
 class AcidTrapWeight(TrapWeight):
     """How likely a trap is an Acid Trap, which dissolves your clothes."""
     display_name = "Acid Trap Weight"
+
+
+class EcstasyTrapWeight(TrapWeight):
+    """
+    How likely a trap is an Ecstasy Trap, which puts you in Lust: a card that weakens you is added to your hand.
+    """
+    display_name = "Ecstasy Trap Weight"
 
 
 class StartingEventCount(Range):
@@ -185,7 +196,7 @@ class StartingEventCount(Range):
     display_name = "Starting Event Count"
     range_start = 0
     range_end = len(data.UNLOCK_EVENTS)
-    default = 2
+    default = 3
 
 
 class StartingEvents(OptionSet):
@@ -207,14 +218,14 @@ class StartingEvents(OptionSet):
 
 class SoulMultiplier(Range):
     """
-    Multiplies the souls a run earns. Souls add up over the runs of a seed and are spent in the soul shop of the
+    The souls a run earns, as a percentage: 100 is what the game counts, 200 twice that. Souls add up over the runs of a seed and are spent in the soul shop of the
     standby screen: a new set of floor events to choose from, a floor event of your choice, a Forget-Me-Not, a
     Pieris (DLC), or 10 LP or RP. The prices double with every 20 floors.
     """
     display_name = "Soul Multiplier"
-    range_start = 1
-    range_end = 10
-    default = 1
+    range_start = 100
+    range_end = 200
+    default = 100
 
 
 @dataclass
@@ -234,6 +245,7 @@ class LostChapterOptions(PerGameCommonOptions):
     sticky_trap_weight: StickyTrapWeight
     paralysis_trap_weight: ParalysisTrapWeight
     acid_trap_weight: AcidTrapWeight
+    ecstasy_trap_weight: EcstasyTrapWeight
     starting_event_count: StartingEventCount
     starting_events: StartingEvents
     soul_multiplier: SoulMultiplier

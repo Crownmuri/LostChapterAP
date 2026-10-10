@@ -447,6 +447,7 @@ class LostChapterWorld(World):
             self.options.sticky_trap_weight.value,
             self.options.paralysis_trap_weight.value,
             self.options.acid_trap_weight.value,
+            self.options.ecstasy_trap_weight.value,
         ]
         traps = round(filler * self.options.trap_percentage.value / 100) if any(weights) else 0
 

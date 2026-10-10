@@ -301,7 +301,7 @@
     // Traps: the Climax Trap empties RP, the others are a state (Confusion, Sticky Fluid, Paralysis, Torn Clothes)
     const ITEM_CLIMAX_TRAP = 30;
     const ITEM_ACID_TRAP = 34;
-    const TRAP_STATES = { 31: 121, 32: 101, 33: 242, 34: 131 };
+    const TRAP_STATES = { 31: 121, 32: 101, 33: 242, 34: 131, 35: 4 }; // 35: Ecstasy Trap, the Lust state
     const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
     const TRAP_DELAY_FRAMES = 120; // into a fight before a trap goes off, and between two traps
@@ -1088,6 +1088,12 @@
     // The souls a milestone takes
     const soulsFor = milestone => milestone;
 
+    // The soul_multiplier option is a percentage from 100 up. Seeds from before that have a factor from 1 to 10.
+    const soulRate = () => {
+        const value = option("soul_multiplier") || 100;
+        return value >= 100 ? value / 100 : value;
+    };
+
     const updateSouls = () => {
         const s = state();
         const score = $gameVariables.value(VARIABLE_FLOOR) >= 1 ? runScore() : null;
@@ -1097,7 +1103,7 @@
             if (score < s.runBase) {
                 s.runBase = score;
             }
-            s.runSouls = Math.max(s.runSouls, (score - s.runBase) * (option("soul_multiplier") || 1));
+            s.runSouls = Math.max(s.runSouls, Math.floor((score - s.runBase) * soulRate()));
         }
         for (const milestone of soulMilestones()) {
             if (soulTotal() >= soulsFor(milestone) && !s.checked.includes(SOUL_OFFSET + milestone)) {
