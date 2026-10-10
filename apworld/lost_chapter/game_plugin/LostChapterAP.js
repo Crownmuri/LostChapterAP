@@ -1338,6 +1338,14 @@
         if (s.regrant && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             s.regrant = false;
             s.relics.forEach(grantRelic);
+            // A title that was obtained once in this multiworld is obtained in every later run, without meeting
+            // its condition again. Releasing it in the Title Collection is still up to the player.
+            for (let title = 1; title <= TITLE_COUNT; title++) {
+                const obtained = s.checked.includes(SWITCH_OFFSET + TITLE_SWITCH_BASE + title);
+                if (obtained && !$gameParty.hasItem($dataArmors[title], true)) {
+                    $gameParty.gainItem($dataArmors[title], 1, true);
+                }
+            }
         }
         // Every run adds its souls from 0: what the origin, the starting set and the relics from the multiworld are worth
         // in the score is taken off. The DLC's origin alone would start a run at 115.
