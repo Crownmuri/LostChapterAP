@@ -40,7 +40,7 @@
  *    goal and the climb continues afterwards instead of rolling the ending.
  *  - The bonus shop is skipped. Received starting sets are offered after the
  *    origin is confirmed.
- *  - Souls (the score the bonus shop used to spend) add up over all runs and
+ *  - Souls (the score the bonus shop used to spend) are counted over a run and
  *    send checks at milestones. The standby screen shows the total.
  *
  * The title screen shows the state of the Archipelago connection in its
@@ -375,7 +375,7 @@
                 events: [],
                 bosses: [],
                 sets: [],
-                souls: 0, // banked from finished runs
+                souls: 0, // no longer used: souls were banked over the runs once
                 runSouls: 0, // best value of the current run
                 runBase: null, // score the current run started with, which does not count
                 goals: [], // values of the goal option that wins have reached
@@ -572,7 +572,9 @@
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
             s.claimed = [];
-            s.souls += s.runSouls;
+            // Souls are counted for one run at a time
+            s.souls = 0;
+            s.spent = 0;
             s.runSouls = 0;
             s.runBase = null;
         }
@@ -1570,10 +1572,14 @@
         }
     };
 
-    // Replaces the first floor advance of a run: wait on the standby screen at floor 1
+    // Replaces the first floor advance of a run: wait on the standby screen at floor 1.
+    // The standby screen is reserved, not called. From the second run on this runs in a parallel event of Map006
+    // whose page ends once the floor is 1 or more, which stops whatever that event is still doing a frame later.
+    // The game's own call gets away with it because nothing in it waits after the floor is set.
     AP.startRun = () => {
         state().holdFloor = true;
         $gameVariables.setValue(VARIABLE_FLOOR, 1);
+        $gameTemp.reserveCommonEvent(COMMON_EVENT_STANDBY);
     };
 
     // Replaces the floor increment of common event 86
@@ -1956,10 +1962,7 @@
     const patchRunStart = list => {
         for (let i = list.length - 1; i >= 0; i--) {
             if (list[i].code === 117 && list[i].parameters[0] === COMMON_EVENT_NEXT_FLOOR) {
-                overrideRange(list, i, i, [
-                    command(355, 0, ["LostChapterAP.startRun();"]),
-                    command(117, 0, [COMMON_EVENT_STANDBY]),
-                ]);
+                overrideRange(list, i, i, [command(355, 0, ["LostChapterAP.startRun();"])]);
             }
         }
     };

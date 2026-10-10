@@ -30,7 +30,7 @@ A run starts on the standby screen, and the opening questions are replaced by a 
 The bonus shop is gone. Starting sets (Boxer, Fighter, Mage, Knight, Merchant, Succubus) are items instead:
 once received, a set can be picked at the start of each run.
 
-Souls, the score the bonus shop used to spend, add up over all your runs and send checks at milestones. The
+Souls, the score the bonus shop used to spend, are counted from 0 in every run and send checks at milestones. The
 screen between floors shows your total.
 
 The game counts as cleared from the start, so defeating the last boss does not end it. The climb continues and
@@ -59,7 +59,7 @@ title check only holds filler. They have no story difference and are only there 
 - Reaching every 10th floor
 - The first visit of each floor event
 - Relics found in events
-- Soul milestones, added up over all runs
+- Soul milestones, counted from 0 in every run
 
 ## Which items can be in another player's world?
 

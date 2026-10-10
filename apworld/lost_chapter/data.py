@@ -35,7 +35,7 @@ LATE_EVENT_FLOOR = 41
 
 # Souls are the score the bonus shop spends. Common event 72 computes the score of a run:
 # (Max LP + Max RP + Gold + fluids) / 10 + STR + DEF + MAG + AGL + LEWD + Floor + counts, plus fixed amounts for
-# relics, quest flags and Heavenly Kings. The plugin adds up the best score of every run.
+# relics, quest flags and Heavenly Kings. The plugin counts the best score of the current run, from 0.
 #
 # milestone -> the floor a climb is expected to reach for it. The first four belong to the first 20 floors.
 SOUL_MILESTONES: Dict[int, int] = {
