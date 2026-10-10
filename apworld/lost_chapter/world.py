@@ -310,14 +310,7 @@ class LostChapterWorld(World):
                 lambda state, floor=floor: self.can_reach_floor(state, floor)
             )
 
-        # With a virgin goal a soul check takes half the souls of its name, and with that the floor of the check
-        # that many souls belong to
-        halved = self.options.goal.current_key in data.VIRGIN_GOALS
-
-        for milestone in data.SOUL_MILESTONES:
-            souls = (milestone + 1) // 2 if halved else milestone
-            floor = next(floor for other, floor in sorted(data.SOUL_MILESTONES.items()) if other >= souls)
-
+        for milestone, floor in data.SOUL_MILESTONES.items():
             self.get_location(f"Souls: {milestone}").access_rule = (
                 lambda state, floor=floor: self.can_reach_floor(state, floor)
             )
