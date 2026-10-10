@@ -1092,6 +1092,11 @@
         const s = state();
         const score = $gameVariables.value(VARIABLE_FLOOR) >= 1 ? runScore() : null;
         if (score !== null && s.runBase != null) {
+            // A score under what the run started with means the start was measured too high, with something of
+            // the run before still counted in it. The souls of this run count from the lower value.
+            if (score < s.runBase) {
+                s.runBase = score;
+            }
             s.runSouls = Math.max(s.runSouls, (score - s.runBase) * (option("soul_multiplier") || 1));
         }
         for (const milestone of soulMilestones()) {
