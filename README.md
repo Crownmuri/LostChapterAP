@@ -132,9 +132,9 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - Souls are counted live with the game's own score formula, less what the run started with (the origin, the
   starting set and received relics are worth nothing, so every run starts at 0) and less what a received item or
   a card taken from the multiworld adds to it. The best score the current run reached, times the
-  `soul_multiplier` option, is its souls: they add up over the runs of a seed and send checks at 25, 50, 100, 200, 300, 400, 500, 600, 800 and 1000. In logic the
-  first four belong to the first 20 floors, 300 and 400 to floor 40, 500 and 600 to floor 60, 800 to floor 80
-  and 1000 to floor 100. The standby screen shows the total and the next milestone.
+  `soul_multiplier` option, is its souls: they add up over the runs of a seed and are spent in the soul shop, the last entry of the floor choice: a new set of floor
+  events (10), a floor event of your choice among the unlocked ones (50), a Forget-Me-Not (30), a Pieris (40, DLC),
+  10 LP or 10 RP (20 each). The prices double with every 20 floors. Souls no longer send checks. The standby screen shows the total and the next milestone.
 - The "Once upon a time" questions are replaced by one list of the nine origins with their effects. The
   description and the Correct / Wrong confirmation are unchanged.
 

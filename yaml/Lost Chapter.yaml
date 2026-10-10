@@ -24,6 +24,10 @@ Lost Chapter:
   # Relics found in events become checks and are shuffled into the pool
   relicsanity: true
 
+  # Completing a big quest is a check: Memory of Moon, Memory of Regret, End of Monster, and with the DLC
+  # Footsteps of the Night
+  quest_checks: true
+
   # The first win against each regular enemy is a check
   first_victories: true
 
@@ -67,7 +71,7 @@ Lost Chapter:
   #   Girl with Flower Crown, Sculptor, Treasury
   starting_events: []
 
-  # 1-10. Souls add up over the runs of a seed and send checks at milestones from 25 to 1000
+  # 1-10. Multiplies the souls a run earns. Souls add up over the runs and are spent in the soul shop
   soul_multiplier: 2
 
   # Every game over is passed on to the other DeathLink players, and their deaths end your run

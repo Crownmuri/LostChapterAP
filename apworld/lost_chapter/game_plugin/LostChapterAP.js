@@ -75,6 +75,7 @@
     const SET_OFFSET = 8000;
     const CARD_OFFSET = 9000;
     const SOUL_OFFSET = 10000;
+    const QUEST_OFFSET = 11000;
 
     const SWITCH_CLEARED = 1;
     const SWITCH_BEFORE_BOSS = 62;
@@ -148,6 +149,12 @@
     const EVENT_RANGES = [[21, 61], [161, 171]];
     const LEGACY_EVENTS = Array.from({ length: 41 }, (_, i) => 21 + i);
     const FLOOR_EVENT_CHOICES = 2;
+    const LABEL_STANDBY = "ArchipelagoStandby";
+    // The soul shop of the standby screen. The prices double with every 20 floors.
+    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 30, pieris: 40, heal: 20 };
+    const SHOP_HEAL = 10;
+    const WEAPON_FORGET_ME_NOT = 74;
+    const WEAPON_PIERIS = 75;
     const UNVISITED_EVENT_WEIGHT = 6; // times as likely to be rolled as any other event
     // Floor event -> choice (as written in the event, without its condition and colors) -> what it takes.
     // Choices that already name a card they need, and the ones about FAITH, VIRTUE and LEWD, are not listed:
@@ -620,6 +627,10 @@
             }
             AP.deathReceived = false;
         }
+        if (value && !wasOn && (option("quests") || []).includes(switchId)) {
+            // A big quest that is completed (slot data "quests")
+            check(QUEST_OFFSET + switchId);
+        }
         if (value && (KING_SWITCHES.includes(switchId) || DLC_BOSS_SWITCHES.includes(switchId))) {
             check(SWITCH_OFFSET + switchId);
         } else if (!value && wasOn && eventCommon[switchId]) {
@@ -1075,7 +1086,7 @@
             return "";
         }
         const next = soulMilestones().find(milestone => soulsFor(milestone) > soulTotal());
-        return soulTotal() + (next ? " / " + soulsFor(next) : " souls");
+        return soulTotal() + (next ? " / " + soulsFor(next) : "");
     };
 
     // A line of text drawn over the map scene, redrawn only when it changes
@@ -1120,7 +1131,7 @@
         const shown =
             bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL) && $gameVariables.value(VARIABLE_SCREEN) === 0;
         const waiting = soulMilestones().some(milestone => soulsFor(milestone) > soulTotal());
-        updateLabel(scene._archipelagoSoulsTitle, shown, waiting ? "Next AP unlock" : "AP unlocks done", "#b0e0a0");
+        updateLabel(scene._archipelagoSoulsTitle, shown, waiting ? "Next AP unlock" : "Souls", "#b0e0a0");
         updateLabel(scene._archipelagoSouls, shown, soulText());
     };
 
@@ -1693,6 +1704,8 @@
     };
 
     const startFloorEvent = switchId => {
+        // The roll of the floor is used up
+        AP.offer = null;
         if (switchId !== SWITCH_FIGHT) {
             $gameVariables.setValue(VARIABLE_FLOOR_EVENT, switchId);
         }
@@ -1700,7 +1713,107 @@
     };
 
     // Asks what `floor` holds and hands the switch id to `callback`. False when there is nothing to choose from.
-    const offerFloorEvents = (interpreter, floor, callback) => {
+    const shopPrice = (name, floor) => SHOP_PRICES[name] * Math.pow(2, Math.floor((Math.max(floor, 1) - 1) / 20));
+
+    const spendSouls = cost => {
+        state().spent = (state().spent || 0) + cost;
+    };
+
+    // The choices of a menu of the standby screen: [text, enabled, what it does]. Every one of them asks the
+    // standby question again unless it settles the floor.
+    const askStandby = (interpreter, entries) => {
+        $gameMessage.setChoices(entries.map(entry => entry[0]), 0, entries.length - 1);
+        if ($gameMessage.setChoiceEnables) {
+            $gameMessage.setChoiceEnables(entries.map(entry => entry[1]));
+        }
+        $gameMessage.setChoiceBackground(0);
+        $gameMessage.setChoicePositionType(2);
+        $gameMessage.setChoiceCallback(index => {
+            AP.standbyAgain = true;
+            if (entries[index][1]) {
+                entries[index][2]();
+            }
+        });
+        interpreter.setWaitMode("message");
+    };
+
+    const offerShop = (interpreter, floor) => {
+        const actor = $gameActors.actor(1);
+        const entry = (text, name, buy) => {
+            const cost = shopPrice(name, floor);
+            return [text + " (" + cost + ")", soulTotal() >= cost, () => {
+                spendSouls(cost);
+                buy();
+            }];
+        };
+        const relic = weaponId => () => {
+            AP.granting = true;
+            withoutSouls(() => $gameParty.gainItem($dataWeapons[weaponId], 1));
+            AP.granting = false;
+        };
+        const entries = [
+            entry("New Floor Events", "reroll", () => {
+                AP.offer = null;
+                AP.standbyMenu = null;
+            }),
+            [
+                "Choose the Floor Event (" + shopPrice("pick", floor) + ")",
+                soulTotal() >= shopPrice("pick", floor),
+                () => {
+                    AP.standbyMenu = "pick";
+                },
+            ],
+            entry("Forget-Me-Not", "forgetMeNot", relic(WEAPON_FORGET_ME_NOT)),
+        ];
+        const pieris = $dataWeapons[WEAPON_PIERIS];
+        if (option("include_dlc") && pieris && pieris.name === "Pieris") {
+            entries.push(entry("Pieris", "pieris", relic(WEAPON_PIERIS)));
+        }
+        entries.push(
+            entry("LP +" + SHOP_HEAL, "heal", () => withoutSouls(() => actor.gainHp(SHOP_HEAL))),
+            entry("RP +" + SHOP_HEAL, "heal", () => withoutSouls(() => actor.gainMp(SHOP_HEAL))),
+            [
+                "Back (" + soulTotal() + " souls)",
+                true,
+                () => {
+                    AP.standbyMenu = null;
+                },
+            ]
+        );
+        askStandby(interpreter, entries);
+    };
+
+    // Any unlocked event the floor could hold, for the price of the shop
+    const offerPick = (interpreter, floor) => {
+        const cost = shopPrice("pick", floor);
+        const names = [];
+        const entries = [];
+        for (const eventId of eventIds()) {
+            const name = eventName(eventId);
+            if (!state().events.includes(eventId) || !eventAvailable(eventId, floor) || names.includes(name)) {
+                continue;
+            }
+            // A pair goes by one name: which of the two it is stays a matter of luck
+            const group = eventGroup(eventId);
+            const members = (group ? group.events : [eventId]).filter(
+                member => state().events.includes(member) && eventAvailable(member, floor)
+            );
+            names.push(name);
+            entries.push([name, true, () => {
+                spendSouls(cost);
+                AP.standbyMenu = null;
+                AP.standbyAgain = false;
+                AP.standbyChoice = false;
+                AP.chosenFloorEvent = members[Math.floor(Math.random() * members.length)];
+            }]);
+        }
+        entries.push(["Back", true, () => {
+            AP.standbyMenu = "shop";
+        }]);
+        askStandby(interpreter, entries);
+    };
+
+    const offerFloorEvents = (interpreter, floor, callback, shop) => {
         // Drawn from every event the floor could hold. The ones without their unlock are shown grayed out, so a
         // few unlocked events do not come up floor after floor.
         const unlocked = eventId => state().events.includes(eventId);
@@ -1719,9 +1832,11 @@
             const index = pool.findIndex(eventId => (roll -= weight(eventId)) < 0);
             return pool.splice(index < 0 ? pool.length - 1 : index, 1)[0];
         };
-        const offered = [];
+        // The roll of a floor stands until the floor is over or the shop rolls it again
+        const kept = AP.offer && AP.offer.floor === floor ? AP.offer.events : null;
+        const offered = kept || [];
         const choices = FLOOR_EVENT_CHOICES + (state().exploration || 0);
-        while (offered.length < choices && pool.length > 0) {
+        while (!kept && offered.length < choices && pool.length > 0) {
             const eventId = draw();
             const group = eventGroup(eventId);
             offered.push(eventId);
@@ -1736,21 +1851,36 @@
         if (offered.length === 0) {
             return false;
         }
+        AP.offer = { floor: floor, events: offered };
         const switchIds = [SWITCH_FIGHT].concat(offered);
         const names = ["Battle"].concat(offered.map(eventName));
+        if (shop) {
+            names.push("Soul Shop (" + soulTotal() + " souls)");
+        }
         $gameMessage.setChoices(names, 0, -1);
         if (canGray) {
-            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked)));
+            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked), [true]));
         }
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
-        $gameMessage.setChoiceCallback(index => callback(switchIds[index]));
+        $gameMessage.setChoiceCallback(index => {
+            if (index >= switchIds.length) {
+                AP.standbyMenu = "shop";
+                AP.standbyAgain = true;
+                return;
+            }
+            callback(switchIds[index]);
+        });
         interpreter.setWaitMode("message");
         return true;
     };
 
     // Runs at the start of common event 86, while the standby screen is still shown
     AP.prepareFloorEvent = interpreter => {
+        if (!AP.standbyAgain) {
+            AP.standbyMenu = null;
+        }
+        AP.standbyAgain = false;
         AP.chosenFloorEvent = 0;
         if (bound() && state().runOver) {
             $gameActors.actor(1).setHp(0);
@@ -1764,10 +1894,23 @@
         if (bossFloorSwitch(floor)) {
             return;
         }
-        const offered = offerFloorEvents(interpreter, floor, switchId => {
-            AP.standbyChoice = false;
-            AP.chosenFloorEvent = switchId;
-        });
+        if (AP.standbyMenu === "shop") {
+            offerShop(interpreter, floor);
+            return;
+        }
+        if (AP.standbyMenu === "pick") {
+            offerPick(interpreter, floor);
+            return;
+        }
+        const offered = offerFloorEvents(
+            interpreter,
+            floor,
+            switchId => {
+                AP.standbyChoice = false;
+                AP.chosenFloorEvent = switchId;
+            },
+            true
+        );
         // Nothing to roll from is settled here too, so the floor is not rolled a second time after the screen went dark
         AP.standbyChoice = offered;
         if (!offered) {
@@ -2176,7 +2319,17 @@
             while (standbyEnd > 0 && [355, 655].includes(list[standbyEnd - 1].code)) {
                 standbyEnd--;
             }
-            list.splice(standbyEnd, 0, command(355, 0, ["LostChapterAP.prepareFloorEvent(this);"]));
+            // Asked again after a visit to the soul shop
+            list.splice(
+                standbyEnd,
+                0,
+                command(118, 0, [LABEL_STANDBY]),
+                command(355, 0, ["LostChapterAP.prepareFloorEvent(this);"]),
+                command(111, 0, [12, "LostChapterAP.standbyAgain"]),
+                command(119, 1, [LABEL_STANDBY]),
+                command(0, 1, []),
+                command(412, 0, [])
+            );
         }
     };
 

@@ -13,7 +13,7 @@ from .options import LostChapterOptions
 
 
 SLOT_DATA_OPTIONS = (
-    "goal", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
+    "goal", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "quest_checks", "shuffle_title_effects",
     "finisher_move", "field_exploration", "final_boss_floor", "soul_multiplier", "death_link",
 )
 
@@ -39,8 +39,8 @@ def location_table() -> Dict[str, int]:
     for event_id, name in data.EVENTS.items():
         table[data.first_visit(event_id)] = data.SWITCH_OFFSET + event_id
 
-    for milestone in data.SOUL_MILESTONES:
-        table[f"Souls: {milestone}"] = data.SOUL_OFFSET + milestone
+    for switch_id, name in list(data.QUESTS.items()) + list(data.DLC_QUESTS.items()):
+        table[f"Quest: {name}"] = data.QUEST_OFFSET + switch_id
 
     for item_id, name in data.CARDS.items():
         table[f"Card: {name}"] = data.CARD_OFFSET + item_id
@@ -150,7 +150,7 @@ class LostChapterWorld(World):
         "Relics": {f"Relic: {name}" for name in data.RELICS.values()},
         "Floors": {f"Reach Floor {floor}" for floor in data.FLOOR_CHECKS},
         "Events": {data.first_visit(event_id) for event_id in data.EVENTS},
-        "Souls": {f"Souls: {milestone}" for milestone in data.SOUL_MILESTONES},
+        "Quests": {f"Quest: {name}" for name in list(data.QUESTS.values()) + list(data.DLC_QUESTS.values())},
         "Cards": {f"Card: {name}" for name in data.CARDS.values()},
     }
 
@@ -248,6 +248,13 @@ class LostChapterWorld(World):
 
         return events + self.random.sample(candidates, min(missing, len(candidates)))
 
+    def quests(self) -> Dict[int, str]:
+        """The quests that are checks in this seed, by their game switch."""
+        if not self.options.quest_checks:
+            return {}
+
+        return {**data.QUESTS, **(data.DLC_QUESTS if self.options.include_dlc else {})}
+
     def included_locations(self) -> Dict[str, int]:
         included: set = set(self.location_name_to_id)
 
@@ -265,6 +272,9 @@ class LostChapterWorld(World):
 
         if not self.options.include_dlc:
             included -= self.location_name_groups["DLC Bosses"]
+
+        included -= self.location_name_groups["Quests"]
+        included |= {f"Quest: {name}" for name in self.quests().values()}
 
         return {name: loc_id for name, loc_id in self.location_name_to_id.items() if name in included}
 
@@ -310,9 +320,15 @@ class LostChapterWorld(World):
                 lambda state, floor=floor: self.can_reach_floor(state, floor)
             )
 
-        for milestone, floor in data.SOUL_MILESTONES.items():
-            self.get_location(f"Souls: {milestone}").access_rule = (
-                lambda state, floor=floor: self.can_reach_floor(state, floor)
+        for switch_id, name in self.quests().items():
+            events = [data.event_item(event) for event in data.QUEST_EVENTS[switch_id]]
+
+            self.get_location(f"Quest: {name}").access_rule = (
+                lambda state, events=events, relics=data.QUEST_RELICS[switch_id]: (
+                    state.has_all(events, player)
+                    and all(self.has_relic(state, relic) for relic in relics)
+                    and self.can_reach_floor(state, data.LATE_EVENT_FLOOR)
+                )
             )
 
         for event_id, name in self.events().items():
@@ -474,7 +490,8 @@ class LostChapterWorld(World):
 
     def fill_slot_data(self) -> Dict[str, Any]:
         slot_data = self.options.as_dict(*SLOT_DATA_OPTIONS)
-        slot_data["soul_milestones"] = list(data.SOUL_MILESTONES)
+        slot_data["soul_milestones"] = []  # none: souls are spent in the shop of the standby screen
+        slot_data["quests"] = sorted(self.quests())
         slot_data["starting_events"] = self.starting_events
         slot_data["event_groups"] = data.EVENT_GROUPS
         slot_data["events"] = sorted(self.events())

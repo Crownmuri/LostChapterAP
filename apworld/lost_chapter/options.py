@@ -69,6 +69,15 @@ class Relicsanity(DefaultOnToggle):
     display_name = "Relicsanity"
 
 
+class QuestChecks(DefaultOnToggle):
+    """
+    Completing one of the big quests is a check: Memory of Moon (the door of the Corridor with the White Key),
+    Memory of Regret (the same door with the Black Key), End of Monster (the quest that starts in the Prison and
+    ends at the Sea) and, with Include DLC, Footsteps of the Night (the door with the White Key as The New Ruler).
+    """
+    display_name = "Quest Checks"
+
+
 class FirstVictories(DefaultOnToggle):
     """The first win against each regular enemy is a check."""
     display_name = "First Victories"
@@ -207,9 +216,9 @@ class StartingEvents(OptionSet):
 
 class SoulMultiplier(Range):
     """
-    Multiplies the souls a run earns. Souls add up over the runs of a seed and send checks at 25, 50, 100, 200,
-    300, 400, 500, 600, 800 and 1000. The first four are expected within the first 20 floors, then 200 more every
-    20 floors.
+    Multiplies the souls a run earns. Souls add up over the runs of a seed and are spent in the soul shop of the
+    standby screen: a new set of floor events to choose from, a floor event of your choice, a Forget-Me-Not, a
+    Pieris (DLC), or 10 LP or RP. The prices double with every 20 floors.
     """
     display_name = "Soul Multiplier"
     range_start = 1
@@ -224,6 +233,7 @@ class LostChapterOptions(PerGameCommonOptions):
     relicsanity: Relicsanity
     shuffle_keys: ShuffleKeys
     first_victories: FirstVictories
+    quest_checks: QuestChecks
     shuffle_title_effects: ShuffleTitleEffects
     finisher_move: FinisherMove
     field_exploration: FieldExploration
