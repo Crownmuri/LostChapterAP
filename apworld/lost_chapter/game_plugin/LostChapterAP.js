@@ -278,6 +278,7 @@
     const TRAP_STATES = { 31: 121, 32: 101, 33: 242, 34: 131 };
     const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
+    const TRAP_DELAY_FRAMES = 120; // into a fight before a trap goes off, and between two traps
 
     // The cards floor events hand out. Which of them are checks comes with the slot data.
     const CARD_ITEMS = [39, 40, 60, 71, 74, 76, 77, 78, 79, 80];
@@ -1174,12 +1175,16 @@
     const applyTraps = () => {
         const s = bound() ? state() : null;
         const actor = $gameActors ? $gameActors.actor(1) : null;
+        // The switch comes on at the end of the fight's own setup. A trap waits a little longer and for any message
+        // to be gone, so it lands in the fight proper and not in the middle of it starting.
+        AP.battleFrames = $gameSwitches && $gameSwitches.value(SWITCH_IN_BATTLE) ? (AP.battleFrames || 0) + 1 : 0;
         if (!s || !s.traps || s.traps.length === 0 || !actor || actor.isDead()) {
             return;
         }
-        if (!$gameSwitches.value(SWITCH_IN_BATTLE)) {
+        if (AP.battleFrames < TRAP_DELAY_FRAMES || $gameMessage.isBusy()) {
             return;
         }
+        AP.battleFrames = 0;
         const trap = s.traps.shift();
         if (trap === ITEM_CLIMAX_TRAP) {
             actor.setMp(0);
