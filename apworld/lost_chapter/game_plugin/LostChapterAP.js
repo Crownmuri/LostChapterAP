@@ -147,7 +147,7 @@
         38: { "Tell Her the Location of the Man's Grave": "Collapse first" },
         40: { "Pay -160 G": "(MAG \u2267 15)" },
         54: { "Bathe in the Water": "filth to wash off", "Bathe in water": "filth to wash off" },
-        56: { "I Came to See You": "seeing the Moon first" },
+        56: { "I Came to See You": "revisit" },
         57: {
             "Create White Key": "Music Box, Recovery Misanga, Moon Hair Ornament",
             "Create Black Key": "Plushie, Clown Mask, Promise Pendant",
