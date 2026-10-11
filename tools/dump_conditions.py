@@ -370,7 +370,8 @@ def main(snapshot: Path, base: Optional[Path]) -> None:
             ]
 
             if own and readers:
-                sets.append(f"- {events.switch_name(switch_id)} (switch {switch_id}): asked for in {', '.join(readers)}")
+                switch = f"{events.switch_name(switch_id)} (switch {switch_id})"
+                sets.append(f"- {switch}: asked for in {', '.join(readers)}")
 
         if needs:
             lines += ["**Asks for what other events did:**", ""] + needs + [""]

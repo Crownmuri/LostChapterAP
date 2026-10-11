@@ -144,12 +144,15 @@ Game changes in a session (the plugin patches the event data in memory at load, 
   while one is open, one of the three cards of a won fight is an Archipelago card (Shift shows what it sends),
   and taking it sends the check in place of a card. What an earlier stretch still has open comes first, so
   nothing is lost by climbing on.
-- Souls are counted live with the game's own score formula, less what the run started with (the origin, the
-  starting set and received relics are worth nothing, so every run starts at 0) and less what a received item or
-  a card taken from the multiworld adds to it. The best score the current run reached, times the
-  `soul_multiplier` option, is its souls: they add up over the runs of a seed and are spent in the soul shop, the last entry of the floor choice: a new set of floor
-  events (10), a floor event of your choice among the unlocked ones (40), a Forget-Me-Not (150, two a run), a Pieris (300, two a run, DLC),
-  10 LP or 10 RP (20 each). While the three cards of a won fight are up, W buys three other ones (20). The prices are the same on every floor. Souls no longer send checks. The standby screen shows the total and the next milestone.
+- Souls are counted live with the game's own score formula (`docs/souls.md`), less what the run started with (the
+  origin, the starting set and received relics are worth nothing, so every run starts at 0) and less what a
+  received item or a card taken from the multiworld adds to it. The best score the current run reached, times
+  the `soul_multiplier` option, is its souls. They add up over the runs of a seed, and the standby screen shows
+  the total.
+- Souls are spent in the Soul Shop of the floor choice: a new set of floor events (10), a floor event of your
+  choice among the unlocked ones (40), a Forget-Me-Not (150, two a run), a Pieris (300, two a run, DLC), 10 LP or
+  10 RP (20 each). While the three cards of a won fight are up, W buys three other ones (20). The prices are the
+  same on every floor.
 - Checkpoints: the first floor after a boss floor (21, 41, 61, ...) is saved to a file of its own
   (`checkpoint1.rmmzsave` is floor 21). A new run asks whether to start over or go on from one of them, with
   everything the run had there. A later run that gets there overwrites it.

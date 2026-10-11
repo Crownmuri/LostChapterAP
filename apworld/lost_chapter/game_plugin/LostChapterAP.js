@@ -41,7 +41,7 @@
  *  - The bonus shop is skipped. Received card sets are taken in the deck
  *    screen, with the received cards.
  *  - Souls (the score the bonus shop used to spend) are counted over a run and
- *    send checks at milestones. The standby screen shows the total.
+ *    spent in the soul shop of the standby screen, which shows the total.
  *
  * The title screen shows the state of the Archipelago connection in its
  * bottom left corner.
@@ -76,7 +76,6 @@
     const TITLE_OFFSET = 7000;
     const SET_OFFSET = 8000;
     const CARD_OFFSET = 9000;
-    const SOUL_OFFSET = 10000;
 
     const SWITCH_CLEARED = 1;
     const SWITCH_BEFORE_BOSS = 62;
@@ -338,7 +337,8 @@
     const mapEvents = () => {
         for (const commonEvent of $dataCommonEvents) {
             const id = commonEvent ? commonEvent.switchId : 0;
-            if (commonEvent && commonEvent.trigger === 1 && EVENT_RANGES.some(range => id >= range[0] && id <= range[1])) {
+            const isFloorEvent = EVENT_RANGES.some(range => id >= range[0] && id <= range[1]);
+            if (commonEvent && commonEvent.trigger === 1 && isFloorEvent) {
                 eventCommon[id] = commonEvent.id;
                 commonEvent.name = EVENT_NAMES[id] || commonEvent.name;
             }
@@ -416,8 +416,6 @@
     const CARD_BUTTON_KEY = "pageup"; // Q and Page Up
     // The Archipelago icon, 48x48
     const AP_ICON = "data:image/png;base64,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";
-    // The milestones come with the slot data. Seeds from before that have these.
-    const LEGACY_SOUL_MILESTONES = [50, 100, 200, 500, 1000, 2000];
     const SOUL_UPDATE_FRAMES = 30;
     const SOULS_Y = 104; // the two lines of the soul counter, under the stats of the standby screen
 
@@ -688,7 +686,6 @@
             soul_multiplier: 100,
             death_link: 0,
             battle_rewards: 0,
-            soul_milestones: [],
             starting_events: [],
             event_groups: {},
             events: allEvents(),
@@ -710,7 +707,8 @@
         }
         if (AP.slot.seed !== SESSION.seed || AP.slot.slot !== SESSION.slot) {
             AP.wrongSlot = true;
-            send({ cmd: "Error", text: "The game was launched for a different slot. Launch it again from the client." });
+            const text = "The game was launched for a different slot. Launch it again from the client.";
+            send({ cmd: "Error", text: text });
             return;
         }
         if (s.seed !== null && s.seed !== AP.slot.seed) {
@@ -1291,7 +1289,10 @@
                 if (named.includes(FINAL_BOSS_LOCK) && !$gameSwitches.value(SWITCH_FINAL_BOSS)) {
                     return named.replace(FINAL_BOSS_LOCK, " \\c[18]requires floor " + finalBossFloor() + "\\c[0]en(0)");
                 }
-                return eventId ? withEffect(eventId, String(text), lockedChoice(this, eventId, String(text), named)) : named;
+                if (!eventId) {
+                    return named;
+                }
+                return withEffect(eventId, String(text), lockedChoice(this, eventId, String(text), named));
             });
             params = [choices].concat(params.slice(1));
         }
@@ -1398,7 +1399,8 @@
                 }
             } else if (item.code === 122 && p[0] === VARIABLE_SCORE && p[1] === VARIABLE_SCORE && p[3] <= 1) {
                 const value = p[3] === 0 ? p[4] : $gameVariables.value(p[4]);
-                score = Math.floor([value, score + value, score - value, score * value, score / value, score % value][p[2]]);
+                const results = [value, score + value, score - value, score * value, score / value, score % value];
+                score = Math.floor(results[p[2]]);
             } else if (item.code !== 0 && item.code !== 412 && item.code !== 122) {
                 return null;
             }
@@ -1419,17 +1421,11 @@
         return runScore();
     };
 
-    // Souls spent on cards are gone, the milestones they reached before stay checked
     // 0 without a session: the labels that show it are asked for their text in the normal game too
     const soulTotal = () => {
         const s = state();
         return s ? (s.souls || 0) + (s.runSouls || 0) - (s.spent || 0) : 0;
     };
-
-    const soulMilestones = () => option("soul_milestones") || LEGACY_SOUL_MILESTONES;
-
-    // The souls a milestone takes
-    const soulsFor = milestone => milestone;
 
     // The soul_multiplier option is a percentage from 100 up. Seeds from before that have a factor from 1 to 10.
     const soulRate = () => {
@@ -1448,20 +1444,9 @@
             }
             s.runSouls = Math.max(s.runSouls, Math.floor((score - s.runBase) * soulRate()));
         }
-        for (const milestone of soulMilestones()) {
-            if (soulTotal() >= soulsFor(milestone) && !s.checked.includes(SOUL_OFFSET + milestone)) {
-                check(SOUL_OFFSET + milestone);
-            }
-        }
     };
 
-    const soulText = () => {
-        if (!bound()) {
-            return "";
-        }
-        const next = soulMilestones().find(milestone => soulsFor(milestone) > soulTotal());
-        return soulTotal() + (next ? " / " + soulsFor(next) : "");
-    };
+    const soulText = () => (bound() ? String(soulTotal()) : "");
 
     // A line of text drawn over the map scene, redrawn only when it changes
     const createLabel = (scene, x, y, width, align) => {
@@ -1498,7 +1483,8 @@
         this._archipelagoStatus = createLabel(this, 16, Graphics.height - 44, 720, "left");
         this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
         this._archipelagoCards = createCardButton(this);
-        this._archipelagoReroll = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, REROLL_Y, NOTICE_WIDTH, "center");
+        const x = (Graphics.width - NOTICE_WIDTH) / 2;
+        this._archipelagoReroll = createLabel(this, x, REROLL_Y, NOTICE_WIDTH, "center");
     };
 
     // The next open battle reward, 0 when there is none: first what an earlier stretch of 20 floors still has
@@ -1625,8 +1611,7 @@
         // Only on the standby screen itself, its Title Collection, deck and item screens have that corner in use
         const shown =
             bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL) && $gameVariables.value(VARIABLE_SCREEN) === 0;
-        const waiting = soulMilestones().some(milestone => soulsFor(milestone) > soulTotal());
-        updateLabel(scene._archipelagoSoulsTitle, shown, waiting ? "Next AP unlock" : "Souls", "#b0e0a0");
+        updateLabel(scene._archipelagoSoulsTitle, shown, "Souls", "#b0e0a0");
         updateLabel(scene._archipelagoSouls, shown, soulText());
     };
 
@@ -1825,8 +1810,8 @@
                 }
             }
         }
-        // Every run adds its souls from 0: what the origin, the starting set and the relics from the multiworld are worth
-        // in the score is taken off. The DLC's origin alone would start a run at 115.
+        // Every run adds its souls from 0: what the origin, the starting set and the relics from the multiworld are
+        // worth in the score is taken off. The DLC's origin alone would start a run at 115.
         if (s.runBase == null && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             s.runBase = freshScore();
         }
@@ -1916,7 +1901,8 @@
     const waitingCards = () => {
         const s = state();
         const claimed = s.claimed || [];
-        return (s.cards || []).map((id, index) => ({ id: id, index: index })).filter(card => !claimed.includes(card.index));
+        const cards = (s.cards || []).map((id, index) => ({ id: id, index: index }));
+        return cards.filter(card => !claimed.includes(card.index));
     };
 
     const cardCost = card => CARD_COSTS[card.id] || 0;
@@ -2003,7 +1989,8 @@
         const y = CARD_PREVIEW_Y;
         $gameScreen.showPicture(PICTURE_CARD_PREVIEW, String(card.id), 1, CARD_PREVIEW_X, y, 100, 100, 255, 0);
         $gameScreen.showPicture(PICTURE_CARD_DESCRIPTION, card.id + "s", 1, CARD_DESCRIPTION_X, y, 100, 100, 255, 0);
-        $gameMessage.add($dataItems[card.id].name + (cost ? ": " + cost + " G, you have " + $gameParty.gold() + " G." : ""));
+        const price = cost ? ": " + cost + " G, you have " + $gameParty.gold() + " G." : "";
+        $gameMessage.add($dataItems[card.id].name + price);
         $gameMessage.setChoices(["Add to Deck", "Back"], 0, 1);
         if ($gameMessage.setChoiceEnables) {
             $gameMessage.setChoiceEnables([affordable, true]);
@@ -2057,7 +2044,8 @@
     };
 
     const takeCards = () => {
-        if (!$gameMessage.isBusy() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK && waitingCards().length + waitingSets().length > 0) {
+        const onDeck = !$gameMessage.isBusy() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK;
+        if (onDeck && waitingCards().length + waitingSets().length > 0) {
             SoundManager.playOk();
             $gameTemp.reserveCommonEvent(AP.cardEvent);
         }
@@ -2506,7 +2494,8 @@
         const list = $dataCommonEvents[COMMON_EVENT_BONUS].list;
         const known = list.some(item => {
             const p = item.parameters;
-            return item.code === 111 && item.indent === 0 && p[0] === 1 && p[1] === VARIABLE_SELECTED && p[3] === boon[0];
+            const asksSelected = p[0] === 1 && p[1] === VARIABLE_SELECTED && p[3] === boon[0];
+            return item.code === 111 && item.indent === 0 && asksSelected;
         });
         const regression = $dataStates[STATE_REGRESSION];
         // Only the versions of the game with the Regression State have the two boons about it
@@ -2797,7 +2786,8 @@
     // it shows nothing. The picture is put there the way the screen does it (common event 80).
     const showTitlePicture = title => {
         const pictureId = TITLE_PICTURE_BASE + title;
-        const waiting = $gameParty.hasItem($dataArmors[title], false) && !$gameSwitches.value(TITLE_SWITCH_BASE + title);
+        const released = $gameSwitches.value(TITLE_SWITCH_BASE + title);
+        const waiting = $gameParty.hasItem($dataArmors[title], false) && !released;
         if (!waiting || $gameScreen.picture(pictureId) || $gameVariables.value(VARIABLE_SCREEN) !== SCREEN_TITLES) {
             return;
         }
@@ -2839,7 +2829,8 @@
         const picture = this.picture(pictureId);
         const title = $gameVariables.value(VARIABLE_SELECTED);
         const screen = $gameVariables.value(VARIABLE_SCREEN);
-        if (pictureId === PICTURE_DECK_COUNTS && picture && bound() && [SCREEN_DECK, SCREEN_DECK_BUSY].includes(screen)) {
+        const onDeck = [SCREEN_DECK, SCREEN_DECK_BUSY].includes(screen);
+        if (pictureId === PICTURE_DECK_COUNTS && picture && bound() && onDeck) {
             picture._x -= DECK_COUNTS_SHIFT;
         }
         if (pictureId !== TITLE_TEXT_PICTURE || !picture || !picture.mzkp_text) {
@@ -3041,7 +3032,8 @@
 
     const findEntry = (table, text) => {
         const lower = text.toLowerCase();
-        return table.find(entry => entry && entry.name && entry.name.toLowerCase() === lower) || table[Number(text)] || null;
+        const named = table.find(entry => entry && entry.name && entry.name.toLowerCase() === lower);
+        return named || table[Number(text)] || null;
     };
 
     // "Grand Strike 2" -> ["Grand Strike", 2]
@@ -3202,7 +3194,8 @@
                 const item = list ? list[current._index] : null;
                 steps.push(
                     (list ? (event ? "CE " + event.id + " " + event.name : "troop page") : "idle") +
-                        (list ? " at " + current._index + "/" + list.length + " code " + (item ? item.code : "end") : "") +
+                        (list ? " at " + current._index + "/" + list.length : "") +
+                        (list ? " code " + (item ? item.code : "end") : "") +
                         (current._waitMode ? " waits for " + current._waitMode : "") +
                         (current._waitCount ? " waits " + current._waitCount + " frames" : "")
                 );
@@ -3211,8 +3204,8 @@
                 battler.name() + " " + battler.hp + "/" + battler.mhp + " states " + battler._states.join(",");
             fight.push(
                 "fight: troop " + $gameTroop._troopId + ", turn " + $gameTroop.turnCount() + ", phase " +
-                    BattleManager._phase + ", acting " + (BattleManager._subject ? BattleManager._subject.name() : "-") +
-                    ", god " + !!AP.god,
+                    BattleManager._phase + ", acting " +
+                    (BattleManager._subject ? BattleManager._subject.name() : "-") + ", god " + !!AP.god,
                 "fight interpreter: " + steps.join(" > "),
                 "fight switches on: " +
                     [3, 5, 14, 103, 105, 106, 107, 108, 184, 195].filter(id => $gameSwitches.value(id)).join(", "),
@@ -3468,7 +3461,8 @@
         for (const item of list) {
             const p = item.parameters;
             if (item.code === 111 && p[0] === 1 && p[1] === VARIABLE_PLAYTHROUGH && p[3] === 2 && p[4] === 1) {
-                const visits = "!LostChapterAP.skipsBonusShop() && $gameVariables.value(" + VARIABLE_PLAYTHROUGH + ") >= 2";
+                const visits =
+                    "!LostChapterAP.skipsBonusShop() && $gameVariables.value(" + VARIABLE_PLAYTHROUGH + ") >= 2";
                 item.parameters = [12, visits];
             }
         }
@@ -3560,11 +3554,14 @@
         }
         const indent = list[choices].indent;
         const at = (code, from, test) =>
-            list.findIndex((item, i) => i > from && item.indent === indent && item.code === code && (!test || test(item)));
+            list.findIndex(
+                (item, i) => i > from && item.indent === indent && item.code === code && (!test || test(item))
+            );
         const cancel = at(403, choices);
         const walkAway = list.findIndex((item, i) => {
             const p = item.parameters;
-            return i < choices && item.indent === indent && item.code === 111 && p[0] === 0 && p[1] === DLC_BOSS_SWITCHES[0];
+            const asksBoss = item.code === 111 && p[0] === 0 && p[1] === DLC_BOSS_SWITCHES[0];
+            return i < choices && item.indent === indent && asksBoss;
         });
         const leave = list.findIndex(
             (item, i) => i > choices && item.indent === 0 && item.code === 357 && item.parameters[1] === "clear"
@@ -3673,7 +3670,8 @@
     // that scene (revisit) or the event as it was before (reset). `kind` is that of the "has ..." question the
     // event asks at its top level, 9 for a relic and 8 for a card. A scene without a label is never played.
     const bonfireLabel = () => {
-        const open = relicChecks().includes(WEAPON_COLLAR_KEY) && !state().checked.includes(RELIC_OFFSET + WEAPON_COLLAR_KEY);
+        const sent = state().checked.includes(RELIC_OFFSET + WEAPON_COLLAR_KEY);
+        const open = relicChecks().includes(WEAPON_COLLAR_KEY) && !sent;
         return "LP Recovery" + (open ? ", full LP: Collar Key" : "");
     };
 
@@ -3694,7 +3692,10 @@
         41: { scenes: [{ kind: 9, id: 41, label: "Max RP +5", optional: true }], reset: "RP +5 / FAITH -5" },
         // Battlefield: the regrets the Collar Key brings (LP -3), then the bonfire of the soldier who gave his ring
         42: {
-            scenes: [{ kind: 9, id: WEAPON_COLLAR_KEY, label: null }, { kind: 9, id: WEAPON_DUSK_RING, label: bonfireLabel }],
+            scenes: [
+                { kind: 9, id: WEAPON_COLLAR_KEY, label: null },
+                { kind: 9, id: WEAPON_DUSK_RING, label: bonfireLabel },
+            ],
             reset: "\uff1cHealing\uff1e required: VIRTUE +5",
         },
         // Cat, whose own card only exists with the DLC
@@ -4028,7 +4029,9 @@
 
     const patchCheckpoint = () => {
         const list = $dataCommonEvents[COMMON_EVENT_STANDBY_START].list;
-        const autosave = list.findIndex(item => item.code === 355 && String(item.parameters[0]).includes("requestAutosave"));
+        const autosave = list.findIndex(
+            item => item.code === 355 && String(item.parameters[0]).includes("requestAutosave")
+        );
         if (autosave >= 0) {
             list.splice(autosave + 1, 0, command(355, list[autosave].indent, ["LostChapterAP.saveCheckpoint();"]));
         }

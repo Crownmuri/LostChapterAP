@@ -23,7 +23,6 @@ Client -> game:
     {"cmd": "Speed", "speed": int}
     {"cmd": "Dev", "args": [str]}
 """
-import asyncio
 import json
 import logging
 

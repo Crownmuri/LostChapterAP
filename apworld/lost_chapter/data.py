@@ -18,12 +18,9 @@ EVENT_OFFSET = 5000   # item id = offset + common event id (the first visit loca
 BOSS_OFFSET = 6000    # item id = offset + the Heavenly King's switch id
 TITLE_OFFSET = 7000   # item id = offset + title number
 SET_OFFSET = 8000     # item id = offset + bonus id of the card set
-BATTLE_OFFSET = 11000  # location id = offset + 100 * stretch of floors (1-5) + number of the reward
+BATTLE_OFFSET = 11000  # location id = offset + 100 * stretch of floors (1-10) + number of the reward
 CARD_OFFSET = 9000    # location id and item id = offset + item id of the card
-SOUL_OFFSET = 10000   # location id = offset + soul milestone
-
-# Game variables
-VARIABLE_FLOOR = 11
+# 10000 was the offset of the soul milestones, which are no locations any more
 
 # A Heavenly King waits on every 20th floor (common event 86 "---Standby End---"). The plugin only lets the climb
 # go on once one of them is defeated there, so every boss floor passed takes one more door key.
@@ -69,9 +66,6 @@ LATE_EVENT_FLOOR = 41
 # Souls no longer send checks, they are spent in the soul shop of the standby screen (the plugin's SHOP_PRICES).
 # Archived: the checks were at 25, 50, 100, 200 (floor 20), 300, 400 (40), 500, 600 (60), 800 (80) and 1000 (100).
 
-
-# Game switches
-SWITCH_CLEARED = 1  # set by the Ending map (Map011). The plugin keeps it on, so the climb continues after the last boss
 
 # switch id -> boss name (set by common event 63 "Heavenly King Battle")
 HEAVENLY_KINGS: Dict[int, str] = {
@@ -136,7 +130,9 @@ TITLE_REQUIREMENTS: Dict[int, str] = {
     16: "Possess 15 or more cards",
 }
 # title number -> the value of the game's status report its condition is about (bridge.py "Status")
-TITLE_STATS: Dict[int, str] = {2: "faith", 3: "virtue", 5: "lewd", 11: "gold", 12: "stats", 14: "virtue", 15: "faith", 16: "cards"}
+TITLE_STATS: Dict[int, str] = {
+    2: "faith", 3: "virtue", 5: "lewd", 11: "gold", 12: "stats", 14: "virtue", 15: "faith", 16: "cards",
+}
 
 # title number -> the Heavenly King whose defeat is the condition of that title
 TITLE_KINGS: Dict[int, str] = {
@@ -539,8 +535,6 @@ FINISHER = "Kick Balls"
 EXPLORATION_ID = 11
 EXPLORATION = "Progressive Field Exploration"
 EXPLORATION_FLOORS = (21, 41, 61, 81, 101)
-
-DLC_LAST_BOSS = "Magislilia"
 
 # Names of the goal option. The plugin reports the values of the goals a win reaches.
 DLC_GOALS = ("dlc_end",)

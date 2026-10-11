@@ -487,7 +487,8 @@ class LostChapterWorld(World):
 
         if traps:
             # In the order of data.TRAPS
-            pool += [self.create_item(name) for name in self.random.choices(list(data.TRAPS.values()), weights, k=traps)]
+            trap_names = self.random.choices(list(data.TRAPS.values()), weights, k=traps)
+            pool += [self.create_item(name) for name in trap_names]
 
         pool += [self.create_filler() for _ in range(filler - traps)]
 
@@ -502,7 +503,6 @@ class LostChapterWorld(World):
 
     def fill_slot_data(self) -> Dict[str, Any]:
         slot_data = self.options.as_dict(*SLOT_DATA_OPTIONS)
-        slot_data["soul_milestones"] = []  # none: souls are spent in the shop of the standby screen
         slot_data["starting_events"] = self.starting_events
         slot_data["event_groups"] = data.EVENT_GROUPS
         slot_data["events"] = sorted(self.events())

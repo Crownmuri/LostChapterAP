@@ -214,7 +214,9 @@ class LostChapterTabLayout(BoxLayout):
 
         # The second line is what the title "Minerva's Owl" adds up, which also counts a fifth of Max LP + Max RP
         self.run_label.text = "\n".join([
-            "    ".join([value("Floor", "floor"), value("FAITH", "faith"), value("VIRTUE", "virtue"), value("Souls", "souls")]),
+            "    ".join(
+                [value("Floor", "floor"), value("FAITH", "faith"), value("VIRTUE", "virtue"), value("Souls", "souls")]
+            ),
             "    ".join([
                 value("STR", "str"),
                 value("DEF", "def"),
@@ -293,7 +295,9 @@ class LostChapterTabLayout(BoxLayout):
 
         self.titles_label.text = f"Titles: {done}/{len(self.title_rows)}"
         # Short enough for one line at the tab's smallest width
-        colors = ["".join(f"{round(part * 255):02x}" for part in color) for color in (IN_LOGIC, BY_GRINDING, OUT_OF_LOGIC)]
+        colors = [
+            "".join(f"{round(part * 255):02x}" for part in color) for color in (IN_LOGIC, BY_GRINDING, OUT_OF_LOGIC)
+        ]
         self.legend_label.text = (
             f"[color={COLOR_DONE}]filled: effect unlocked[/color]   [color={colors[0]}]in logic[/color]   "
             f"[color={colors[1]}]grinding[/color]   [color={colors[2]}]not yet[/color]"
