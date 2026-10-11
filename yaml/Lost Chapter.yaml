@@ -48,7 +48,7 @@ Lost Chapter:
 
   # 0-100 each. How the traps are split between the six kinds, compared with each other. 0 leaves a kind out
   climax_trap_weight: 20      # forces a climax on your next turn
-  confusion_trap_weight: 20   # a card of the Confused State lands in your discard pile
+  confusion_trap_weight: 20   # up to five cards of the Confused State land in your discard pile
   sticky_trap_weight: 20      # lowers your AGL
   paralysis_trap_weight: 20   # can decide a fight
   acid_trap_weight: 20        # dissolves your clothes

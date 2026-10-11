@@ -305,7 +305,9 @@
     const STAT_ITEMS = { 20: [0, 5], 21: [1, 5], 22: [2, 1], 23: [4, 1], 24: [3, 1], 25: [5, 1] };
     // Traps: the Climax Trap empties RP, the others are a state (Confusion, Sticky Fluid, Paralysis, Torn Clothes)
     const ITEM_CLIMAX_TRAP = 30;
+    const ITEM_CONFUSION_TRAP = 31;
     const ITEM_ACID_TRAP = 34;
+    const COMMON_EVENT_CONFUSION = 221; // "Hypnotic Spell", what an enemy's confusion spell runs
     const TRAP_STATES = { 31: 121, 32: 101, 33: 242, 34: 131, 35: 4 }; // 35: Ecstasy Trap, the Lust state
     const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
@@ -1396,6 +1398,23 @@
     };
 
     // A trap goes off in a fight: the one that is on, or the next
+    // The Confusion Trap does what an enemy's confusion spell does (common event 221): its sound, the cards it
+    // puts into the discard pile, the state and the dazed look. Not the reflection it starts with, and not the
+    // enemy action it ends in, which belongs to the enemy's turn. Nothing of what is left waits.
+    const confuse = actor => {
+        const list = $dataCommonEvents[COMMON_EVENT_CONFUSION].list;
+        const start = list.findIndex(item => item.code === 411 && item.indent === 0);
+        const end = start < 0 ? -1 : list.findIndex((item, i) => i > start && item.code === 412 && item.indent === 0);
+        const spell = list.slice(start + 1, Math.max(end, 0)).filter(item => item.code !== 339);
+        if (!spell.some(item => item.code === 313 && item.parameters[3] === TRAP_STATES[ITEM_CONFUSION_TRAP])) {
+            actor.addState(TRAP_STATES[ITEM_CONFUSION_TRAP]);
+            return;
+        }
+        const interpreter = new Game_Interpreter();
+        interpreter.setup(spell.map(item => command(item.code, item.indent - 1, item.parameters)).concat([command(0, 0, [])]));
+        interpreter.update();
+    };
+
     const applyTraps = () => {
         const s = bound() ? state() : null;
         const actor = $gameActors ? $gameActors.actor(1) : null;
@@ -1412,6 +1431,8 @@
         const trap = s.traps.shift();
         if (trap === ITEM_CLIMAX_TRAP) {
             actor.setMp(0);
+        } else if (trap === ITEM_CONFUSION_TRAP) {
+            confuse(actor);
         } else {
             actor.addState(TRAP_STATES[trap]);
         }

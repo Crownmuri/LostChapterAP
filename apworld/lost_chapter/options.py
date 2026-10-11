@@ -158,8 +158,8 @@ class ClimaxTrapWeight(TrapWeight):
 
 class ConfusionTrapWeight(TrapWeight):
     """
-    How likely a trap is a Confusion Trap, which confuses you: a card of the Confused State lands in your discard
-    pile.
+    How likely a trap is a Confusion Trap, which confuses you like an enemy's spell does: up to five cards of the
+    Confused State land in your discard pile.
     """
     display_name = "Confusion Trap Weight"
 
