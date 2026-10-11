@@ -1071,7 +1071,7 @@
         46: {"Entrust": "ends Nude and Torn Clothes", "Attack from behind": "Pieris"},
         47: {"Cross the River %": "LP -2, DEF +1, fail: LP -4", "Take a Detour": "AGL +1"},
         48: {"Help Yourself": "Gold +200, then a trap", "Doubt": "FAITH -5", "! %": "fail: LP -10, Torn Clothes", "Dodge ＜Step＞ Required": "no damage"},
-        49: {"Stay": "a card or LEWD +2", "Flee": "FAITH -5", "Follow the Man": "LEWD +2"},
+        49: {"Stay": "a card or LEWD +2", "Flee": "FAITH -5", "Follow the Man": "LEWD +2, Womb Crest"},
         50: {"Hold His Hand": "VIRTUE +20", "Get Revenge on Him": "VIRTUE -20", "Leave This World": "plays an ending"},
         51: {"Pick It Up": "LP -2, Forget-Me-Not"},
         52: {"Masturbate": "LEWD +5"},
