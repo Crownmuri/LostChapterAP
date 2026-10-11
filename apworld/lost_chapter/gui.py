@@ -258,6 +258,10 @@ class LostChapterTabLayout(BoxLayout):
             requirement = data.TITLE_REQUIREMENTS[number]
             stat = data.TITLE_STATS.get(number)
 
+            # With a virgin goal this title ends the run it is obtained in
+            if number == data.TITLE_LOSE_VIRGINITY and ctx.slot_data.get("goal") in data.VIRGIN_GOAL_VALUES:
+                requirement += " (game over)"
+
             if checked:
                 widget.text = f"[color={COLOR_DONE}]{data.TITLES[number]}  {requirement}, done[/color]"
             else:

@@ -113,6 +113,8 @@
     const PICTURE_GUI = 98; // its line of text
     const COMMON_EVENT_SCORE = 72;
     const COMMON_EVENT_TITLE_RELEASE = 400; // + title number
+    const COMMON_EVENT_TITLES = 80; // opens the Title Collection
+    const TITLE_PICTURE_BASE = 70; // + title number
     const COMMON_EVENT_KING_BATTLE = 63;
     // Kick Balls: the turn start (common event 103) draws card 93 while the enemy is in its Refractory Period
     const COMMON_EVENT_TURN_START = 103;
@@ -305,9 +307,13 @@
     const STAT_ITEMS = { 20: [0, 5], 21: [1, 5], 22: [2, 1], 23: [4, 1], 24: [3, 1], 25: [5, 1] };
     // Traps: the Climax Trap empties RP, the others are a state (Confusion, Sticky Fluid, Paralysis, Torn Clothes)
     const ITEM_CLIMAX_TRAP = 30;
-    const ITEM_CONFUSION_TRAP = 31;
     const ITEM_ACID_TRAP = 34;
-    const COMMON_EVENT_CONFUSION = 221; // "Hypnotic Spell", what an enemy's confusion spell runs
+    // The common events of the enemy skills behind the traps: Hypnotic Spell, Sticky Fluid and Slash
+    const TRAP_EVENTS = { 31: 221, 32: 201, 34: 231 };
+    // The skill behind the Paralysis Trap has no common event of its own, only an animation
+    const TRAP_ANIMATIONS = { 33: 144 };
+    const TRAP_STATE_NAMES = { 33: "Paralysis" };
+    const STATE_REFLECTION = 21;
     const TRAP_STATES = { 31: 121, 32: 101, 33: 242, 34: 131, 35: 4 }; // 35: Ecstasy Trap, the Lust state
     const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
@@ -1398,21 +1404,31 @@
     };
 
     // A trap goes off in a fight: the one that is on, or the next
-    // The Confusion Trap does what an enemy's confusion spell does (common event 221): its sound, the cards it
-    // puts into the discard pile, the state and the dazed look. Not the reflection it starts with, and not the
-    // enemy action it ends in, which belongs to the enemy's turn. Nothing of what is left waits.
-    const confuse = actor => {
-        const list = $dataCommonEvents[COMMON_EVENT_CONFUSION].list;
-        const start = list.findIndex(item => item.code === 411 && item.indent === 0);
-        const end = start < 0 ? -1 : list.findIndex((item, i) => i > start && item.code === 412 && item.indent === 0);
-        const spell = list.slice(start + 1, Math.max(end, 0)).filter(item => item.code !== 339);
-        if (!spell.some(item => item.code === 313 && item.parameters[3] === TRAP_STATES[ITEM_CONFUSION_TRAP])) {
-            actor.addState(TRAP_STATES[ITEM_CONFUSION_TRAP]);
-            return;
+    // A trap does what the enemy skill behind its state does, which is the common event of that skill: its sound,
+    // the look of the protagonist, and for confusion the cards put into the discard pile. Not the reflection some
+    // of them start with, and not the enemy action they end in, which belongs to the enemy's turn. Nothing of what
+    // is left waits, so one update runs all of it.
+    const castTrap = (trap, actor) => {
+        const event = $dataCommonEvents[TRAP_EVENTS[trap]];
+        let spell = event ? event.list : [];
+        const reflects = item => item.code === 111 && item.indent === 0 && item.parameters[3] === STATE_REFLECTION;
+        if (spell.length > 0 && reflects(spell[0])) {
+            const start = spell.findIndex(item => item.code === 411 && item.indent === 0);
+            const end = spell.findIndex((item, i) => i > start && item.code === 412 && item.indent === 0);
+            const unreflected = start < 0 || end < 0 ? [] : spell.slice(start + 1, end);
+            spell = unreflected.map(item => command(item.code, item.indent - 1, item.parameters));
         }
-        const interpreter = new Game_Interpreter();
-        interpreter.setup(spell.map(item => command(item.code, item.indent - 1, item.parameters)).concat([command(0, 0, [])]));
-        interpreter.update();
+        spell = spell.filter(item => item.code !== 339);
+        if (spell.length > 0) {
+            const interpreter = new Game_Interpreter();
+            interpreter.setup(spell.concat([command(0, 0, [])]));
+            interpreter.update();
+        }
+        actor.addState(TRAP_STATES[trap]);
+        const animation = $dataAnimations[TRAP_ANIMATIONS[trap]];
+        if (animation && animation.name === TRAP_STATE_NAMES[trap] && $gameParty.inBattle()) {
+            $gameTemp.requestAnimation([actor], animation.id);
+        }
     };
 
     const applyTraps = () => {
@@ -1431,10 +1447,8 @@
         const trap = s.traps.shift();
         if (trap === ITEM_CLIMAX_TRAP) {
             actor.setMp(0);
-        } else if (trap === ITEM_CONFUSION_TRAP) {
-            confuse(actor);
         } else {
-            actor.addState(TRAP_STATES[trap]);
+            castTrap(trap, actor);
         }
         if (trap === ITEM_ACID_TRAP && $gameVariables.value(VARIABLE_TORN_CLOTHES) < 1) {
             $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 1);
@@ -2102,9 +2116,37 @@
         title <= TITLE_COUNT &&
         !state().titles.includes(title);
 
+    // The Title Collection only puts the picture of an obtained title on the screen when it is opened, hidden until
+    // the title is released. A title that was not there yet at that moment has no picture to fade in, so releasing
+    // it shows nothing. The picture is put there the way the screen does it (common event 80).
+    const showTitlePicture = title => {
+        const pictureId = TITLE_PICTURE_BASE + title;
+        const waiting = $gameParty.hasItem($dataArmors[title], false) && !$gameSwitches.value(TITLE_SWITCH_BASE + title);
+        if (!waiting || $gameScreen.picture(pictureId) || $gameVariables.value(VARIABLE_SCREEN) !== SCREEN_TITLES) {
+            return;
+        }
+        const list = $dataCommonEvents[COMMON_EVENT_TITLES].list;
+        const start = list.findIndex(item => {
+            const p = item.parameters;
+            return item.code === 231 && p[0] === pictureId && p[8] === 0;
+        });
+        if (start < 0) {
+            return;
+        }
+        let end = start;
+        while (list[end + 1].code !== 0 && list[end + 1].indent === list[start].indent) {
+            end++;
+        }
+        const interpreter = new Game_Interpreter();
+        const show = list.slice(start, end + 1).map(item => command(item.code, 0, item.parameters));
+        interpreter.setup(show.concat([command(0, 0, [])]));
+        interpreter.update();
+    };
+
     // Guards the "has armor n" branch of the title release events (common events 401-416)
     AP.titleLocked = title => {
         if (!titleEffectMissing(title)) {
+            showTitlePicture(title);
             return false;
         }
         // The condition is met and the title would be released now
