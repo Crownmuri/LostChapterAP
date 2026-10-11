@@ -157,7 +157,7 @@
     const LEGACY_EVENTS = Array.from({ length: 41 }, (_, i) => 21 + i);
     const FLOOR_EVENT_CHOICES = 2;
     const LABEL_STANDBY = "ArchipelagoStandby";
-    // The soul shop of the standby screen. The prices go up with every 20 floors, see shopPrice.
+    // The soul shop of the standby screen. The prices are the same on every floor.
     // Boons: souls -> [bonus id of common event 418, name, the switch it turns on if it is one, needs the
     // Regression State]. BOON_TIERS names the price groups.
     const COMMON_EVENT_BONUS = 418;
@@ -183,8 +183,6 @@
     };
     const SHOP_LIMITS = { forgetMeNot: 2, pieris: 1 }; // how many of each a run can buy
     const SHOP_PRICES = { reroll: 10, pick: 40, forgetMeNot: 150, pieris: 300, heal: 20, cards: 20, vial: 50 };
-    const FLAT_PRICES = ["cards"]; // the others go up by their price with every 20 floors: x1, x2, x3, ...
-    const PRICE_STEPS = 5; // up to x5, from floor 81 on
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
     // common event 16 takes the choice while its switch is on
     const SWITCH_DROP_CONTROL = 16;
@@ -2324,9 +2322,8 @@
     };
 
     // Asks what `floor` holds and hands the switch id to `callback`. False when there is nothing to choose from.
-    const shopPrice = (name, floor) =>
-        SHOP_PRICES[name] *
-        (FLAT_PRICES.includes(name) ? 1 : Math.min(PRICE_STEPS, 1 + Math.floor((Math.max(floor, 1) - 1) / 20)));
+    // The same on every floor
+    const shopPrice = name => SHOP_PRICES[name];
 
     const spendSouls = cost => {
         state().spent = (state().spent || 0) + cost;

@@ -246,7 +246,7 @@ class SoulMultiplier(Range):
     The souls a run earns, as a percentage: 100 is what the game counts, 200 twice that. Souls add up over the runs
     of a seed and are spent in the soul shop of the standby screen: a new set of floor events to choose from, a
     floor event of your choice, a Forget-Me-Not, a Pieris (DLC), 10 LP or RP, or a Yellow Vial that ends the
-    Regression State. The prices go up by their starting price with every 20 floors, up to five times from floor 81 on.
+    Regression State. The prices are the same on every floor.
     """
     display_name = "Soul Multiplier"
     range_start = 100
