@@ -2930,6 +2930,29 @@
         }
     };
 
+    // The DLC shows a tip about a new kind of card on the first standby screen of a save. It uses the picture the
+    // standby screen takes its clicks with and erases it afterwards, which leaves the screen deaf to the mouse.
+    // The picture is put back after the tip.
+    const patchStandbyTip = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_STANDBY_START].list;
+        const isButton = item =>
+            item.code === 357 && item.parameters[0] === "ButtonPicture" && Number(item.parameters[3].pictureId) === 100;
+        const button = list.findIndex(isButton);
+        const shown = button > 0 && list[button - 1].code === 231 && list[button - 1].parameters[0] === 100;
+        const erased = list.findIndex((item, i) => i > button && item.code === 235 && item.parameters[0] === 100);
+        if (!shown || erased < 0) {
+            return;
+        }
+        let end = button;
+        while (list[end + 1].code === 657) {
+            end++;
+        }
+        const again = list
+            .slice(button - 1, end + 1)
+            .map(item => command(item.code, list[erased].indent, JSON.parse(JSON.stringify(item.parameters))));
+        list.splice(erased + 1, 0, ...again);
+    };
+
     // A floor event that hands out a card asks "has card n" the same way
     const patchCardConditions = () => {
         for (const eventId of allEvents()) {
@@ -3010,6 +3033,7 @@
             patchMarket();
             patchConclusions();
             patchStandbyVerse();
+            patchStandbyTip();
             patchCardConditions();
             createCardEvent();
             patchRelicConditions();

@@ -107,6 +107,14 @@ try {
             lines.push("verse: " + JSON.stringify(text.slice(text.indexOf("that the tears"))));
         }
     });
+    // The click picture of the standby screen: every command that touches picture 100, in order
+    lines.push("standby click picture: " + $dataCommonEvents[87].list.filter(function(command) {
+        var p = command.parameters;
+        return ([231, 232, 235].indexOf(command.code) >= 0 && p[0] === 100) ||
+            (command.code === 357 && p[0] === "ButtonPicture" && Number(p[3].pictureId) === 100);
+    }).map(function(command) {
+        return { 231: "show", 232: "move", 235: "erase", 357: "button" }[command.code];
+    }).join(" "));
     // The opening: what follows the list of origins the plugin puts in place of the questions
     MAPS["Map001.json"].events.forEach(function(event) {
         (event ? event.pages : []).forEach(function(page) {
