@@ -106,6 +106,7 @@
     const COMMON_EVENT_NEXT_FLOOR = 86;
     const COMMON_EVENT_STANDBY = 11;
     const COMMON_EVENT_STANDBY_START = 87;
+    const COMMON_EVENT_GUI = 2; // parallel: copies LP, RP and the stats to their variables and draws them
     const COMMON_EVENT_SCORE = 72;
     const COMMON_EVENT_TITLE_RELEASE = 400; // + title number
     const COMMON_EVENT_KING_BATTLE = 63;
@@ -1829,6 +1830,14 @@
             withoutSouls(() => $gameParty.gainItem($dataWeapons[weaponId], 1));
             AP.granting = false;
         };
+        // The game stops drawing LP and RP while the floor is chosen (common event 86 turns the switch of common
+        // event 2 off), so the numbers are drawn here. That event never waits: one update runs all of it.
+        const heal = gain => {
+            withoutSouls(gain);
+            const gui = new Game_Interpreter();
+            gui.setup($dataCommonEvents[COMMON_EVENT_GUI].list);
+            gui.update();
+        };
         const entries = [
             entry("Reroll Floor Events", "reroll", () => {
                 AP.offer = null;
@@ -1848,8 +1857,8 @@
             entries.push(entry("Pieris", "pieris", relic(WEAPON_PIERIS)));
         }
         entries.push(
-            entry("LP +" + SHOP_HEAL, "heal", () => withoutSouls(() => actor.gainHp(SHOP_HEAL))),
-            entry("RP +" + SHOP_HEAL, "heal", () => withoutSouls(() => actor.gainMp(SHOP_HEAL))),
+            entry("LP +" + SHOP_HEAL, "heal", () => heal(() => actor.gainHp(SHOP_HEAL))),
+            entry("RP +" + SHOP_HEAL, "heal", () => heal(() => actor.gainMp(SHOP_HEAL))),
             [
                 "Back (" + soulTotal() + " souls)",
                 true,
