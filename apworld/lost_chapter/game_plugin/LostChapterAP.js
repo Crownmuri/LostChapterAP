@@ -1377,17 +1377,23 @@
         this._archipelagoReroll = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, REROLL_Y, NOTICE_WIDTH, "center");
     };
 
-    // The next open battle reward of the stretch of 20 floors the player is on, 0 when there is none
+    // The next open battle reward, 0 when there is none: first what an earlier stretch of 20 floors still has
+    // open, so nothing is lost by climbing on, then the stretch the player is on
     const battleReward = () => {
-        const stretch = Math.ceil($gameVariables.value(VARIABLE_FLOOR) / BOSS_FLOOR_INTERVAL);
-        // The stretches go up to the boss floor of the final boss
-        if (!bound() || stretch < 1 || stretch > Math.ceil(finalBossFloor() / BOSS_FLOOR_INTERVAL)) {
+        if (!bound()) {
             return 0;
         }
-        for (let number = 1; number <= (option("battle_rewards") || 0); number++) {
-            const location = BATTLE_OFFSET + 100 * stretch + number;
-            if (!state().checked.includes(location)) {
-                return location;
+        // The stretches go up to the boss floor of the final boss
+        const last = Math.min(
+            Math.ceil($gameVariables.value(VARIABLE_FLOOR) / BOSS_FLOOR_INTERVAL),
+            Math.ceil(finalBossFloor() / BOSS_FLOOR_INTERVAL)
+        );
+        for (let stretch = 1; stretch <= last; stretch++) {
+            for (let number = 1; number <= (option("battle_rewards") || 0); number++) {
+                const location = BATTLE_OFFSET + 100 * stretch + number;
+                if (!state().checked.includes(location)) {
+                    return location;
+                }
             }
         }
         return 0;

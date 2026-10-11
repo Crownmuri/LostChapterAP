@@ -140,7 +140,8 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - With the `battle_rewards` option each stretch of 20 floors up to `final_boss_floor` has that many battle reward
   checks (5 with the final boss on floor 160 are 40):
   while one is open, one of the three cards of a won fight is an Archipelago card (Shift shows what it sends),
-  and taking it sends the check in place of a card.
+  and taking it sends the check in place of a card. What an earlier stretch still has open comes first, so
+  nothing is lost by climbing on.
 - Souls are counted live with the game's own score formula, less what the run started with (the origin, the
   starting set and received relics are worth nothing, so every run starts at 0) and less what a received item or
   a card taken from the multiworld adds to it. The best score the current run reached, times the
