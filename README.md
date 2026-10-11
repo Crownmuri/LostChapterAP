@@ -151,10 +151,9 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - The soul shop also sells a Yellow Vial (50) that ends the Regression State, and "Back" in the floor choice
   returns to the standby screen with the same floor events.
 - Next to the soul shop the floor choice has a Boon Shop with the boons of the game's bonus shop at fixed prices:
-  stats, regen, FAITH and VIRTUE (200), Gold +200, "Acquired Gold +100 G", LEWD +5 and Rare Drop Rate +3 (300),
-  the body changes (400),
-  dealt damage +10% and received damage -10% (600), all stats +2, Max LP or RP +20, LEWD +10 and Double LEWD Rate
-  (800). The four single cards of the bonus shop (Healing, Inspiration, Refresh, Psych Up) are items, bought into
+  Small Boons (200: stats, regen, FAITH and VIRTUE, "Acquired Gold +100 G"), Medium Boons (300: Gold +200,
+  LEWD +5, Rare Drop Rate +3), Body (400), Combat (600: dealt damage +10%, received damage -10%) and Large Boons
+  (800: all stats +2, Max LP or RP +20, LEWD +10, Double LEWD Rate). The four single cards of the bonus shop (Healing, Inspiration, Refresh, Psych Up) are items, bought into
   the deck for 100 G like the other received cards.
 - `/offline` in the client launches the game with the plugin but nothing shuffled and no server: every floor event
   is open, relics and cards are where the game has them, and the game's own bonus shop is back (the Boons menu

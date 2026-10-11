@@ -161,16 +161,16 @@
     // Boons: souls -> [bonus id of common event 418, name, the switch it turns on if it is one, needs the
     // Regression State]. BOON_TIERS names the price groups.
     const COMMON_EVENT_BONUS = 418;
-    const BOON_TIERS = { 200: "Training", 300: "Minor Boons", 400: "Body", 600: "Combat", 800: "Great Boons" };
+    const BOON_TIERS = { 200: "Small Boons", 300: "Medium Boons", 400: "Body", 600: "Combat", 800: "Large Boons" };
     const COLOR_SOUL_SHOP = 4; // text colors of the game's window skin: light blue
     const COLOR_BOON_SHOP = 2; // orange
     const BOONS = {
         200: [
             [1, "STR +2"], [2, "DEF +2"], [3, "MAG +2"], [4, "AGL +2"], [5, "Max LP +10"], [6, "Max RP +10"],
             [7, "LP Regen +1"], [8, "RP Regen +1"], [17, "FAITH +10"], [18, "FAITH -10"], [19, "VIRTUE +10"],
-            [20, "VIRTUE -10"],
+            [20, "VIRTUE -10"], [109, "Acquired Gold +100 G", 232],
         ],
-        300: [[9, "Gold +200"], [109, "Acquired Gold +100 G", 232], [10, "LEWD +5"], [21, "Rare Drop Rate +3"]],
+        300: [[9, "Gold +200"], [10, "LEWD +5"], [21, "Rare Drop Rate +3"]],
         400: [
             [15, "Womb Crest"], [16, "Bosomy", 0, true], [117, "Swimsuit"], [118, "Beastification"],
             [107, "Regression", 0, true],
