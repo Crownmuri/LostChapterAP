@@ -3191,16 +3191,46 @@
             );
         }
         const on = [1, 2, 16, 17, 66, 86, 87, 88, 89, 90, 101, 294].filter(id => $gameSwitches.value(id));
+        // A fight runs on the interpreter of the troop, with switches of its own for the phases of a turn
+        const fight = [];
+        if ($gameParty.inBattle()) {
+            const troop = $gameTroop._interpreter;
+            const steps = [];
+            for (let current = troop; current; current = current._childInterpreter) {
+                const list = current._list;
+                const event = list ? $dataCommonEvents.find(other => other && other.list === list) : null;
+                const item = list ? list[current._index] : null;
+                steps.push(
+                    (list ? (event ? "CE " + event.id + " " + event.name : "troop page") : "idle") +
+                        (list ? " at " + current._index + "/" + list.length + " code " + (item ? item.code : "end") : "") +
+                        (current._waitMode ? " waits for " + current._waitMode : "") +
+                        (current._waitCount ? " waits " + current._waitCount + " frames" : "")
+                );
+            }
+            const fighter = battler =>
+                battler.name() + " " + battler.hp + "/" + battler.mhp + " states " + battler._states.join(",");
+            fight.push(
+                "fight: troop " + $gameTroop._troopId + ", turn " + $gameTroop.turnCount() + ", phase " +
+                    BattleManager._phase + ", acting " + (BattleManager._subject ? BattleManager._subject.name() : "-") +
+                    ", god " + !!AP.god,
+                "fight interpreter: " + steps.join(" > "),
+                "fight switches on: " +
+                    [3, 5, 14, 103, 105, 106, 107, 108, 184, 195].filter(id => $gameSwitches.value(id)).join(", "),
+                "fighters: " + $gameParty.members().concat($gameTroop.members()).map(fighter).join(" | ")
+            );
+        }
         const picture = $gameScreen.picture(100);
         const spriteset = SceneManager._scene && SceneManager._scene._spriteset;
         const sprites = spriteset && spriteset._pictureContainer ? spriteset._pictureContainer.children : [];
         const sprite = sprites.find(other => other._pictureId === 100);
         const s = state();
         return [
+            "scene " + (SceneManager._scene ? SceneManager._scene.constructor.name : "none"),
             "map " + $gameMap.mapId() + ", floor " + $gameVariables.value(VARIABLE_FLOOR) + ", screen " +
                 $gameVariables.value(VARIABLE_SCREEN) + ", LP " + $gameVariables.value(VARIABLE_LP),
             "interpreter: " + running.join(" > "),
             "switches on: " + on.join(", "),
+            ...fight,
             "message busy " + $gameMessage.isBusy() + ", choice " + $gameMessage.isChoice() + ", reserved CE " +
                 $gameTemp.isCommonEventReserved() + ", fade " + $gameScreen.brightness(),
             "bound " + bound() + ", active " + active() + ", holdFloor " + (s ? !!s.holdFloor : "-") + ", runOver " +
