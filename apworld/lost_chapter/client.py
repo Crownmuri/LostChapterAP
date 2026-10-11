@@ -208,6 +208,7 @@ class LostChapterContext(Context):
             # The game shows what the place of a relic or a card holds instead of the relic or the card
             relic_locations = {data.RELIC_OFFSET + weapon_id for weapon_id in data.RELICS}
             relic_locations |= {data.CARD_OFFSET + item_id for item_id in data.CARDS}
+            relic_locations |= {location_id for location_id, _ in data.battle_rewards().values()}
             relic_locations &= self.server_locations
 
             if relic_locations:

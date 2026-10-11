@@ -63,4 +63,4 @@ title check only holds filler. They have no story difference and are only there 
 
 ## Which items can be in another player's world?
 
-Floor event unlocks, door keys, title effects, starting sets, relics and gold.
+Floor event unlocks, door keys, title effects, card sets, relics and gold.

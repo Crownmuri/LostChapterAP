@@ -5,7 +5,7 @@ AP ids are derived from the game's own database ids, so the in-game plugin
 (game_plugin/LostChapterAP.js) can compute them without a lookup table.
 Keep the offsets in sync with the constants at the top of that file.
 """
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 GAME_NAME = "Lost Chapter"
 STEAM_APP_ID = 2356470
@@ -17,7 +17,8 @@ FLOOR_OFFSET = 4000   # location id = offset + floor number
 EVENT_OFFSET = 5000   # item id = offset + common event id (the first visit location uses SWITCH_OFFSET)
 BOSS_OFFSET = 6000    # item id = offset + the Heavenly King's switch id
 TITLE_OFFSET = 7000   # item id = offset + title number
-SET_OFFSET = 8000     # item id = offset + bonus id of the starting set
+SET_OFFSET = 8000     # item id = offset + bonus id of the card set
+BATTLE_OFFSET = 11000  # location id = offset + 100 * stretch of floors (1-5) + number of the reward
 CARD_OFFSET = 9000    # location id and item id = offset + item id of the card
 SOUL_OFFSET = 10000   # location id = offset + soul milestone
 
@@ -28,6 +29,29 @@ VARIABLE_FLOOR = 11
 # go on once one of them is defeated there, so every boss floor passed takes one more door key.
 BOSS_FLOOR_INTERVAL = 20
 FLOOR_CHECKS = range(10, 81, 10)
+
+# Battle rewards: after a won fight the cards on offer can be passed up for a check. Each stretch of 20 floors up
+# to floor 100 has its own, as many as the battle_rewards option says.
+BATTLE_STRETCHES = 5
+BATTLE_REWARDS_MAX = 10
+
+
+def battle_reward(stretch: int, number: int) -> str:
+    """Name of a battle reward location. Stretch 1 is floors 1-20."""
+    first = (stretch - 1) * BOSS_FLOOR_INTERVAL + 1
+
+    return f"Floors {first}-{first + BOSS_FLOOR_INTERVAL - 1}: Battle Reward {number}"
+
+
+def battle_rewards(count: int = BATTLE_REWARDS_MAX) -> Dict[str, Tuple[int, int]]:
+    """Battle reward location name -> its id and the first floor of its stretch."""
+    return {
+        battle_reward(stretch, number): (
+            BATTLE_OFFSET + 100 * stretch + number, (stretch - 1) * BOSS_FLOOR_INTERVAL + 1
+        )
+        for stretch in range(1, BATTLE_STRETCHES + 1)
+        for number in range(1, count + 1)
+    }
 
 # Floor events from this id on are only offered above this floor (common event 86)
 LATE_EVENT_FIRST = 57
@@ -338,14 +362,14 @@ def event_item(event: str) -> str:
     """Name of the item that unlocks a floor event."""
     return f"Event: {EVENT_UNLOCKS[EVENT_IDS[event]]}"
 
-# bonus id of the bonus shop (common event 418) -> starting set. Each set is three cards.
+# bonus id of the bonus shop (common event 418) -> card set. Each set is three cards, taken in the deck screen.
 STARTING_SETS: Dict[int, str] = {
-    101: "Boxer Set",     # Strike, Grand Strike, Berserk
-    102: "Fighter Set",   # Shoot, Dusk Shoot, Fleet Footwork
-    103: "Mage Set",      # Witch Act, Sacrament, Over Release
-    104: "Knight Set",    # Shield Bash x2, Eminence Protect
-    105: "Merchant Set",  # Mammonite x2, Investment
-    106: "Succubus Set",  # Temptation x2, Levy Suit
+    101: "Boxer Card Set",     # Strike, Grand Strike, Berserk
+    102: "Fighter Card Set",   # Shoot, Dusk Shoot, Fleet Footwork
+    103: "Mage Card Set",      # Witch Act, Sacrament, Over Release
+    104: "Knight Card Set",    # Shield Bash x2, Eminence Protect
+    105: "Merchant Card Set",  # Mammonite x2, Investment
+    106: "Succubus Card Set",  # Temptation x2, Levy Suit
 }
 
 # weapon id -> relic name. Only relics with a known event source are listed.

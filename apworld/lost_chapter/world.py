@@ -14,7 +14,7 @@ from .options import LostChapterOptions
 
 SLOT_DATA_OPTIONS = (
     "goal", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
-    "finisher_move", "field_exploration", "final_boss_floor", "soul_multiplier", "death_link",
+    "finisher_move", "field_exploration", "final_boss_floor", "soul_multiplier", "death_link", "battle_rewards",
 )
 
 
@@ -43,6 +43,9 @@ def location_table() -> Dict[str, int]:
     for item_id, name in data.CARDS.items():
         table[f"Card: {name}"] = data.CARD_OFFSET + item_id
 
+    for name, (location_id, _) in data.battle_rewards().items():
+        table[name] = location_id
+
     return table
 
 
@@ -70,7 +73,7 @@ def item_table() -> Dict[str, int]:
         table[f"Unlock Title Effect: {name}"] = data.TITLE_OFFSET + number
 
     for bonus_id, name in data.STARTING_SETS.items():
-        table[f"Starting {name}"] = data.SET_OFFSET + bonus_id
+        table[name] = data.SET_OFFSET + bonus_id
 
     return table
 
@@ -136,7 +139,7 @@ class LostChapterWorld(World):
         "Events": {f"Event: {unlock}" for unlock in data.UNLOCK_EVENTS},
         "Door Keys": set(data.DOOR_KEYS.values()),
         "Title Effects": {f"Unlock Title Effect: {name}" for name in data.TITLES.values()},
-        "Starting Sets": {f"Starting {name}" for name in data.STARTING_SETS.values()},
+        "Card Sets": set(data.STARTING_SETS.values()),
         "Cards": {f"Card: {name}" for name in data.CARDS.values()},
         "Traps": set(data.TRAPS.values()),
     }
@@ -149,6 +152,7 @@ class LostChapterWorld(World):
         "Floors": {f"Reach Floor {floor}" for floor in data.FLOOR_CHECKS},
         "Events": {data.first_visit(event_id) for event_id in data.EVENTS},
         "Cards": {f"Card: {name}" for name in data.CARDS.values()},
+        "Battle Rewards": set(data.battle_rewards()),
     }
 
     required_client_version = (0, 6, 7)
@@ -260,6 +264,9 @@ class LostChapterWorld(World):
         included -= self.location_name_groups["Cards"]
         included |= {f"Card: {name}" for name in self.cards().values()}
 
+        included -= self.location_name_groups["Battle Rewards"]
+        included |= set(data.battle_rewards(self.options.battle_rewards.value))
+
         if not self.options.include_dlc:
             included -= self.location_name_groups["DLC Bosses"]
 
@@ -306,6 +313,9 @@ class LostChapterWorld(World):
             self.get_location(f"Reach Floor {floor}").access_rule = (
                 lambda state, floor=floor: self.can_reach_floor(state, floor)
             )
+
+        for name, (_, floor) in data.battle_rewards(self.options.battle_rewards.value).items():
+            self.get_location(name).access_rule = lambda state, floor=floor: self.can_reach_floor(state, floor)
 
         for event_id, name in self.events().items():
             floor = data.LATE_EVENT_FLOOR if event_id >= data.LATE_EVENT_FIRST else 1
@@ -411,7 +421,7 @@ class LostChapterWorld(World):
             classification = ItemClassification.progression | ItemClassification.useful
         elif name == data.FINISHER:
             classification = ItemClassification.useful
-        elif name in self.item_name_groups["Title Effects"] | self.item_name_groups["Starting Sets"]:
+        elif name in self.item_name_groups["Title Effects"] | self.item_name_groups["Card Sets"]:
             classification = ItemClassification.useful
 
         return LostChapterItem(name, classification, self.item_name_to_id[name], self.player)
@@ -420,7 +430,7 @@ class LostChapterWorld(World):
         return LostChapterItem(name, ItemClassification.progression, None, self.player)
 
     def create_items(self) -> None:
-        names = set(self.item_name_groups["Door Keys"] | self.item_name_groups["Starting Sets"])
+        names = set(self.item_name_groups["Door Keys"] | self.item_name_groups["Card Sets"])
         names |= {f"Event: {unlock}" for unlock in self.unlocks()}
 
         if self.options.shuffle_title_effects:

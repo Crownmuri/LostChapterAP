@@ -102,7 +102,7 @@ real `CommonEvents.json` in a headless browser with a stubbed engine, but has no
 Checks: Heavenly Kings, title conditions, first victories, every 10th floor, first visit of each floor event,
 relics from events, soul milestones.
 
-Items: floor event unlocks, door keys, title effects, starting sets, relics, gold.
+Items: floor event unlocks, door keys, title effects, card sets, relics, gold.
 
 The plugin only acts in a session: the client's `/run` writes `archipelago_session.json`
 into the game folder, and the plugin reads it at boot. In a session the game saves into `save_ap_<seed>_<slot>/`
@@ -127,13 +127,15 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - The game counts as cleared from the start. Defeating the last boss is the goal, and the climb continues
   afterwards (the Heavenly Kings come back, as in the game's own later laps) instead of rolling the ending.
   The Prison event is a normal event unlock and the Recollection menu is open.
-- The bonus shop and its currency are skipped. Received starting sets are offered in a menu right after the
-  origin is confirmed, one set per run.
+- The bonus shop and its currency are skipped. Received card sets (Boxer Card Set, ...) are taken in the deck
+  screen with the received cards, each once a run and for free.
+- With the `battle_rewards` option each stretch of 20 floors up to floor 100 has that many battle reward checks:
+  while the cards of a won fight are up, Q passes them up for the next one.
 - Souls are counted live with the game's own score formula, less what the run started with (the origin, the
   starting set and received relics are worth nothing, so every run starts at 0) and less what a received item or
   a card taken from the multiworld adds to it. The best score the current run reached, times the
   `soul_multiplier` option, is its souls: they add up over the runs of a seed and are spent in the soul shop, the last entry of the floor choice: a new set of floor
-  events (10), a floor event of your choice among the unlocked ones (50), a Forget-Me-Not (30), a Pieris (40, DLC),
+  events (10), a floor event of your choice among the unlocked ones (50), a Forget-Me-Not (100, two a run), a Pieris (200, one a run, DLC),
   10 LP or 10 RP (20 each). While the three cards of a won fight are up, W buys three other ones (20). The prices double with every 20 floors. Souls no longer send checks. The standby screen shows the total and the next milestone.
 - A later run of a seed can start further up: once the floor after a boss floor was reached (21, 41, 61, ...),
   a new run asks which of those floors to start from. The bosses below it are not fought in that run.

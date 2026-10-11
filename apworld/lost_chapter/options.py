@@ -113,6 +113,17 @@ class FieldExploration(Range):
     default = len(data.EXPLORATION_FLOORS)
 
 
+class BattleRewards(Range):
+    """
+    Adds checks to the fights. After a won fight the cards on offer can be passed up for the next of these checks
+    instead. Each stretch of 20 floors up to floor 100 (1-20, 21-40, ...) has this many of them, 0 for none.
+    """
+    display_name = "Battle Rewards"
+    range_start = 0
+    range_end = data.BATTLE_REWARDS_MAX
+    default = 0
+
+
 class FinalBossFloor(Range):
     """
     The floor you have to reach before the final boss can be challenged. He is one of the doors of a boss floor, and
@@ -239,6 +250,7 @@ class LostChapterOptions(PerGameCommonOptions):
     shuffle_title_effects: ShuffleTitleEffects
     finisher_move: FinisherMove
     field_exploration: FieldExploration
+    battle_rewards: BattleRewards
     final_boss_floor: FinalBossFloor
     trap_percentage: TrapPercentage
     climax_trap_weight: ClimaxTrapWeight

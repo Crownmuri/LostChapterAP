@@ -38,8 +38,8 @@
  *  - The "Once upon a time" questions are replaced by a list of the origins.
  *  - The game counts as cleared from the start: defeating the last boss is the
  *    goal and the climb continues afterwards instead of rolling the ending.
- *  - The bonus shop is skipped. Received starting sets are offered after the
- *    origin is confirmed.
+ *  - The bonus shop is skipped. Received card sets are taken in the deck
+ *    screen, with the received cards.
  *  - Souls (the score the bonus shop used to spend) are counted over a run and
  *    send checks at milestones. The standby screen shows the total.
  *
@@ -157,13 +157,20 @@
     const FLOOR_EVENT_CHOICES = 2;
     const LABEL_STANDBY = "ArchipelagoStandby";
     // The soul shop of the standby screen. The prices double with every 20 floors.
-    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 30, pieris: 40, heal: 20, cards: 20, vial: 50 };
+    const SHOP_LIMITS = { forgetMeNot: 2, pieris: 1 }; // how many of each a run can buy
+    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 100, pieris: 200, heal: 20, cards: 20, vial: 50 };
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
     // common event 16 takes the choice while its switch is on
     const SWITCH_DROP_CONTROL = 16;
+    const COMMON_EVENT_DROP_CONTROL = 16;
     const SWITCH_DROP_START = 17;
     const REROLL_KEY = "pagedown"; // W
     const REROLL_Y = 520;
+    // Battle rewards (the battle_rewards option): BATTLE_OFFSET and BATTLE_STRETCHES of apworld/lost_chapter/data.py
+    const BATTLE_OFFSET = 11000;
+    const BATTLE_STRETCHES = 5;
+    const BATTLE_REWARD_KEY = "pageup"; // Q
+    const BATTLE_REWARD_Y = 554;
     const SHOP_HEAL = 10;
     const WEAPON_FORGET_ME_NOT = 74;
     const WEAPON_PIERIS = 75;
@@ -239,12 +246,12 @@
 
     // Bonus id of the bonus shop (common event 418) -> name and the cards it hands out
     const STARTING_SETS = {
-        101: ["Boxer Set", [11, 19, 32]],
-        102: ["Fighter Set", [12, 20, 33]],
-        103: ["Mage Set", [25, 34, 27]],
-        104: ["Knight Set", [29, 29, 30]],
-        105: ["Merchant Set", [35, 35, 36]],
-        106: ["Succubus Set", [80, 80, 37]],
+        101: ["Boxer Card Set", [11, 19, 32]],
+        102: ["Fighter Card Set", [12, 20, 33]],
+        103: ["Mage Card Set", [25, 34, 27]],
+        104: ["Knight Card Set", [29, 29, 30]],
+        105: ["Merchant Card Set", [35, 35, 36]],
+        106: ["Succubus Card Set", [80, 80, 37]],
     };
 
     const CHECK_TROOP_MAX = 24; // 22-24 are the enemies of the DLC
@@ -713,6 +720,7 @@
             return;
         }
         const s = state();
+        AP.battleDrop = false;
         if (s && value > (s.best || 0)) {
             s.best = value;
         }
@@ -722,6 +730,8 @@
             s.runOver = false;
             AP.deathReceived = false;
             s.claimed = [];
+            s.claimedSets = [];
+            s.shopBought = {};
             // The souls of the run that ended are kept, the next one adds to them
             s.souls = (s.souls || 0) + (s.runSouls || 0);
             s.runSouls = 0;
@@ -734,6 +744,8 @@
     const _BattleManager_processVictory = BattleManager.processVictory;
     BattleManager.processVictory = function() {
         const troopId = $gameTroop._troopId;
+        // The card choice that follows is the one of a fight. Events hand out cards through the same choice.
+        AP.battleDrop = true;
         if (troopId >= 1 && troopId <= CHECK_TROOP_MAX) {
             check(TROOP_OFFSET + troopId);
         } else if (troopId === TROOP_LAST_BOSS && state()) {
@@ -1189,6 +1201,44 @@
         this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
         this._archipelagoCards = createCardButton(this);
         this._archipelagoReroll = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, REROLL_Y, NOTICE_WIDTH, "center");
+        this._archipelagoBattle = createLabel(this, (Graphics.width - 960) / 2, BATTLE_REWARD_Y, 960, "center");
+    };
+
+    // The next open battle reward of the stretch of 20 floors the player is on, 0 when there is none
+    const battleReward = () => {
+        const stretch = Math.ceil($gameVariables.value(VARIABLE_FLOOR) / BOSS_FLOOR_INTERVAL);
+        if (!bound() || stretch < 1 || stretch > BATTLE_STRETCHES) {
+            return 0;
+        }
+        for (let number = 1; number <= (option("battle_rewards") || 0); number++) {
+            const location = BATTLE_OFFSET + 100 * stretch + number;
+            if (!state().checked.includes(location)) {
+                return location;
+            }
+        }
+        return 0;
+    };
+
+    // While the cards of a won fight are up, they can be passed up for the next battle reward of the multiworld.
+    // The check is sent and the card choice is left the way cancelling it leaves it (dropSkipped below).
+    const updateBattleReward = scene => {
+        const location = AP.battleDrop && $gameSwitches.value(SWITCH_DROP_CONTROL) ? battleReward() : 0;
+        const found = location ? scoutLabel(location) : null;
+        const text = "[Q] Take the Archipelago card instead" + (found ? ": " + found : "");
+        updateLabel(scene._archipelagoBattle, location !== 0, text, "#b0e0a0");
+        if (location && Input.isTriggered(BATTLE_REWARD_KEY)) {
+            SoundManager.playOk();
+            check(location);
+            AP.battleDrop = false;
+            AP.dropSkip = true;
+        }
+    };
+
+    // Part of the "cancel" condition of the card choice (common event 16)
+    AP.dropSkipped = () => {
+        const skipped = !!AP.dropSkip;
+        AP.dropSkip = false;
+        return skipped;
     };
 
     // While the cards of a won fight are up, souls buy three new ones
@@ -1208,6 +1258,7 @@
 
     const updateSoulCounter = scene => {
         updateCardReroll(scene);
+        updateBattleReward(scene);
         // Only on the standby screen itself, its Title Collection, deck and item screens have that corner in use
         const shown =
             bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL) && $gameVariables.value(VARIABLE_SCREEN) === 0;
@@ -1502,9 +1553,19 @@
 
     const cardCost = card => CARD_COSTS[card.id] || 0;
 
+    // The received card sets that were not taken this run. A set is three cards and free.
+    const waitingSets = () => {
+        const s = state();
+        const taken = s.claimedSets || [];
+        return s.sets.filter(setId => STARTING_SETS[setId] && !taken.includes(setId)).sort((a, b) => a - b);
+    };
+
+    const setCards = setId => STARTING_SETS[setId][1].map(itemId => $dataItems[itemId].name).join(", ");
+
     // Runs in the common event the button of the deck screen starts: the list of the received cards
     AP.offerCards = interpreter => {
-        const cards = bound() ? waitingCards() : [];
+        const sets = bound() ? waitingSets().map(setId => ({ set: setId })) : [];
+        const cards = sets.concat(bound() ? waitingCards() : []);
         AP.cardPreview = null;
         AP.cardAgain = false;
         if (cards.length === 0) {
@@ -1515,7 +1576,10 @@
             interpreter.setWaitMode("message");
             return;
         }
-        const label = card => $dataItems[card.id].name + (cardCost(card) ? " (" + cardCost(card) + " G)" : "");
+        const label = card =>
+            card.set
+                ? STARTING_SETS[card.set][0] + " (3 cards, free)"
+                : $dataItems[card.id].name + (cardCost(card) ? " (" + cardCost(card) + " G)" : "");
         $gameMessage.add("Which card from the multiworld do you look at? Each can be taken once a run.");
         $gameMessage.add("You have " + $gameParty.gold() + " G.");
         $gameMessage.setChoices(cards.map(label).concat(["Not Now"]), 0, cards.length);
@@ -1528,11 +1592,42 @@
         interpreter.setWaitMode("message");
     };
 
+    // A card set has no picture of its own: its cards are named and the same question follows
+    const previewSet = (interpreter, setId) => {
+        const fits = $gameVariables.value(VARIABLE_DECK_COUNT) + STARTING_SETS[setId][1].length <= DECK_LIMIT;
+        $gameMessage.add(STARTING_SETS[setId][0] + ": " + setCards(setId) + ".");
+        if (!fits) {
+            $gameMessage.add("There is no room for all of them in the deck.");
+        }
+        $gameMessage.setChoices(["Add to Deck", "Back"], 0, 1);
+        if ($gameMessage.setChoiceEnables) {
+            $gameMessage.setChoiceEnables([fits, true]);
+        }
+        $gameMessage.setChoiceBackground(0);
+        $gameMessage.setChoicePositionType(2);
+        $gameMessage.setChoiceCallback(index => {
+            if (index !== 0 || !fits) {
+                AP.cardAgain = true;
+                return;
+            }
+            const s = state();
+            s.claimedSets = (s.claimedSets || []).concat([setId]);
+            AP.granting = true;
+            withoutSouls(() => STARTING_SETS[setId][1].forEach(itemId => $gameParty.gainItem($dataItems[itemId], 1)));
+            AP.granting = false;
+        });
+        interpreter.setWaitMode("message");
+    };
+
     // The next step: the picked card and its description, and the question whether it goes into the deck
     AP.previewCard = interpreter => {
         const card = AP.cardPreview;
         AP.cardPreview = null;
         if (!card) {
+            return;
+        }
+        if (card.set) {
+            previewSet(interpreter, card.set);
             return;
         }
         const cost = cardCost(card);
@@ -1594,7 +1689,7 @@
     };
 
     const takeCards = () => {
-        if (!$gameMessage.isBusy() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK && waitingCards().length > 0) {
+        if (!$gameMessage.isBusy() && $gameVariables.value(VARIABLE_SCREEN) === SCREEN_DECK && waitingCards().length + waitingSets().length > 0) {
             SoundManager.playOk();
             $gameTemp.reserveCommonEvent(AP.cardEvent);
         }
@@ -1629,7 +1724,7 @@
         if (!button.visible) {
             return;
         }
-        const count = waitingCards().length;
+        const count = waitingCards().length + waitingSets().length;
         if (Input.isTriggered(CARD_BUTTON_KEY)) {
             takeCards();
         }
@@ -1904,6 +1999,17 @@
             withoutSouls(() => $gameParty.gainItem($dataWeapons[weaponId], 1));
             AP.granting = false;
         };
+        // The flowers are sold a few times a run only
+        const limited = (text, name, weaponId) => {
+            const s = state();
+            const bought = (s.shopBought || {})[name] || 0;
+            const offer = entry(text + ", " + (SHOP_LIMITS[name] - bought) + " left", name, () => {
+                s.shopBought = Object.assign({}, s.shopBought, { [name]: bought + 1 });
+                relic(weaponId)();
+            });
+            offer[1] = offer[1] && bought < SHOP_LIMITS[name];
+            return offer;
+        };
         const heal = gain => {
             withoutSouls(gain);
             redrawGui();
@@ -1920,11 +2026,11 @@
                     AP.standbyMenu = "pick";
                 },
             ],
-            entry("Forget-Me-Not", "forgetMeNot", relic(WEAPON_FORGET_ME_NOT)),
+            limited("Forget-Me-Not", "forgetMeNot", WEAPON_FORGET_ME_NOT),
         ];
         const pieris = $dataWeapons[WEAPON_PIERIS];
         if (option("include_dlc") && pieris && pieris.name === "Pieris") {
-            entries.push(entry("Pieris", "pieris", relic(WEAPON_PIERIS)));
+            entries.push(limited("Pieris", "pieris", WEAPON_PIERIS));
         }
         // What the yellow potion of the Small Room does. Only offered to a regressed player.
         const regression = $dataStates[STATE_REGRESSION];
@@ -2260,32 +2366,6 @@
         $gameMessage.setChoicePositionType(1);
         limitChoiceRows();
         $gameMessage.setChoiceCallback(index => $gameVariables.setValue(VARIABLE_ORIGIN, origins[index][0]));
-        interpreter.setWaitMode("message");
-    };
-
-    // Runs once the origin is confirmed
-    AP.chooseStartingSet = interpreter => {
-        if (!bound()) {
-            return;
-        }
-        const owned = state().sets.filter(setId => STARTING_SETS[setId]).sort((a, b) => a - b);
-        if (owned.length === 0) {
-            return;
-        }
-        const cardNames = setId => STARTING_SETS[setId][1].map(itemId => "\u3010" + $dataItems[itemId].name + "\u3011");
-        const names = owned.map(setId => "[" + STARTING_SETS[setId][0] + "] " + cardNames(setId).join(""));
-        $gameMessage.setBackground(2);
-        $gameMessage.setPositionType(1);
-        $gameMessage.add("You carry......");
-        $gameMessage.setChoices(names.concat("Nothing"), 0, -1);
-        $gameMessage.setChoiceBackground(0);
-        $gameMessage.setChoicePositionType(1);
-        limitChoiceRows();
-        $gameMessage.setChoiceCallback(index => {
-            if (index < owned.length) {
-                STARTING_SETS[owned[index]][1].forEach(itemId => $gameParty.gainItem($dataItems[itemId], 1));
-            }
-        });
         interpreter.setWaitMode("message");
     };
 
@@ -2690,13 +2770,6 @@
     };
 
     // Map001: the branch of the "Correct" choice that applies the origin
-    const patchStartingSet = list => {
-        const correct = list.findIndex(item => item.code === 402 && item.parameters[1] === "Correct");
-        if (correct >= 0 && list.some(item => item.code === 401 && String(item.parameters[0]).startsWith("That's right"))) {
-            list.splice(correct + 1, 0, command(355, list[correct].indent + 1, ["LostChapterAP.chooseStartingSet(this);"]));
-        }
-    };
-
     // Map003: a new run goes to the bonus shop (Map008) from the second playthrough on
     const patchBonusShop = list => {
         for (const item of list) {
@@ -2715,7 +2788,6 @@
         for (const list of eventLists(map)) {
             patchRunStart(list);
             patchOrigin(list);
-            patchStartingSet(list);
             patchBonusShop(list);
         }
     };
@@ -3130,6 +3202,19 @@
         }
     };
 
+    // The card choice after a fight is also left when a battle reward was taken in its place
+    const patchDropControl = () => {
+        const cancel = $dataCommonEvents[COMMON_EVENT_DROP_CONTROL].list.find(item => {
+            const p = item.parameters;
+            return item.code === 111 && item.indent === 0 && p[0] === 11 && p[1] === "cancel";
+        });
+        if (cancel) {
+            cancel.parameters = [12, "Input.isTriggered('cancel') || LostChapterAP.dropSkipped()"];
+        } else {
+            console.error("[AP] Common event 16 has an unexpected layout, battle rewards cannot be taken");
+        }
+    };
+
     const patchDeckSlots = () => {
         const list = $dataCommonEvents[COMMON_EVENT_DECK_DISPLAY].list;
         const button = list.findIndex(item => item.code === 357 && item.parameters[0] === "ButtonPicture");
@@ -3240,6 +3325,7 @@
             patchStandbyVerse();
             patchStandbyTip();
             patchDeckSlots();
+            patchDropControl();
             patchCardConditions();
             createCardEvent();
             patchRelicConditions();
