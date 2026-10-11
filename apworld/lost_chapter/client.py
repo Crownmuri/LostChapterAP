@@ -230,6 +230,9 @@ class LostChapterContext(Context):
             Utils.async_start(self.send_scouts())
         elif cmd == "ReceivedItems":
             Utils.async_start(self.send_items())
+        elif cmd == "RoomUpdate" and "checked_locations" in args:
+            # Someone collected what this slot still held for them
+            Utils.async_start(self.send_checked())
 
         # UT Tab Integration
         super().on_package(cmd, args)
@@ -278,6 +281,12 @@ class LostChapterContext(Context):
 
         await self.send_items()
         await self.send_scouts()
+        await self.send_checked()
+
+    async def send_checked(self) -> None:
+        """The locations the server has as checked, which a collect adds to without the game sending them."""
+        if self.slot:
+            await self.bridge.send({"cmd": "Checked", "locations": sorted(self.checked_locations)})
 
     async def send_scouts(self) -> None:
         if not self.slot or not self.locations_info:

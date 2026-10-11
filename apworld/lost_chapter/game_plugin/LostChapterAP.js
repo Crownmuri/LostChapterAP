@@ -644,11 +644,14 @@
             AP.wrongSlot = false;
             AP.items = [];
             AP.scouts = {};
+            AP.collected = [];
             bindSave();
         } else if (message.cmd === "Items") {
             AP.items = message.items;
         } else if (message.cmd === "Scouts") {
             AP.scouts = message.locations;
+        } else if (message.cmd === "Checked") {
+            AP.collected = message.locations;
         } else if (message.cmd === "Notice") {
             notify(String(message.text), message.flags & ITEM_FLAG_PROGRESSION);
         } else if (message.cmd === "Death") {
@@ -731,6 +734,9 @@
             send({ cmd: "Checks", locations: s.checked });
         }
     };
+
+    // Sent by this save, or checked on the server without it: collected by the player the item is for
+    const isSent = location => state().checked.includes(location) || (AP.collected || []).includes(location);
 
     const checkFloor = floor => {
         for (const milestone of CHECK_FLOORS) {
@@ -1435,7 +1441,7 @@
         for (let stretch = 1; stretch <= last; stretch++) {
             for (let number = 1; number <= (option("battle_rewards") || 0); number++) {
                 const location = BATTLE_OFFSET + 100 * stretch + number;
-                if (!state().checked.includes(location)) {
+                if (!isSent(location)) {
                     return location;
                 }
             }
@@ -2227,7 +2233,7 @@
         const group = eventGroup(eventId);
         return (group ? group.events : [eventId])
             .reduce((all, id) => all.concat(held[id] || []), [])
-            .filter(location => !state().checked.includes(location)).length;
+            .filter(location => !isSent(location)).length;
     };
 
     // The name of an event in the floor choice, with its open checks behind it
