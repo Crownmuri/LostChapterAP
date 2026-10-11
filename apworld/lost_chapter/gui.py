@@ -172,18 +172,22 @@ class LostChapterTabLayout(BoxLayout):
         if not game_path:
             plugin = "game not found (set lost_chapter_options.game_path in host.yaml)"
         elif game_install.is_plugin_current(game_path):
-            plugin = "plugin installed"
+            plugin = ""
         elif game_install.is_plugin_installed(game_path):
             plugin = "plugin outdated (/patch, then restart the game)"
         else:
             plugin = "plugin not installed (/patch)"
 
         if ctx.bridge.is_game_connected:
-            game = f"game connected (plugin {ctx.bridge.plugin_version or '?'})"
+            game = ""
         else:
             game = f"waiting for the game on port {ctx.bridge.port} (/run)"
 
-        self.status_label.text = f"[color={COLOR_DONE}]{plugin}, {game}[/color]"
+        # Only what is wrong takes up a line
+        problems = ", ".join(part for part in (plugin, game) if part)
+
+        self.status_label.text = f"[color={COLOR_DONE}]{problems}[/color]" if problems else ""
+        self.status_label.height = dp(24) if problems else 0
 
     def update_run(self) -> None:
         """Where the run stands: the stats the title conditions are about."""
