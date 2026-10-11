@@ -149,8 +149,9 @@ Game changes in a session (the plugin patches the event data in memory at load, 
   the deck for 100 G like the other received cards.
 - `/offline` in the client launches the game with the plugin but nothing shuffled and no server: every floor event
   is open, relics and cards are where the game has them, and the game's own bonus shop is back (the Boons menu
-  is left out). The floor choice, the soul shop, the choice effects and revisit / reset stay. It has a save of
-  its own (`save_ap_offline_0`).
+  is left out). The origin questions, the doors of the boss floors, the last boss and the ending are the game's
+  own too, and events are not revisited or reset. The floor choice, the soul shop, the card reroll and the
+  choice effects stay. It has a save of its own (`save_ap_offline_0`).
 - The "Once upon a time" questions are replaced by one list of the nine origins with their effects. The
   description and the Correct / Wrong confirmation are unchanged.
 

@@ -524,6 +524,11 @@
     // The save belongs to the multiworld the client is connected to
     const active = () => !!(AP.slot && bound() && state().seed === AP.slot.seed);
 
+    // In a multiworld, as opposed to offline: what follows from things being shuffled or from the climb being a
+    // multiworld's (the doors of the boss floors, the game counting as cleared, the list of origins, revisits)
+    const shuffled = () => bound() && !OFFLINE;
+    AP.shuffled = shuffled;
+
     const option = name => (bound() ? state().options[name] : 0);
 
     //-------------------------------------------------------------------------
@@ -1559,7 +1564,7 @@
             return;
         }
         syncKingUnlockSwitches();
-        if (bound() && !$gameSwitches.value(SWITCH_CLEARED)) {
+        if (shuffled() && !$gameSwitches.value(SWITCH_CLEARED)) {
             // With the game cleared, common event 64 continues the climb after the last boss
             _Game_Switches_setValue.call($gameSwitches, SWITCH_CLEARED, true);
         }
@@ -1902,14 +1907,14 @@
     const kingsDefeated = () => KING_SWITCHES.every(kingSwitch => $gameSwitches.value(kingSwitch));
 
     // From the floor of the last boss on the doors are a free choice: any king again, the last boss, or go on
-    const freeDoors = () => bound() && ($gameVariables.value(VARIABLE_FLOOR) >= FREE_DOORS_FLOOR || kingsDefeated());
+    const freeDoors = () => shuffled() && ($gameVariables.value(VARIABLE_FLOOR) >= FREE_DOORS_FLOOR || kingsDefeated());
 
     // The "Final Boss" door choice only opens from this floor on (final_boss_floor option)
     const finalBossFloor = () => option("final_boss_floor") || FREE_DOORS_FLOOR;
 
     const doorOpen = kingSwitch => {
         const defeated = $gameSwitches.value(kingSwitch);
-        if (!bound()) {
+        if (!shuffled()) {
             return !defeated;
         }
         return state().bosses.includes(kingSwitch) && (!defeated || freeDoors());
@@ -1925,12 +1930,12 @@
         for (const kingSwitch of KING_SWITCHES) {
             mirrorSwitch(kingSwitch + KING_UNLOCK_SWITCH_SHIFT, doorOpen(kingSwitch));
         }
-        mirrorSwitch(SWITCH_TURN_BACK, bound() && !freeDoors());
+        mirrorSwitch(SWITCH_TURN_BACK, shuffled() && !freeDoors());
         mirrorSwitch(SWITCH_FREE_DOORS, freeDoors());
         mirrorSwitch(SWITCH_FINAL_BOSS, $gameVariables.value(VARIABLE_FLOOR) >= finalBossFloor());
         const sent = weaponId => state().checked.includes(RELIC_OFFSET + weaponId);
         mirrorSwitch(SWITCH_MARKET_THANKS, AP.marketMenu() && MARKET_RELICS.every(sent));
-        const hasKey = weaponId => !bound() || $gameParty.hasItem($dataWeapons[weaponId], false);
+        const hasKey = weaponId => !shuffled() || $gameParty.hasItem($dataWeapons[weaponId], false);
         mirrorSwitch(SWITCH_WHITE_DOOR, hasKey(WEAPON_WHITE_KEY));
         mirrorSwitch(SWITCH_BLACK_DOOR, hasKey(WEAPON_BLACK_KEY));
         mirrorSwitch(SWITCH_LAST_DOOR, bound() && DLC_BOSS_SWITCHES.every(switchId => $gameSwitches.value(switchId)));
@@ -1941,7 +1946,7 @@
         if (floor % BOSS_FLOOR_INTERVAL !== 0) {
             return 0;
         }
-        if (!bound() && kingsDefeated()) {
+        if (!shuffled() && kingsDefeated()) {
             return SWITCH_LAST_BOSS;
         }
         // In a multiworld every boss floor leads to the doors. The last boss is one of the choices there, and
@@ -2511,7 +2516,7 @@
         // A floor that was reached before in this multiworld can be started from: the first floor after each
         // boss floor. The bosses below it are not fought in that run.
         const floors = [];
-        for (let floor = 1; bound() && floor <= bestFloor(); floor += BOSS_FLOOR_INTERVAL) {
+        for (let floor = 1; shuffled() && floor <= bestFloor(); floor += BOSS_FLOOR_INTERVAL) {
             floors.push(floor);
         }
         if (floors.length < 2 || !interpreter) {
@@ -2794,7 +2799,7 @@
     };
 
     // Keeps commands start..end for saves that are not bound to a multiworld and runs `replacement` otherwise
-    const overrideRange = (list, start, end, replacement) => {
+    const overrideRange = (list, start, end, replacement, keeps) => {
         const indent = list[start].indent;
         const original = list.slice(start, end + 1);
         original.forEach(originalCommand => originalCommand.indent++);
@@ -2802,7 +2807,7 @@
         list.splice(
             start,
             original.length,
-            command(111, indent, [12, "!LostChapterAP.bound()"]),
+            command(111, indent, [12, keeps || "!LostChapterAP.bound()"]),
             ...original,
             command(0, indent + 1, []),
             command(411, indent, []),
@@ -2957,7 +2962,9 @@
             const p = item.parameters;
             return item.code === 122 && p[0] === VARIABLE_ORIGIN && p[1] === VARIABLE_ORIGIN && p[4] === DLC_ORIGIN[0];
         });
-        overrideRange(list, question - 1, revealStart - 1, [command(355, 0, ["LostChapterAP.chooseOrigin(this);"])]);
+        // Offline the game asks its own questions
+        const pick = [command(355, 0, ["LostChapterAP.chooseOrigin(this);"])];
+        overrideRange(list, question - 1, revealStart - 1, pick, "!LostChapterAP.shuffled()");
     };
 
     // Map001: the branch of the "Correct" choice that applies the origin
@@ -3213,7 +3220,7 @@
         return $gameParty.hasItem((scene.kind === 9 ? $dataWeapons : $dataItems)[scene.id], scene.equip);
     };
 
-    const sceneOffered = scene => !!scene.label && bound() && sceneTaken(scene);
+    const sceneOffered = scene => !!scene.label && shuffled() && sceneTaken(scene);
 
     // Asked before the first of the scenes: is there one to revisit? Also forgets the answer of the last visit.
     AP.concluded = eventId => {
@@ -3226,7 +3233,7 @@
         const scene = CONCLUSIONS[eventId].scenes[index];
         // The game's own question where nothing is asked: outside a multiworld, and for a scene that is never
         // revisited and whose relic is in the player's hands
-        if (!bound() || (!scene.label && !sceneIsCheck(scene))) {
+        if (!shuffled() || (!scene.label && !sceneIsCheck(scene))) {
             return $gameParty.hasItem((scene.kind === 9 ? $dataWeapons : $dataItems)[scene.id], scene.equip);
         }
         // A scene that is `blocked` gives way to what the event holds further down, the grave of the Collapse
