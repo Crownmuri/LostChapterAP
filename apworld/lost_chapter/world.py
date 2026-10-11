@@ -327,8 +327,8 @@ class LostChapterWorld(World):
             floor = data.LATE_EVENT_FLOOR if event_id >= data.LATE_EVENT_FIRST else 1
 
             self.get_location(data.first_visit(event_id)).access_rule = (
-                lambda state, item=data.event_item(name), floor=floor: (
-                    state.has(item, player) and self.can_reach_floor(state, floor)
+                lambda state, name=name, floor=floor: (
+                    self.can_visit(state, name) and self.can_reach_floor(state, floor)
                 )
             )
 
@@ -383,13 +383,29 @@ class LostChapterWorld(World):
                 lambda state: self.can_reach_floor(state, self.options.final_boss_floor.value)
             )
 
+    def can_visit(self, state: CollectionState, event: str) -> bool:
+        """A floor event is unlocked and the game offers it, floors aside."""
+        if not state.has(data.event_item(event), self.player):
+            return False
+
+        conditions = data.EVENT_CONDITIONS.get(event)
+
+        if not conditions:
+            return True
+
+        return (
+            state.has_all([data.event_item(other) for other in conditions["events"]], self.player)
+            and all(self.has_relic(state, relic) for relic in conditions["relics"])
+            and (not conditions["any_relic"] or any(self.has_relic(state, relic) for relic in conditions["any_relic"]))
+        )
+
     def can_find_relic(self, state: CollectionState, name: str) -> bool:
         """The place of a relic can be reached: its events, the floor they come up on and what it is traded for."""
         source = data.RELIC_SOURCES[name]
         late = any(data.EVENT_IDS[event] >= data.LATE_EVENT_FIRST for event in source["events"])
 
         return (
-            state.has_all([data.event_item(event) for event in source["events"]], self.player)
+            all(self.can_visit(state, event) for event in source["events"])
             and self.can_reach_floor(state, data.LATE_EVENT_FLOOR if late else 1)
             and all(self.has_relic(state, relic) for relic in source["relics"])
         )

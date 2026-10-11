@@ -412,6 +412,16 @@ RELICS.update(DLC_RELICS)
 WHITE_KEY = "White Key"
 BLACK_KEY = "Black Key"
 
+# event -> what the game wants before it offers the event at all: other events that have to come first in the same
+# run, relics that have to be held, and relics of which one is enough.
+EVENT_CONDITIONS: Dict[str, Dict[str, List[str]]] = {
+    # The locked door of the Corridor is all there is to it
+    "Corridor": {"events": [], "relics": [], "any_relic": [WHITE_KEY, BLACK_KEY]},
+    # Both only come up once the Aetolus Flag was hoisted on the Hill, in every run anew
+    "Old Woman": {"events": ["Hill"], "relics": ["Aetolus Flag"], "any_relic": []},
+    "Sculptor": {"events": ["Hill"], "relics": ["Aetolus Flag"], "any_relic": []},
+}
+
 # relic name -> what it takes to find it: the floor events and the relics it is traded for.
 # First pass read from the event commands, not yet confirmed in play.
 RELIC_SOURCES: Dict[str, Dict[str, List[str]]] = {

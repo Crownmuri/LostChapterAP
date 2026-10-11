@@ -2143,7 +2143,7 @@
     };
 
     // A conditional branch of such a block. null for a kind of condition this does not know.
-    const blockCondition = (p, scratch) => {
+    const blockCondition = (p, scratch, eventId) => {
         const actor = p[0] === 4 ? $gameActors.actor(p[1]) : null;
         switch (p[0]) {
             case 0:
@@ -2158,15 +2158,24 @@
                     return !!actor && $gameParty.members().includes(actor);
                 }
                 return p[2] === 6 ? !!actor && actor.isStateAffected(p[3]) : null;
-            case 9:
+            case 9: {
+                // An event is gone once the relic it hands out is held (Checkpoint). Where that relic is a check
+                // it is gone once the check was sent: the relic itself can come from anywhere.
+                const handsOut = eventData(eventId).list.some(
+                    item => item.code === 127 && item.parameters[0] === p[1] && item.parameters[1] === 0
+                );
+                if (handsOut && bound() && relicChecks().includes(p[1])) {
+                    return state().checked.includes(RELIC_OFFSET + p[1]);
+                }
                 return $gameParty.hasItem($dataWeapons[p[1]], p[2]);
+            }
             default:
                 return null;
         }
     };
 
     // True when the block ends in the jump that rolls again. Switches it sets are its own scratch values.
-    const rerolls = block => {
+    const rerolls = (block, eventId) => {
         const scratch = {};
         const taken = {};
         let skipAbove = Infinity;
@@ -2177,7 +2186,7 @@
             skipAbove = Infinity;
             const p = item.parameters;
             if (item.code === 111) {
-                const result = blockCondition(p, scratch);
+                const result = blockCondition(p, scratch, eventId);
                 if (result === null) {
                     return false;
                 }
@@ -2205,7 +2214,7 @@
         if (eventId > 56 && floor <= 40) {
             return false;
         }
-        return !rerollBlocks[eventId] || !rerolls(rerollBlocks[eventId]);
+        return !rerollBlocks[eventId] || !rerolls(rerollBlocks[eventId], eventId);
     };
 
     // { name, events } of the pair `eventId` belongs to (slot data "event_groups"), null for an event on its own
