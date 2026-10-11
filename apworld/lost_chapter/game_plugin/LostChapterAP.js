@@ -206,6 +206,11 @@
     const WEAPON_FORGET_ME_NOT = 74;
     const WEAPON_PIERIS = 75;
     const UNVISITED_EVENT_WEIGHT = 6; // times as likely to be rolled as any other event
+    // Checkpoints: the first floor after a boss floor (21, 41, ...) is saved to a file of its own, checkpoint 1 is
+    // floor 21. They are no save files of the game, which loads the newest of those when it starts.
+    const CHECKPOINT_NAME = "checkpoint";
+    const CHECKPOINTS = 10;
+    const CHECKPOINT_WAIT = 600; // frames the event that asked stands still while the checkpoint loads
     // Floor event -> choice (as written in the event, without its condition and colors) -> what it takes.
     // Choices that already name a card they need, and the ones about FAITH, VIRTUE and LEWD, are not listed:
     // the latter are read from their condition.
@@ -746,13 +751,6 @@
         }
     };
 
-    // The highest floor reached in this multiworld. Saves from before it was kept go by their floor checks.
-    const bestFloor = () => {
-        const s = state();
-        const checked = CHECK_FLOORS.filter(floor => s.checked.includes(FLOOR_OFFSET + floor));
-        return Math.max(s.best || 0, checked.length > 0 ? checked[checked.length - 1] : 0);
-    };
-
     // The goals the wins of this save have reached are kept, and sent again whenever the client connects
     const sendGoal = () => {
         const s = state();
@@ -894,9 +892,6 @@
         }
         const s = state();
         AP.battleDrop = false;
-        if (s && value > (s.best || 0)) {
-            s.best = value;
-        }
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
@@ -905,6 +900,8 @@
             s.claimed = [];
             s.claimedSets = [];
             s.shopBought = {};
+            s.lastFight = 0;
+            s.checkpoint = 0;
             // The souls of the run that ended are kept, the next one adds to them
             s.souls = (s.souls || 0) + (s.runSouls || 0);
             s.runSouls = 0;
@@ -919,6 +916,9 @@
         const troopId = $gameTroop._troopId;
         // The card choice that follows is the one of a fight. Events hand out cards through the same choice.
         AP.battleDrop = true;
+        if (state()) {
+            state().lastFight = $gameVariables.value(VARIABLE_FLOOR);
+        }
         if (troopId >= 1 && troopId <= CHECK_TROOP_MAX) {
             check(TROOP_OFFSET + troopId);
         } else if (troopId === TROOP_LAST_BOSS && state()) {
@@ -2243,7 +2243,75 @@
         if (left === null || !state().events.includes(eventId)) {
             return eventName(eventId);
         }
-        return eventName(eventId) + (left ? " (" + left + ")" : " \\c[8](0)\\c[0]");
+        // An asterisk: something is left to do here that is no check, but opens one in another event
+        const group = eventGroup(eventId);
+        const quest = (group ? group.events : [eventId]).some(member => questEvents().includes(member));
+        return eventName(eventId) + (quest ? "*" : "") + (left ? " (" + left + ")" : " \\c[8](0)\\c[0]");
+    };
+
+    // Whether the branch of `choice` of the choices command at `start` hands out a check that is still open
+    const branchChecks = (list, start, choice) => {
+        const indent = list[start].indent;
+        const found = [];
+        let inBranch = false;
+        for (let i = start + 1; i < list.length; i++) {
+            const item = list[i];
+            const p = item.parameters;
+            if (item.indent === indent) {
+                if (item.code !== 402 && item.code !== 403) {
+                    break;
+                }
+                inBranch = item.code === 402 && p[0] === choice;
+            } else if (inBranch && item.code === 127 && p[1] === 0 && relicChecks().includes(p[0])) {
+                found.push(RELIC_OFFSET + p[0]);
+            } else if (inBranch && item.code === 126 && p[1] === 0 && cardChecks().includes(p[0])) {
+                found.push(CARD_OFFSET + p[0]);
+            }
+        }
+        return found.filter(location => !isSent(location));
+    };
+
+    // The floor events with something left to do that opens a check in another event: the message of the Old
+    // Woman, which the guard of the Checkpoint hands the Memento Chisel over for. A check that one of its choices
+    // already leads to is not waiting on anything.
+    let questCache = null;
+    const questEvents = () => {
+        if (questCache && questCache.frame === Graphics.frameCount) {
+            return questCache.events;
+        }
+        if (!switchSetters) {
+            findSwitchSetters();
+        }
+        const waiting = {};
+        const ready = [];
+        for (const eventId of eventIds()) {
+            const list = eventData(eventId).list;
+            list.forEach((item, start) => {
+                (item.code === 102 ? item.parameters[0] : []).forEach((text, choice) => {
+                    const shown = CHOICE_SHOWN.exec(String(text));
+                    const match = shown && /^\s*s\[(\d+)\]\s*$/.exec(shown[1]);
+                    const setters = match ? switchSetters[Number(match[1])] || [] : [];
+                    if (setters.length === 0 || setters.length > STORY_SWITCH_EVENTS || setters.includes(eventId)) {
+                        return;
+                    }
+                    for (const location of branchChecks(list, start, choice)) {
+                        if ($gameSwitches.value(Number(match[1]))) {
+                            ready.push(location);
+                        } else {
+                            waiting[location] = (waiting[location] || []).concat(setters);
+                        }
+                    }
+                });
+            });
+        }
+        const events = [];
+        for (const location of Object.keys(waiting).map(Number)) {
+            if (!ready.includes(location)) {
+                waiting[location].forEach(eventId => remember(events, eventId));
+            }
+        }
+        questCache = { frame: Graphics.frameCount, events: events };
+        return events;
     };
 
     const startFloorEvent = switchId => {
@@ -2318,7 +2386,7 @@
             }),
             [
                 "Choose the Floor Event (" + shopPrice("pick", floor) + ")",
-                soulTotal() >= shopPrice("pick", floor),
+                soulTotal() >= shopPrice("pick", floor) && floorsToFight(floor) !== 0,
                 () => {
                     AP.standbyMenu = "pick";
                 },
@@ -2439,6 +2507,18 @@
         askStandby(interpreter, entries);
     };
 
+    // Battle rewards are only found in fights, and nothing else makes a player fight: while one is open, a floor
+    // is a fight when none was won on the floors before it. 5 rewards for 20 floors are a fight every 4 floors.
+    // The floors until the next one has to be a fight, 0 for this one, null when nothing forces any.
+    const floorsToFight = floor => {
+        const rewards = option("battle_rewards") || 0;
+        if (!shuffled() || !rewards || !battleReward()) {
+            return null;
+        }
+        const interval = Math.max(1, Math.floor(BOSS_FLOOR_INTERVAL / rewards));
+        return Math.max(0, (state().lastFight || 0) + interval - floor);
+    };
+
     const offerFloorEvents = (interpreter, floor, callback, shop) => {
         // Drawn from every event the floor could hold. The ones without their unlock are shown grayed out, so a
         // few unlocked events do not come up floor after floor.
@@ -2479,7 +2559,15 @@
         }
         AP.offer = { floor: floor, events: offered };
         const switchIds = [SWITCH_FIGHT].concat(offered);
-        const names = ["Battle"].concat(offered.map(offerName));
+        const toFight = floorsToFight(floor);
+        const forced = toFight === 0;
+        let battle = "Battle";
+        if (forced) {
+            battle += " \\c[2](a battle reward is open, this floor is a fight)\\c[0]";
+        } else if (toFight !== null) {
+            battle += " \\c[8](forced in " + toFight + (toFight === 1 ? " floor)" : " floors)") + "\\c[0]";
+        }
+        const names = [battle].concat(offered.map(offerName));
         const menus = [];
         if (shop) {
             // Back is also what cancelling does. The roll of the floor stands, so a relic bought in the shop can be
@@ -2495,7 +2583,8 @@
         }
         $gameMessage.setChoices(names, 0, shop ? names.length - 1 : -1);
         if (canGray) {
-            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked), menus.map(() => true), [true]));
+            const open = eventId => unlocked(eventId) && !forced;
+            $gameMessage.setChoiceEnables([true].concat(offered.map(open), menus.map(() => true), [true]));
         }
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
@@ -2684,30 +2773,101 @@
     // whose page ends once the floor is 1 or more, which stops whatever that event is still doing a frame later.
     // The game's own call gets away with it because nothing in it waits after the floor is set.
     AP.startRun = interpreter => {
-        const start = floor => {
-            state().holdFloor = true;
-            $gameVariables.setValue(VARIABLE_FLOOR, floor);
-            $gameTemp.reserveCommonEvent(COMMON_EVENT_STANDBY);
-        };
-        // A floor that was reached before in this multiworld can be started from: the first floor after each
-        // boss floor. The bosses below it are not fought in that run.
-        const floors = [];
-        for (let floor = 1; shuffled() && floor <= bestFloor(); floor += BOSS_FLOOR_INTERVAL) {
-            floors.push(floor);
+        // A run that got past a boss floor left a checkpoint on the floor after it, with everything it had there
+        const ids = [];
+        for (let id = 1; bound() && interpreter && id <= CHECKPOINTS; id++) {
+            if (StorageManager.exists(CHECKPOINT_NAME + id)) {
+                ids.push(id);
+            }
         }
-        if (floors.length < 2 || !interpreter) {
-            start(1);
+        if (ids.length === 0) {
+            startAt(1);
             return;
         }
+        const names = ids.map(id => "Checkpoint: floor " + checkpointFloor(id));
         $gameMessage.setBackground(2);
         $gameMessage.setPositionType(1);
-        $gameMessage.add("Start from which floor?");
-        $gameMessage.setChoices(floors.map(floor => "Floor " + floor), 0, -1);
+        $gameMessage.add("Start a new run, or go on from a checkpoint?");
+        $gameMessage.setChoices(["New run"].concat(names), 0, -1);
         limitChoiceRows();
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
-        $gameMessage.setChoiceCallback(index => start(floors[index]));
+        $gameMessage.setChoiceCallback(index => {
+            if (index === 0) {
+                startAt(1);
+                return;
+            }
+            // Nothing of the event that asked goes on while the checkpoint takes the place of this game
+            interpreter.wait(CHECKPOINT_WAIT);
+            SceneManager.goto(Scene_ArchipelagoLoad);
+            SceneManager.prepareNextScene(ids[index - 1]);
+        });
         interpreter.setWaitMode("message");
+    };
+
+    const startAt = floor => {
+        state().holdFloor = true;
+        $gameVariables.setValue(VARIABLE_FLOOR, floor);
+        $gameTemp.reserveCommonEvent(COMMON_EVENT_STANDBY);
+    };
+
+    const checkpointFloor = id => id * BOSS_FLOOR_INTERVAL + 1;
+
+    // Runs in common event 87 right after the game's own autosave, so a checkpoint goes on the way that one does
+    AP.saveCheckpoint = () => {
+        const s = state();
+        const floor = $gameVariables.value(VARIABLE_FLOOR);
+        const id = (floor - 1) / BOSS_FLOOR_INTERVAL;
+        // Once a run: the standby screen starts over after every look at the deck or the shop
+        if (!bound() || id < 1 || id > CHECKPOINTS || id !== Math.floor(id) || s.checkpoint === floor) {
+            return;
+        }
+        s.checkpoint = floor;
+        $gameSystem.onBeforeSave();
+        StorageManager.saveObject(CHECKPOINT_NAME + id, DataManager.makeSaveContents())
+            .then(() => notify("Checkpoint saved: floor " + floor))
+            .catch(error => {
+                s.checkpoint = 0;
+                writeLog("checkpoint of floor " + floor + " not saved: " + error);
+            });
+    };
+
+    // Loads a checkpoint the way the game's load screen loads a save file
+    function Scene_ArchipelagoLoad() {
+        this.initialize(...arguments);
+    }
+    Scene_ArchipelagoLoad.prototype = Object.create(Scene_Base.prototype);
+    Scene_ArchipelagoLoad.prototype.constructor = Scene_ArchipelagoLoad;
+
+    Scene_ArchipelagoLoad.prototype.prepare = function(id) {
+        this._checkpoint = id;
+    };
+
+    Scene_ArchipelagoLoad.prototype.start = function() {
+        Scene_Base.prototype.start.call(this);
+        StorageManager.loadObject(CHECKPOINT_NAME + this._checkpoint)
+            .then(contents => {
+                DataManager.createGameObjects();
+                DataManager.extractSaveContents(contents);
+                DataManager.correctDataErrors();
+                this._loaded = true;
+                AP.offer = null;
+                AP.standbyMenu = null;
+                SceneManager.goto(Scene_Map);
+            })
+            .catch(error => {
+                writeLog("checkpoint " + this._checkpoint + " not loaded: " + error);
+                startAt(1);
+                SceneManager.goto(Scene_Map);
+            });
+    };
+
+    Scene_ArchipelagoLoad.prototype.terminate = function() {
+        Scene_Base.prototype.terminate.call(this);
+        if (this._loaded) {
+            $gameSystem.onAfterLoad();
+            notify("Checkpoint loaded: floor " + $gameVariables.value(VARIABLE_FLOOR));
+        }
     };
 
     // Replaces the floor increment of common event 86
@@ -3661,6 +3821,14 @@
         }
     };
 
+    const patchCheckpoint = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_STANDBY_START].list;
+        const autosave = list.findIndex(item => item.code === 355 && String(item.parameters[0]).includes("requestAutosave"));
+        if (autosave >= 0) {
+            list.splice(autosave + 1, 0, command(355, list[autosave].indent, ["LostChapterAP.saveCheckpoint();"]));
+        }
+    };
+
     const patchStandbyTip = () => {
         const list = $dataCommonEvents[COMMON_EVENT_STANDBY_START].list;
         const isButton = item =>
@@ -3801,6 +3969,7 @@
             patchConclusions();
             patchStandbyVerse();
             patchStandbyTip();
+            patchCheckpoint();
             patchDeckSlots();
             patchDrops();
             patchCardRolls();
