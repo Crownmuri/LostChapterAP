@@ -53,6 +53,7 @@ def item_table() -> Dict[str, int]:
     table: Dict[str, int] = {name: item_id for item_id, name in data.FILLER.items()}
     table.update({name: item_id for item_id, name in data.STAT_FILLER.items()})
     table.update({name: item_id for item_id, name in data.RESTORE_FILLER.items()})
+    table.update({name: item_id for item_id, name in data.SOUL_FILLER.items()})
     table.update({name: item_id for item_id, name in data.TRAPS.items()})
     table[data.FINISHER] = data.FINISHER_ID
     table[data.EXPLORATION] = data.EXPLORATION_ID
@@ -420,6 +421,7 @@ class LostChapterWorld(World):
             classification = ItemClassification.trap
         elif name in self.item_name_groups["Cards"] or name in (
             list(data.FILLER.values()) + list(data.STAT_FILLER.values()) + list(data.RESTORE_FILLER.values())
+            + list(data.SOUL_FILLER.values())
         ):
             classification = ItemClassification.filler
         elif name in self.item_name_groups["Door Keys"]:
@@ -476,10 +478,11 @@ class LostChapterWorld(World):
         self.multiworld.itempool += pool
 
     def get_filler_item_name(self) -> str:
-        # 100 Gold, 300 Gold, +5 LP, +5 RP, then the six stat boosts
+        # 100 Gold, 300 Gold, +5 LP, +5 RP, the six stat boosts, then 10, 25 and 50 Souls
         names = list(data.FILLER.values()) + list(data.RESTORE_FILLER.values()) + list(data.STAT_FILLER.values())
+        names += list(data.SOUL_FILLER.values())
 
-        return self.random.choices(names, weights=[3, 1, 2, 2] + [1] * len(data.STAT_FILLER))[0]
+        return self.random.choices(names, weights=[3, 1, 2, 2] + [1] * len(data.STAT_FILLER) + [2, 2, 1])[0]
 
     def fill_slot_data(self) -> Dict[str, Any]:
         slot_data = self.options.as_dict(*SLOT_DATA_OPTIONS)

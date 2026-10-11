@@ -439,6 +439,13 @@ FILLER: Dict[int, str] = {
     2: "300 Gold",
 }
 
+# Souls to spend in the soul shop and the Boon Shop
+SOUL_FILLER: Dict[int, str] = {
+    5: "10 Souls",
+    6: "25 Souls",
+    7: "50 Souls",
+}
+
 # Filler that raises a stat of the run it arrives in, once. Stats start over with every run.
 # Restores LP or RP in the current run, without raising the maximum
 RESTORE_FILLER: Dict[int, str] = {

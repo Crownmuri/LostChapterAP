@@ -339,6 +339,7 @@
     // The cards whose handing out by a floor event is a check
     const cardChecks = () => option("cards") || [];
     const GOLD_ITEMS = { 1: 100, 2: 300 };
+    const SOUL_FILLER = { 5: 10, 6: 25, 7: 50 }; // SOUL_FILLER of apworld/lost_chapter/data.py: souls to spend
     // Filler: item id -> [parameter of the protagonist, amount]. Parameters 2-5 are STR, DEF, MAG and AGL.
     const STAT_ITEMS = { 20: [0, 5], 21: [1, 5], 22: [2, 1], 23: [4, 1], 24: [3, 1], 25: [5, 1] };
     // Traps: the Climax Trap empties RP, the others are a state (Confusion, Sticky Fluid, Paralysis, Torn Clothes)
@@ -1641,6 +1642,8 @@
             s.exploration = (s.exploration || 0) + 1;
         } else if (GOLD_ITEMS[item.id]) {
             $gameParty.gainGold(GOLD_ITEMS[item.id]);
+        } else if (SOUL_FILLER[item.id]) {
+            s.souls = (s.souls || 0) + SOUL_FILLER[item.id];
         } else if (item.id === ITEM_RESTORE_LP) {
             $gameActors.actor(1).gainHp(RESTORE_AMOUNT);
         } else if (item.id === ITEM_RESTORE_RP) {
