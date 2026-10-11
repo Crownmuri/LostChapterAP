@@ -891,6 +891,7 @@
         }
         const s = state();
         AP.battleDrop = false;
+        AP.skipNotes = [];
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
@@ -1062,13 +1063,14 @@
     // the condition is about anything else
     const eventRequirement = (eventId, condition) => {
         const match = /^\s*s\[(\d+)\]\s*$/.exec(condition);
-        if (!match) {
-            return null;
-        }
+        return match ? switchRequirement(eventId, Number(match[1])) : null;
+    };
+
+    const switchRequirement = (eventId, switchId) => {
         if (!switchSetters) {
             findSwitchSetters();
         }
-        const setters = switchSetters[Number(match[1])] || [];
+        const setters = switchSetters[switchId] || [];
         if (setters.length === 0 || setters.length > STORY_SWITCH_EVENTS || setters.includes(eventId)) {
             return null;
         }
@@ -1197,6 +1199,66 @@
         const conditions = /((?:if|en)\([^)]*\)\s*)+$/.exec(text);
         const at = conditions ? conditions.index : text.length;
         return text.slice(0, at) + " \\c[8](" + effect + ")\\c[0]" + text.slice(at);
+    };
+
+    // Not every option of a floor event is a choice that can be shown grayed out: some sit in a part of the event
+    // that is passed over as a whole (the cursed dog is only released by a player with the Collar Key). A notice
+    // names the first choice of such a part and what it takes, as far as the condition is one that can be named.
+    const SKIP_NOTICES = 2; // a visit
+    const branchRequirement = (eventId, p) => {
+        if (p[0] === 0 && p[2] === 0) {
+            return switchRequirement(eventId, p[1]);
+        }
+        if (p[0] === 1 && p[1] === VARIABLE_ORIGIN && p[2] === 0 && p[4] === 0) {
+            return originRequirement("v[" + VARIABLE_ORIGIN + "]==" + p[3]);
+        }
+        const list = eventData(eventId).list;
+        // Not the relic the event itself hands out: that question is whether it was taken
+        const handsOut = other => other.code === 127 && other.parameters[0] === p[1] && other.parameters[1] === 0;
+        return p[0] === 9 && $dataWeapons[p[1]] && !list.some(handsOut) ? $dataWeapons[p[1]].name : null;
+    };
+
+    const noteSkipped = (list, at, taken, eventId) => {
+        const item = list[at];
+        const p = item.parameters;
+        let from = at;
+        let requirement = null;
+        if (!taken) {
+            requirement = branchRequirement(eventId, p);
+        } else if (p[0] === 0 && p[2] === 1) {
+            // "the switch is off" held: what comes after its Else takes the switch
+            from = list.findIndex((other, i) => i > at && other.indent <= item.indent);
+            requirement = from >= 0 && list[from].code === 411 ? switchRequirement(eventId, p[1]) : null;
+        }
+        if (!requirement) {
+            return;
+        }
+        let choices = null;
+        for (let i = from + 1; i < list.length && list[i].indent > item.indent && !choices; i++) {
+            choices = list[i].code === 102 ? list[i].parameters[0] : null;
+        }
+        const notes = AP.skipNotes || (AP.skipNotes = []);
+        if (!choices || notes.length >= SKIP_NOTICES || notes.includes(at)) {
+            return;
+        }
+        notes.push(at);
+        const text = effectKey(String(choices[0]));
+        notify(/[a-z]/i.test(text)
+            ? "\"" + text + "\" is not offered: requires " + requirement
+            : "Another scene of this event requires " + requirement);
+    };
+
+    const _Game_Interpreter_command111 = Game_Interpreter.prototype.command111;
+    Game_Interpreter.prototype.command111 = function() {
+        const list = this._list;
+        const at = this._index;
+        const indent = this._indent;
+        const result = _Game_Interpreter_command111.apply(this, arguments);
+        const eventId = bound() && list && list[at] && list[at].code === 111 ? floorEventOf(list) : 0;
+        if (eventId) {
+            noteSkipped(list, at, !!this._branch[indent], eventId);
+        }
+        return result;
     };
 
     const floorEventOf = list => {
