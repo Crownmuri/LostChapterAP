@@ -833,11 +833,12 @@
         }
         _Game_Switches_setValue.apply(this, arguments);
         if (value && !wasOn && switchId === SWITCH_GAME_OVER && bound()) {
-            // DeathLink: every game over is passed on
+            // DeathLink: every game over is passed on, except the one a death from the multiworld brought
             // The ending map closes a run through the same switch, which is no death
-            if ($gameMap.mapId() !== MAP_ENDING) {
+            if (!AP.deathReceived && $gameMap.mapId() !== MAP_ENDING) {
                 send({ cmd: "Death", floor: $gameVariables.value(VARIABLE_FLOOR) });
             }
+            AP.deathReceived = false;
         }
         if (value && (KING_SWITCHES.includes(switchId) || DLC_BOSS_SWITCHES.includes(switchId))) {
             check(SWITCH_OFFSET + switchId);
@@ -893,6 +894,7 @@
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
             s.runOver = false;
+            AP.deathReceived = false;
             s.claimed = [];
             s.claimedSets = [];
             s.shopBought = {};
@@ -1789,10 +1791,12 @@
         }
         const s = state();
         if (AP.pendingDeath && $gameVariables.value(VARIABLE_FLOOR) >= 1 && !s.runOver) {
-            // A death of someone else is a Climax Trap: it goes off in the fight that is on, or in the next one
-            notify("DeathLink: " + AP.pendingDeath + " died, a climax is coming");
+            // Like virgin mode with the state lost: the fight is lost, or the game over follows before the next floor
+            notify("DeathLink: " + AP.pendingDeath + " died, this run is over");
             AP.pendingDeath = null;
-            s.traps = (s.traps || []).concat([ITEM_CLIMAX_TRAP]);
+            AP.deathReceived = true;
+            s.runOver = true;
+            $gameActors.actor(1).setHp(0);
         }
         if (s.regrant && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             s.regrant = false;
