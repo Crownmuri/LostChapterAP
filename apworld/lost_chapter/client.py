@@ -246,6 +246,8 @@ class LostChapterContext(Context):
             await self.bridge.send({"cmd": "Slot", "connected": False})
             return
 
+        locations = self.missing_locations | self.checked_locations
+
         await self.bridge.send({
             "cmd": "Slot",
             "connected": True,
@@ -253,6 +255,11 @@ class LostChapterContext(Context):
             "slot": self.slot,
             "name": self.player_names.get(self.slot, ""),
             "slot_data": self.slot_data,
+            # The checks of each floor event that this seed has, for the count in the floor choice
+            "event_checks": {
+                str(event_id): [location for location in data.event_locations(event_id) if location in locations]
+                for event_id in data.EVENTS
+            },
         })
 
         await self.send_items()

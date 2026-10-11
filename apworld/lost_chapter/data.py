@@ -492,3 +492,19 @@ VIRGIN_GOALS = ("true_virgin", "dlc_virgin")
 
 VICTORY = "Victory"
 ENDING_EVENT = "Reach the Ending"
+
+
+def event_locations(event_id: int) -> List[int]:
+    """The checks an event holds: its first visit and the relics and cards found in it."""
+    name = EVENTS[event_id]
+    locations: List[int] = [SWITCH_OFFSET + event_id]
+
+    for weapon_id, relic in RELICS.items():
+        if name in RELIC_SOURCES.get(relic, {}).get("events", []):
+            locations.append(RELIC_OFFSET + weapon_id)
+
+    for item_id, card in CARDS.items():
+        if name in CARD_SOURCES[card]["events"]:
+            locations.append(CARD_OFFSET + item_id)
+
+    return locations

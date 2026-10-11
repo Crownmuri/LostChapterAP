@@ -1759,6 +1759,28 @@
         return group ? group.name : eventData(eventId).name;
     };
 
+    // How many checks an event has left, null when the client did not say which ones it holds. A pair is counted
+    // together, like in the tracker.
+    const checksLeft = eventId => {
+        const held = AP.slot && AP.slot.event_checks;
+        if (!held) {
+            return null;
+        }
+        const group = eventGroup(eventId);
+        return (group ? group.events : [eventId])
+            .reduce((all, id) => all.concat(held[id] || []), [])
+            .filter(location => !state().checked.includes(location)).length;
+    };
+
+    // The name of an event in the floor choice, with its open checks behind it
+    const offerName = eventId => {
+        const left = checksLeft(eventId);
+        if (left === null) {
+            return eventName(eventId);
+        }
+        return eventName(eventId) + (left ? " (" + left + ")" : " \\c[8](0)\\c[0]");
+    };
+
     const startFloorEvent = switchId => {
         // The roll of the floor is used up
         AP.offer = null;
@@ -1845,7 +1867,7 @@
         const names = [];
         const entries = [];
         for (const eventId of eventIds()) {
-            const name = eventName(eventId);
+            const name = offerName(eventId);
             if (!state().events.includes(eventId) || !eventAvailable(eventId, floor) || names.includes(name)) {
                 continue;
             }
@@ -1909,7 +1931,7 @@
         }
         AP.offer = { floor: floor, events: offered };
         const switchIds = [SWITCH_FIGHT].concat(offered);
-        const names = ["Battle"].concat(offered.map(eventName));
+        const names = ["Battle"].concat(offered.map(offerName));
         if (shop) {
             names.push("Soul Shop (" + soulTotal() + " souls)");
         }

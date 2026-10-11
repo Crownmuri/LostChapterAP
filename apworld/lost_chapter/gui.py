@@ -29,23 +29,7 @@ BY_GRINDING = (1.0, 0.82, 0.38)
 OUT_OF_LOGIC = (0.88, 0.31, 0.31)
 
 
-def event_locations(event_id: int) -> List[int]:
-    """The checks an event holds: its first visit and the relics and cards found in it."""
-    name = data.EVENTS[event_id]
-    locations: List[int] = [data.SWITCH_OFFSET + event_id]
-
-    for weapon_id, relic in data.RELICS.items():
-        if name in data.RELIC_SOURCES.get(relic, {}).get("events", []):
-            locations.append(data.RELIC_OFFSET + weapon_id)
-
-    for item_id, card in data.CARDS.items():
-        if name in data.CARD_SOURCES[card]["events"]:
-            locations.append(data.CARD_OFFSET + item_id)
-
-    return locations
-
-
-EVENT_LOCATIONS: Dict[int, List[int]] = {event_id: event_locations(event_id) for event_id in data.EVENTS}
+EVENT_LOCATIONS: Dict[int, List[int]] = {event_id: data.event_locations(event_id) for event_id in data.EVENTS}
 
 
 def label(**kwargs) -> Label:
