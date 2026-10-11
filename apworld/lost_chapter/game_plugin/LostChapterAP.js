@@ -3728,44 +3728,52 @@
         return "Revisit Event (" + (typeof label === "function" ? label() : label) + ")";
     };
 
-    // Throne: with the king dead ("Seduce the King", or the Monster quest) the event is over for the rest of the
-    // run, and with it the place of the Aetolus Flag. In a multiworld the player is asked instead, like at an event
-    // that reached its conclusion, and a reset has the king alive again.
-    const COMMON_EVENT_THRONE = 59;
-    const SWITCH_KING_DEAD = 273;
-    const LABEL_THRONE_START = "archipelago throne";
-    AP.kingResets = () => shuffled();
+    // Events that are over for the rest of the run once someone in them is gone: the Throne with the king dead
+    // ("Seduce the King", or the Monster quest), and with it the place of the Aetolus Flag, and the Old Woman once
+    // she left or was robbed. In a multiworld the player is asked instead, like at an event that reached its
+    // conclusion, and a reset has them back: `off` are the switches it turns off, the first is the one asked for.
+    const REVIVALS = [
+        { event: 59, off: [273], line: "The king is dead.", revisit: "the king is dead", reset: "the king lives" },
+        // Old Woman (DLC): "Disappearance of Old Woman", and her message with it so it can be taken again
+        { event: 594, off: [264, 261], line: "The old woman is gone.", revisit: "she is gone", reset: "she is back" },
+    ];
+    AP.revives = () => shuffled();
 
-    const patchThrone = () => {
-        const list = $dataCommonEvents[COMMON_EVENT_THRONE].list;
-        const dead = list.findIndex(item => {
-            const p = item.parameters;
-            return item.code === 111 && item.indent === 0 && p[0] === 0 && p[1] === SWITCH_KING_DEAD && p[2] === 0;
-        });
-        if (dead < 0) {
-            console.error("[AP] Common event 59 has an unexpected layout, the king cannot be brought back");
-            return;
+    const patchRevivals = () => {
+        for (const revival of REVIVALS) {
+            const commonEvent = $dataCommonEvents[revival.event];
+            const list = commonEvent ? commonEvent.list : [];
+            const gone = list.findIndex(item => {
+                const q = item.parameters;
+                return item.code === 111 && q[0] === 0 && q[1] === revival.off[0] && q[2] === 0;
+            });
+            if (gone < 0) {
+                // The Old Woman is only there with the DLC
+                continue;
+            }
+            const label = "archipelago revival " + revival.event;
+            const indent = list[gone].indent + 1;
+            const answers = ["Revisit Event (" + revival.revisit + ")", "Reset Event (" + revival.reset + ")"];
+            list.splice(
+                gone + 1,
+                0,
+                command(111, indent, [12, "LostChapterAP.revives()"]),
+                command(101, indent + 1, ["", 0, 1, 2, ""]),
+                command(401, indent + 1, [revival.line]),
+                command(401, indent + 1, ["Revisit or reset the event?"]),
+                command(102, indent + 1, [answers, -1, 0, 2, 0]),
+                command(402, indent + 1, [0, answers[0]]),
+                command(0, indent + 2, []),
+                command(402, indent + 1, [1, answers[1]]),
+                ...revival.off.map(switchId => command(121, indent + 2, [switchId, switchId, 1])),
+                command(119, indent + 2, [label]),
+                command(0, indent + 2, []),
+                command(404, indent + 1, []),
+                command(0, indent + 1, []),
+                command(412, indent, [])
+            );
+            list.unshift(command(118, 0, [label]));
         }
-        const answers = ["Revisit Event (the king is dead)", "Reset Event (the king lives)"];
-        list.splice(
-            dead + 1,
-            0,
-            command(111, 1, [12, "LostChapterAP.kingResets()"]),
-            command(101, 2, ["", 0, 1, 2, ""]),
-            command(401, 2, ["The king is dead."]),
-            command(401, 2, ["Revisit or reset the event?"]),
-            command(102, 2, [answers, -1, 0, 2, 0]),
-            command(402, 2, [0, answers[0]]),
-            command(0, 3, []),
-            command(402, 2, [1, answers[1]]),
-            command(121, 3, [SWITCH_KING_DEAD, SWITCH_KING_DEAD, 1]),
-            command(119, 3, [LABEL_THRONE_START]),
-            command(0, 3, []),
-            command(404, 2, []),
-            command(0, 2, []),
-            command(412, 1, [])
-        );
-        list.unshift(command(118, 0, [LABEL_THRONE_START]));
     };
 
     const patchConclusions = () => {
@@ -4091,7 +4099,7 @@
             patchMarsh();
             patchMarket();
             patchConclusions();
-            patchThrone();
+            patchRevivals();
             patchStandbyVerse();
             patchStandbyTip();
             patchCheckpoint();
