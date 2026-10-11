@@ -107,6 +107,8 @@
     const COMMON_EVENT_STANDBY = 11;
     const COMMON_EVENT_STANDBY_START = 87;
     const COMMON_EVENT_GUI = 2; // parallel: copies LP, RP and the stats to their variables and draws them
+    const SWITCH_GUI = 2; // runs that event
+    const PICTURE_GUI = 98; // its line of text
     const COMMON_EVENT_SCORE = 72;
     const COMMON_EVENT_TITLE_RELEASE = 400; // + title number
     const COMMON_EVENT_KING_BATTLE = 63;
@@ -1288,6 +1290,18 @@
         }
     };
 
+    // The game stops drawing LP, RP, gold and the stats while the floor is chosen (common event 86 turns the switch
+    // of common event 2 off), so a change made then is drawn here. That event never waits: one update runs all of
+    // it. Only where its line is on the screen already, so it does not turn up on a screen that hides it.
+    const redrawGui = () => {
+        const picture = $gameScreen.picture(PICTURE_GUI);
+        if (!$gameSwitches.value(SWITCH_GUI) && picture && picture.mzkp_text && !$gameParty.inBattle()) {
+            const gui = new Game_Interpreter();
+            gui.setup($dataCommonEvents[COMMON_EVENT_GUI].list);
+            gui.update();
+        }
+    };
+
     const applyItem = item => {
         const s = state();
         if (item.id >= CARD_OFFSET) {
@@ -1319,6 +1333,9 @@
             $gameActors.actor(1).addParam(STAT_ITEMS[item.id][0], STAT_ITEMS[item.id][1]);
         } else if (item.id === ITEM_CLIMAX_TRAP || TRAP_STATES[item.id]) {
             s.traps = (s.traps || []).concat([item.id]);
+        }
+        if (item.id < RELIC_OFFSET) {
+            redrawGui();
         }
         console.log("[AP] Received " + item.name + " from " + item.sender);
         const own = AP.slot && item.sender === AP.slot.name;
@@ -1830,13 +1847,9 @@
             withoutSouls(() => $gameParty.gainItem($dataWeapons[weaponId], 1));
             AP.granting = false;
         };
-        // The game stops drawing LP and RP while the floor is chosen (common event 86 turns the switch of common
-        // event 2 off), so the numbers are drawn here. That event never waits: one update runs all of it.
         const heal = gain => {
             withoutSouls(gain);
-            const gui = new Game_Interpreter();
-            gui.setup($dataCommonEvents[COMMON_EVENT_GUI].list);
-            gui.update();
+            redrawGui();
         };
         const entries = [
             entry("Reroll Floor Events", "reroll", () => {
