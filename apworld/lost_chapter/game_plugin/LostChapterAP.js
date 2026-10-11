@@ -226,7 +226,12 @@
         },
         59: { "Show Ring": "Dusk Ring" },
         60: { "Hoist Flag": "Aetolus Flag" },
+        162: { "Do you know this girl?": "Faithful Dog Lassi" },
+        163: { "Release desire": "(LEWD \u2267 30)" },
+        170: { "You brought a tool": "Old Iron Hammer, Memento Chisel" },
     };
+    // A switch that more floor events than this turn on is one they all use for their own ends, not a story switch
+    const STORY_SWITCH_EVENTS = 3;
 
     // The game calls common event 52 "Small Room" like common event 35, the apworld calls it "Small Room 2"
     const EVENT_ALIASES = { "small room 2": 52 };
@@ -1023,6 +1028,39 @@
 
     const stripConditions = text => text.replace(CHOICE_SHOWN, "").replace(CHOICE_ENABLED, "");
 
+    // switch id -> the floor events that turn it on
+    let switchSetters = null;
+    const findSwitchSetters = () => {
+        switchSetters = {};
+        for (const eventId of allEvents()) {
+            for (const item of eventData(eventId).list) {
+                const p = item.parameters;
+                if (item.code === 121 && p[0] === p[1] && p[2] === 0) {
+                    switchSetters[p[0]] = switchSetters[p[0]] || [];
+                    remember(switchSetters[p[0]], eventId);
+                }
+            }
+        }
+    };
+
+    // "the Old Woman event" for a choice that only shows once another floor event turned its switch on, null when
+    // the condition is about anything else
+    const eventRequirement = (eventId, condition) => {
+        const match = /^\s*s\[(\d+)\]\s*$/.exec(condition);
+        if (!match) {
+            return null;
+        }
+        if (!switchSetters) {
+            findSwitchSetters();
+        }
+        const setters = switchSetters[Number(match[1])] || [];
+        if (setters.length === 0 || setters.length > STORY_SWITCH_EVENTS || setters.includes(eventId)) {
+            return null;
+        }
+        const names = setters.map(eventName).filter((name, index, all) => all.indexOf(name) === index);
+        return "the " + names.join(" or ") + " event";
+    };
+
     // A choice of a floor event whose condition is not met stays on the list, grayed out, and says what it takes.
     // `original` is the text of the event data, `text` what is shown for it.
     const lockedChoice = (interpreter, eventId, original, text) => {
@@ -1035,7 +1073,8 @@
         const key = stripConditions(original)
             .replace(/\\c\[\d+\]/gi, "")
             .trim();
-        const requirement = (CHOICE_REQUIREMENTS[eventId] || {})[key] || statRequirement(failed[1]);
+        const requirement =
+            (CHOICE_REQUIREMENTS[eventId] || {})[key] || statRequirement(failed[1]) || eventRequirement(eventId, failed[1]);
         if (!requirement) {
             return text;
         }
