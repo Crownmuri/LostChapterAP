@@ -61,6 +61,7 @@
     const RECONNECT_MS = 3000;
     const IMAGE_RETRIES = 3;
     const IMAGE_RETRY_MS = 250;
+    const PICTURE_MISSING_FRAMES = 90;
     const SESSION_FILE = "archipelago_session.json";
     const LOG_FILE = "archipelago_log.txt";
     const MAP_TITLE = 3;
@@ -455,6 +456,11 @@
 
     // A log of the session next to the game, started anew with every launch: the game is shipped without the
     // developer console, so this is where its errors and the plugin's own messages can be read afterwards
+    const bitmapState = bitmap =>
+        bitmap.width + "x" + bitmap.height + " " + bitmap._loadingState + (bitmap._image ? " image" : "") +
+        (bitmap._canvas ? " canvas" : "") + (bitmap._baseTexture ? "" : " no texture") +
+        (bitmap.mzkp_isTextPicture ? " text" : "");
+
     const writeLog = text => {
         if (!SESSION) {
             return;
@@ -499,6 +505,7 @@
         const _Bitmap_onError = Bitmap.prototype._onError;
         Bitmap.prototype._onError = function() {
             this._archipelagoRetries = (this._archipelagoRetries || 0) + 1;
+            writeLog("image failed, try " + this._archipelagoRetries + ": " + decodeURIComponent(this._url || ""));
             if (this._archipelagoRetries > IMAGE_RETRIES || !this._url) {
                 _Bitmap_onError.apply(this, arguments);
                 return;
@@ -514,6 +521,27 @@
                 }
             }
             return _ImageManager_loadBitmapFromUrl.apply(this, arguments);
+        };
+
+        // A picture on screen whose image never arrived is invisible and takes no clicks, which leaves the standby
+        // screen stuck when it is the picture that takes its clicks. Such a picture loads its image anew.
+        const _Sprite_Picture_update = Sprite_Picture.prototype.update;
+        Sprite_Picture.prototype.update = function() {
+            _Sprite_Picture_update.apply(this, arguments);
+            const bitmap = this.bitmap;
+            const missing = this.visible && this._pictureName && bitmap && bitmap.width === 0;
+            this._archipelagoMissing = missing ? (this._archipelagoMissing || 0) + 1 : 0;
+            if (this._archipelagoMissing >= PICTURE_MISSING_FRAMES) {
+                this._archipelagoMissing = 0;
+                writeLog("picture " + this._pictureId + " '" + this._pictureName + "' has no image (" +
+                    bitmapState(bitmap) + "), loading it again");
+                for (const url of Object.keys(ImageManager._cache)) {
+                    if (ImageManager._cache[url] === bitmap) {
+                        delete ImageManager._cache[url];
+                    }
+                }
+                this.loadBitmap();
+            }
         };
 
         // Every multiworld slot saves into its own folder, the normal save folder is never opened
@@ -2876,7 +2904,7 @@
             }).join(", "),
             "picture 100: " + (picture ? "'" + picture.name() + "' opacity " + picture.opacity() + " button " +
                 picture.mzkp_commonEventId : "none") + ", sprite " + (sprite ? "visible " + sprite.visible +
-                " bitmap " + (sprite.bitmap ? sprite.bitmap.width + "x" + sprite.bitmap.height : "none") : "none"),
+                " bitmap " + (sprite.bitmap ? bitmapState(sprite.bitmap) : "none") : "none"),
             "trace: " + (AP.traced || []).join(" | "),
         ].join("\n");
     };
