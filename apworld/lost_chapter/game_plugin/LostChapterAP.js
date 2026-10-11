@@ -2618,11 +2618,14 @@
         "event NAME|ID|fight - force the next floor's event",
         "events [FLOOR] - the events the game would offer on a floor right now",
         "gold N - set gold",
+        "souls N - set the souls there are to spend",
+        "next - leave the standby screen, as a click on it does",
+        "stuck - what the game is doing right now, for a screen that takes no input",
         "heal - restore LP and RP",
         "stat " + DEV_PARAMS.join("|") + "|lewd N - set a stat",
         "card NAME [COUNT] / relic NAME [COUNT] - give (negative COUNT takes away)",
         "title N - meet the condition of title N",
-        "unlock - own every event, boss, title effect and starting set unlock",
+        "unlock - own every event, boss, title effect and card set unlock",
         "var ID [VALUE] / switch ID [on|off] - read or write game data",
         "god [on|off] - LP and RP cannot go down",
         "speed N - game speed 1-4",
@@ -2681,6 +2684,22 @@
         gold: words => {
             $gameParty.gainGold(Number(words[0]) - $gameParty.gold());
             return "Gold " + $gameParty.gold();
+        },
+        souls: words => {
+            const s = state();
+            if (!s || !bound()) {
+                return "Only in a game launched from the client";
+            }
+            // What was earned stays as it is, the souls spent make up the difference
+            s.spent = (s.souls || 0) + (s.runSouls || 0) - Math.max(0, Math.floor(Number(words[0])) || 0);
+            return "Souls " + soulTotal();
+        },
+        next: () => {
+            if (!$gameSwitches.value(SWITCH_STANDBY_CONTROL)) {
+                return "Not on the standby screen";
+            }
+            $gameSwitches.setValue(SWITCH_STANDBY_END, true);
+            return "Leaving the standby screen";
         },
         heal: () => {
             $gameActors.actor(1).recoverAll();

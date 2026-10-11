@@ -60,10 +60,13 @@ connected. The same commands work in the game's console as `LostChapterAP.dev("f
 | `/dev floor N` | Set the current floor. The next floor is N + 1, so `floor 19` puts a boss floor next |
 | `/dev event NAME` | Force the next floor's event (name, common event id, or `fight`) |
 | `/dev gold N`, `/dev heal` | Set gold, restore LP and RP |
+| `/dev souls N` | Set the souls there are to spend |
+| `/dev next` | Leave the standby screen, as a click on it does |
+| `/dev stuck` | What the game is doing right now, for a screen that takes no input |
 | `/dev stat NAME N` | Set `maxlp`, `maxrp`, `str`, `def`, `mag`, `agl`, `faith`, `virtue` or `lewd` |
 | `/dev card NAME [COUNT]`, `/dev relic NAME [COUNT]` | Give a card or relic, a negative count takes it away |
 | `/dev title N` | Meet the condition of title N |
-| `/dev unlock` | Own every event, boss, title effect and starting set unlock on this save |
+| `/dev unlock` | Own every event, boss, title effect and card set unlock on this save |
 | `/dev var ID [VALUE]`, `/dev switch ID [on\|off]` | Read or write a game variable or switch |
 | `/dev god [on\|off]` | LP and RP cannot go down |
 | `/dev speed N` | Game speed 1-4 |
