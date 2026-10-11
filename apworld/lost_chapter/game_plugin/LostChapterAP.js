@@ -189,6 +189,8 @@
     const REROLL_Y = 520;
     // Battle rewards (the battle_rewards option): BATTLE_OFFSET of apworld/lost_chapter/data.py
     const BATTLE_OFFSET = 11000;
+    const TRACED_SWITCHES = [65, 66, 86, 87, 89, 90]; // fight, game over, standby end and start, its input, a click
+    const TRACE_LENGTH = 24;
     const COMMON_EVENT_DROP_START = 17;
     const VARIABLE_DROP_FIRST = 6; // variables 6-8 are the item ids of the three cards on offer
     const DROP_CARDS = 3;
@@ -730,9 +732,17 @@
         sendGoal();
     };
 
+    // The last things that happened around the standby screen, for "/dev stuck"
+    const trace = text => {
+        AP.traced = (AP.traced || []).concat([Graphics.frameCount + " " + text]).slice(-TRACE_LENGTH);
+    };
+
     const _Game_Switches_setValue = Game_Switches.prototype.setValue;
     Game_Switches.prototype.setValue = function(switchId, value) {
         const wasOn = this.value(switchId);
+        if (TRACED_SWITCHES.includes(switchId) && !!value !== wasOn) {
+            trace("s" + switchId + (value ? " on" : " off"));
+        }
         _Game_Switches_setValue.apply(this, arguments);
         if (value && !wasOn && switchId === SWITCH_GAME_OVER && bound()) {
             // DeathLink: every game over is passed on, except the one a death from the multiworld brought
@@ -1195,6 +1205,19 @@
         return score;
     };
 
+    // The score goes by variables that the game only brings up to date in its status display (common event 2: gold,
+    // the stats, FAITH and VIRTUE). Measured around a received item they would still be the old ones, and the item
+    // would count for the souls a moment later. Those commands of the event are carried out first.
+    const freshScore = () => {
+        const copies = $dataCommonEvents[COMMON_EVENT_GUI].list.filter(
+            item => item.code === 122 && item.indent === 0 && item.parameters[3] === 3
+        );
+        const interpreter = new Game_Interpreter();
+        interpreter.setup(copies.concat([command(0, 0, [])]));
+        interpreter.update();
+        return runScore();
+    };
+
     // Souls spent on cards are gone, the milestones they reached before stay checked
     // 0 without a session: the labels that show it are asked for their text in the normal game too
     const soulTotal = () => {
@@ -1499,9 +1522,9 @@
     // relic 51 to 777, the card Shadow Cat Assam 222), so the score it adds is taken off again.
     const withoutSouls = give => {
         const s = state();
-        const before = s.runBase != null ? runScore() : null;
+        const before = s.runBase != null ? freshScore() : null;
         give();
-        const after = before !== null ? runScore() : null;
+        const after = before !== null ? freshScore() : null;
         if (after !== null) {
             s.runBase += after - before;
         }
@@ -1596,7 +1619,7 @@
         // Every run adds its souls from 0: what the origin, the starting set and the relics from the multiworld are worth
         // in the score is taken off. The DLC's origin alone would start a run at 115.
         if (s.runBase == null && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
-            s.runBase = runScore();
+            s.runBase = freshScore();
         }
         while (s.itemIndex < AP.items.length) {
             const item = AP.items[s.itemIndex];
@@ -2344,6 +2367,7 @@
 
     // Runs at the start of common event 86, while the standby screen is still shown
     AP.prepareFloorEvent = interpreter => {
+        trace("prepare");
         if (!AP.standbyAgain) {
             AP.standbyMenu = null;
         }
@@ -2393,6 +2417,7 @@
     // "Back" in the floor choice: common event 86 has only turned the standby screen's switches off by then, its
     // pictures are still there. With the switches back on and the event left, the screen takes input again.
     AP.backToStandby = interpreter => {
+        trace("back");
         AP.standbyBack = false;
         for (const switchId of [SWITCH_GUI, SWITCH_STANDBY_IMAGE, SWITCH_STANDBY_CONTROL]) {
             $gameSwitches.setValue(switchId, true);
@@ -2752,6 +2777,10 @@
             );
         }
         const on = [1, 2, 16, 17, 66, 86, 87, 88, 89, 90, 101, 294].filter(id => $gameSwitches.value(id));
+        const picture = $gameScreen.picture(100);
+        const spriteset = SceneManager._scene && SceneManager._scene._spriteset;
+        const sprites = spriteset && spriteset._pictureContainer ? spriteset._pictureContainer.children : [];
+        const sprite = sprites.find(other => other._pictureId === 100);
         const s = state();
         return [
             "map " + $gameMap.mapId() + ", floor " + $gameVariables.value(VARIABLE_FLOOR) + ", screen " +
@@ -2764,6 +2793,22 @@
                 (s ? !!s.runOver : "-") + ", standbyChoice " + !!AP.standbyChoice + ", menu " + AP.standbyMenu +
                 ", again " + !!AP.standbyAgain + ", chosen " + AP.chosenFloorEvent,
             "bgm " + (AudioManager._currentBgm ? AudioManager._currentBgm.name : "none"),
+            // The standby screen takes its input in the parallel common event 89 and its clicks through picture 100
+            "parallel: " + [88, 89].map(id => {
+                const event = ($gameMap._commonEvents || []).find(other => other._commonEventId === id);
+                const own = event && event._interpreter;
+                if (!own) {
+                    return "CE " + id + (event ? " no interpreter" : " not on this map");
+                }
+                return "CE " + id + " at " + own._index + (own._list ? "/" + own._list.length : " (no list)") +
+                    (own._waitMode ? " waits for " + own._waitMode : "") +
+                    (own._waitCount ? " waits " + own._waitCount : "") +
+                    (own._childInterpreter ? " in a called event" : "");
+            }).join(", "),
+            "picture 100: " + (picture ? "'" + picture.name() + "' opacity " + picture.opacity() + " button " +
+                picture.mzkp_commonEventId : "none") + ", sprite " + (sprite ? "visible " + sprite.visible +
+                " bitmap " + (sprite.bitmap ? sprite.bitmap.width + "x" + sprite.bitmap.height : "none") : "none"),
+            "trace: " + (AP.traced || []).join(" | "),
         ].join("\n");
     };
 
