@@ -1133,7 +1133,7 @@
         58: {"Remove the Portrait": "the donated Gold ×3", "Use Black Key": "all Stats +3, later +1"},
         59: {"Seduce the King": "LEWD +4, VIRTUE -10, the king dies", "Show Ring": "Aetolus Flag"},
         60: {"Hoist Flag": "uses Aetolus Flag"},
-        61: {"Open the Door": "White Key and Black Key: Monster quest"},
+        61: {"Open the Door": "White Key and Black Key: Monster quest, without them FAITH +10", "Apologize": "FAITH +10"},
         591: {"Wear Clothes": "ends Nude", "Wear a swimsuit": "ends Nude", "Stay as you are": "LUX +50"},
         592: {"I want to fight too": "DEF +1", "Leave him ＜Loyal Dog Lassie＞ Lost": "Max LP +30", "I don’t know what to do": "opens the Checkpoint"},
         593: {"Show contempt for the man": "FAITH -5", "Praise the woman": "FAITH +5", "Release desire": "LEWD +2"},
