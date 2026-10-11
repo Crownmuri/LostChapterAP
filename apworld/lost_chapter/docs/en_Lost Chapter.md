@@ -46,7 +46,7 @@ Defeating the last boss, which needs all four Heavenly Kings defeated first. The
   of a boss floor, once Migwarners (White Door, takes the White Key) and Bordosegeia (Black Door, takes the Black
   Key) are both defeated in the same run. Needs the `include_dlc` option.
 
-The `virgin_run` option adds to any of these that the Virginity status has to be intact. Losing it then ends the
+The `virgin_mode` option adds to any of these that the Virginity status has to be intact. Losing it then ends the
 run on the spot and the "Lose Virginity" title check only holds filler. It has no story difference and is only
 there for those who want the challenge.
 

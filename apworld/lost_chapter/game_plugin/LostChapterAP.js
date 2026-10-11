@@ -723,8 +723,8 @@
 
     const isVirgin = () => $gameActors.actor(1).isStateAffected(STATE_VIRGINITY);
 
-    // The virgin_run option: a win only counts with the Virginity state intact
-    const winCounts = () => !option("virgin_run") || isVirgin();
+    // The virgin_mode option: a win only counts with the Virginity state intact
+    const winCounts = () => !option("virgin_mode") || isVirgin();
 
     const lastBossDefeated = () => {
         if (!winCounts()) {
@@ -746,13 +746,13 @@
 
     const checkTitle = title => check(SWITCH_OFFSET + TITLE_SWITCH_BASE + title);
 
-    // Virgin run: losing the Virginity state ends the run the way running out of LP does. The fight is lost, or
+    // Virgin mode: losing the Virginity state ends the run the way running out of LP does. The fight is lost, or
     // the event plays out and the game over follows on the way to the next floor.
     const _Game_Battler_removeState = Game_Battler.prototype.removeState;
     Game_Battler.prototype.removeState = function(stateId) {
         const lost = stateId === STATE_VIRGINITY && this.isStateAffected(stateId) && this === $gameActors.actor(1);
         _Game_Battler_removeState.apply(this, arguments);
-        if (lost && bound() && option("virgin_run") && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
+        if (lost && bound() && option("virgin_mode") && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             checkTitle(TITLE_LOSE_VIRGINITY);
             notify("Virginity lost, this run is over");
             // An event can go on to heal the player (a night at the Inn), so the run is marked as over as well
@@ -1643,7 +1643,7 @@
         }
         const s = state();
         if (AP.pendingDeath && $gameVariables.value(VARIABLE_FLOOR) >= 1 && !s.runOver) {
-            // Like a virgin run that is lost: the fight is lost, or the game over follows before the next floor
+            // Like virgin mode with the state lost: the fight is lost, or the game over follows before the next floor
             notify("DeathLink: " + AP.pendingDeath + " died, this run is over");
             AP.pendingDeath = null;
             AP.deathReceived = true;

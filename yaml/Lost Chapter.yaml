@@ -12,7 +12,7 @@ Lost Chapter:
   goal: normal_end
   # The goal only counts with the Virginity status intact, losing it ends the run.
   # No story difference, only for those who want the challenge
-  virgin_run: false
+  virgin_mode: false
 
   # Adds the DLC to the multiworld: checks for its monsters, events, titles and relics where applicable.
   # Only turn this on when you own the DLC

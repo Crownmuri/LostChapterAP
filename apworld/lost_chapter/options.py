@@ -17,7 +17,7 @@ class Goal(Choice):
     DLC End: defeat Magislilia, the last boss of the DLC, who waits behind the last door once Migwarners (White
     Door) and Bordosegeia (Black Door) are defeated in the same run. Needs Include DLC.
 
-    Virgin Run adds to any of these that the Virginity status has to be intact.
+    Virgin Mode adds to any of these that the Virginity status has to be intact.
     """
     display_name = "Goal"
     option_normal_end = 0
@@ -30,14 +30,14 @@ class Goal(Choice):
         return super().get_option_name(value).replace("Dlc", "DLC")
 
 
-class VirginRun(Toggle):
+class VirginMode(Toggle):
     """
     The goal only counts with the Virginity status intact, whichever goal it is.
 
     Losing the Virginity status ends the run on the spot, like running out of LP, and the "Lose Virginity" title
     check only holds filler. This has no story difference, it is only there for those who want the challenge.
     """
-    display_name = "Virgin Run"
+    display_name = "Virgin Mode"
 
 
 class IncludeDLC(Toggle):
@@ -250,7 +250,7 @@ class SoulMultiplier(Range):
 @dataclass
 class LostChapterOptions(PerGameCommonOptions):
     goal: Goal
-    virgin_run: VirginRun
+    virgin_mode: VirginMode
     include_dlc: IncludeDLC
     relicsanity: Relicsanity
     shuffle_keys: ShuffleKeys

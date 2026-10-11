@@ -13,7 +13,7 @@ from .options import LostChapterOptions
 
 
 SLOT_DATA_OPTIONS = (
-    "goal", "virgin_run", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
+    "goal", "virgin_mode", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
     "finisher_move", "field_exploration", "final_boss_floor", "soul_multiplier", "death_link", "battle_rewards",
 )
 
@@ -341,8 +341,8 @@ class LostChapterWorld(World):
                 lambda state, item=door_keys[king]: state.has(item, player)
             )
 
-        # In a virgin run the "Lose Virginity" title costs a run, so nothing worth having is put there
-        if self.options.virgin_run:
+        # In virgin mode the "Lose Virginity" title costs a run, so nothing worth having is put there
+        if self.options.virgin_mode:
             self.get_location(f"Title: {data.TITLES[data.TITLE_LOSE_VIRGINITY]}").progress_type = (
                 LocationProgressType.EXCLUDED
             )

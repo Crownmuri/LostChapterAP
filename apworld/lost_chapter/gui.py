@@ -258,8 +258,8 @@ class LostChapterTabLayout(BoxLayout):
             requirement = data.TITLE_REQUIREMENTS[number]
             stat = data.TITLE_STATS.get(number)
 
-            # In a virgin run this title ends the run it is obtained in
-            if number == data.TITLE_LOSE_VIRGINITY and ctx.slot_data.get("virgin_run"):
+            # In virgin mode this title ends the run it is obtained in
+            if number == data.TITLE_LOSE_VIRGINITY and ctx.slot_data.get("virgin_mode"):
                 requirement += " (game over)"
 
             if checked:
