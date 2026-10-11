@@ -239,6 +239,7 @@
     // The game calls common event 52 "Small Room" like common event 35, the apworld calls it "Small Room 2"
     const EVENT_ALIASES = { "small room 2": 52 };
     const CHOICE_MAX_ROWS = 5;
+    const STANDBY_MAX_ROWS = 9; // what fits on the standby screen, a longer list scrolls
     const STANDBY_CHOICE_Y = 315; // in the 600 high UI area, which sits 60 below the top of the screen
 
     const TITLE_COUNT = 16; // title n is held as armor n once its condition is met
@@ -2342,6 +2343,7 @@
     // standby question again unless it settles the floor.
     const askStandby = (interpreter, entries) => {
         $gameMessage.setChoices(entries.map(entry => entry[0]), 0, entries.length - 1);
+        limitChoiceRows(STANDBY_MAX_ROWS);
         if ($gameMessage.setChoiceEnables) {
             $gameMessage.setChoiceEnables(entries.map(entry => entry[1]));
         }
@@ -2588,6 +2590,7 @@
             names.push("Back");
         }
         $gameMessage.setChoices(names, 0, shop ? names.length - 1 : -1);
+        limitChoiceRows(STANDBY_MAX_ROWS);
         if (canGray) {
             const open = eventId => unlocked(eventId) && !forced;
             $gameMessage.setChoiceEnables([true].concat(offered.map(open), menus.map(() => true), [true]));
@@ -2887,9 +2890,9 @@
     };
 
     // The game's MPP_ChoiceEX decides how many choices are shown before the list scrolls
-    const limitChoiceRows = () => {
+    const limitChoiceRows = rows => {
         if ($gameMessage.setChoicePos) {
-            $gameMessage.setChoicePos(-1, -1, CHOICE_MAX_ROWS);
+            $gameMessage.setChoicePos(-1, -1, rows || CHOICE_MAX_ROWS);
         }
     };
 
