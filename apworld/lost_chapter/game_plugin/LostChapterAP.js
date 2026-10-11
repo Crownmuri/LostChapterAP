@@ -182,7 +182,8 @@
         ],
     };
     const SHOP_LIMITS = { forgetMeNot: 2, pieris: 1 }; // how many of each a run can buy
-    const SHOP_PRICES = { reroll: 10, pick: 40, forgetMeNot: 150, pieris: 300, heal: 20, cards: 10, vial: 50 };
+    const SHOP_PRICES = { reroll: 20, pick: 40, forgetMeNot: 150, pieris: 300, heal: 20, cards: 20, vial: 50 };
+    const FLAT_PRICES = ["reroll", "cards"]; // the others double with every 20 floors
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
     // common event 16 takes the choice while its switch is on
     const SWITCH_DROP_CONTROL = 16;
@@ -2206,7 +2207,8 @@
     };
 
     // Asks what `floor` holds and hands the switch id to `callback`. False when there is nothing to choose from.
-    const shopPrice = (name, floor) => SHOP_PRICES[name] * Math.pow(2, Math.floor((Math.max(floor, 1) - 1) / 20));
+    const shopPrice = (name, floor) =>
+        SHOP_PRICES[name] * (FLAT_PRICES.includes(name) ? 1 : Math.pow(2, Math.floor((Math.max(floor, 1) - 1) / 20)));
 
     const spendSouls = cost => {
         state().spent = (state().spent || 0) + cost;
