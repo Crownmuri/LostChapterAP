@@ -181,7 +181,7 @@
             [110, "Double LEWD Rate", 233],
         ],
     };
-    const SHOP_LIMITS = { forgetMeNot: 2, pieris: 1 }; // how many of each a run can buy
+    const SHOP_LIMITS = { forgetMeNot: 2, pieris: 2 }; // how many of each a run can buy
     const SHOP_PRICES = { reroll: 10, pick: 40, forgetMeNot: 150, pieris: 300, heal: 20, cards: 20, vial: 50 };
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
     // common event 16 takes the choice while its switch is on

@@ -146,7 +146,7 @@ Game changes in a session (the plugin patches the event data in memory at load, 
   starting set and received relics are worth nothing, so every run starts at 0) and less what a received item or
   a card taken from the multiworld adds to it. The best score the current run reached, times the
   `soul_multiplier` option, is its souls: they add up over the runs of a seed and are spent in the soul shop, the last entry of the floor choice: a new set of floor
-  events (10), a floor event of your choice among the unlocked ones (40), a Forget-Me-Not (150, two a run), a Pieris (300, one a run, DLC),
+  events (10), a floor event of your choice among the unlocked ones (40), a Forget-Me-Not (150, two a run), a Pieris (300, two a run, DLC),
   10 LP or 10 RP (20 each). While the three cards of a won fight are up, W buys three other ones (20). The prices are the same on every floor. Souls no longer send checks. The standby screen shows the total and the next milestone.
 - Checkpoints: the first floor after a boss floor (21, 41, 61, ...) is saved to a file of its own
   (`checkpoint1.rmmzsave` is floor 21). A new run asks whether to start over or go on from one of them, with
