@@ -186,8 +186,8 @@ def title_events(number: int, dlc: bool) -> List[str]:
 # taking the same events over and over, but that is out of logic: stats, cards and the swings of FAITH and VIRTUE
 # take a while to add up.
 TITLE_FLOORS: Dict[int, int] = {
-    2: 41,   # FAITH 30 or less
-    3: 41,   # VIRTUE 30 or less
+    2: 21,   # FAITH 30 or less
+    3: 21,   # VIRTUE 30 or less
     5: 21,   # LEWD 15 or more
     8: 21,   # Use 7 cards during 1 turn
     9: 21,   # 7 ailments at the same time: the enemies of the first floors do not inflict that many
