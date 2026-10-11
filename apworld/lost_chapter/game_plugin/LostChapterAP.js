@@ -80,6 +80,8 @@
     const SWITCH_BEFORE_BOSS = 62;
     const SWITCH_LAST_BOSS = 64;
     const SWITCH_FIGHT = 65;
+    const SWITCH_STANDBY_END = 86; // runs common event 86, which leaves the standby screen for the next floor
+    const SWITCH_STANDBY_IMAGE = 88; // on while the standby screen is shown
     const SWITCH_STANDBY_CONTROL = 89; // on while the standby screen takes input
     const VARIABLE_LP = 42;
     const VARIABLE_FLOOR = 11;
@@ -1955,16 +1957,23 @@
         const switchIds = [SWITCH_FIGHT].concat(offered);
         const names = ["Battle"].concat(offered.map(offerName));
         if (shop) {
-            names.push("Soul Shop (" + soulTotal() + " souls)");
+            // Back is also what cancelling does. The roll of the floor stands, so a relic bought in the shop can be
+            // used from the standby screen before the floor is chosen.
+            names.push("Soul Shop (" + soulTotal() + " souls)", "Back");
         }
-        $gameMessage.setChoices(names, 0, -1);
+        $gameMessage.setChoices(names, 0, shop ? names.length - 1 : -1);
         if (canGray) {
-            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked), [true]));
+            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked), [true, true]));
         }
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
         $gameMessage.setChoiceCallback(index => {
-            if (index >= switchIds.length) {
+            if (index > switchIds.length) {
+                AP.standbyChoice = false;
+                AP.standbyBack = true;
+                return;
+            }
+            if (index === switchIds.length) {
                 AP.standbyMenu = "shop";
                 AP.standbyAgain = true;
                 return;
@@ -1981,6 +1990,7 @@
             AP.standbyMenu = null;
         }
         AP.standbyAgain = false;
+        AP.standbyBack = false;
         AP.chosenFloorEvent = 0;
         if (bound() && state().runOver) {
             $gameActors.actor(1).setHp(0);
@@ -2016,6 +2026,17 @@
         if (!offered) {
             AP.chosenFloorEvent = SWITCH_FIGHT;
         }
+    };
+
+    // "Back" in the floor choice: common event 86 has only turned the standby screen's switches off by then, its
+    // pictures are still there. With the switches back on and the event left, the screen takes input again.
+    AP.backToStandby = interpreter => {
+        AP.standbyBack = false;
+        for (const switchId of [SWITCH_GUI, SWITCH_STANDBY_IMAGE, SWITCH_STANDBY_CONTROL]) {
+            $gameSwitches.setValue(switchId, true);
+        }
+        $gameSwitches.setValue(SWITCH_STANDBY_END, false);
+        interpreter.command115();
     };
 
     // The choice of the standby screen sits below its lines instead of over them. Placed here, after the game and
@@ -2458,6 +2479,10 @@
                 command(355, 0, ["LostChapterAP.prepareFloorEvent(this);"]),
                 command(111, 0, [12, "LostChapterAP.standbyAgain"]),
                 command(119, 1, [LABEL_STANDBY]),
+                command(0, 1, []),
+                command(412, 0, []),
+                command(111, 0, [12, "LostChapterAP.standbyBack"]),
+                command(355, 1, ["LostChapterAP.backToStandby(this);"]),
                 command(0, 1, []),
                 command(412, 0, [])
             );
