@@ -1,4 +1,8 @@
+import os
+
 from typing import Dict, List, Optional, Tuple
+
+import Utils
 
 from kvui import GameManager
 
@@ -27,6 +31,13 @@ SQUARE = (0.8, 0.8, 0.8)
 IN_LOGIC = (0.25, 0.82, 0.38)
 BY_GRINDING = (1.0, 0.82, 0.38)
 OUT_OF_LOGIC = (0.88, 0.31, 0.31)
+
+
+def check_mark() -> str:
+    """The mark behind a title that is done. The font of the client has no check mark, this one of its fonts does."""
+    font = Utils.local_path("data", "fonts", "DejaVuSans.ttf")
+
+    return f" [font={font.replace(os.sep, '/')}]✓[/font]" if os.path.isfile(font) else ""
 
 
 EVENT_LOCATIONS: Dict[int, List[int]] = {event_id: data.event_locations(event_id) for event_id in data.EVENTS}
@@ -130,6 +141,7 @@ class LostChapterTabLayout(BoxLayout):
         super().__init__(orientation="vertical", spacing="6dp", padding="12dp")
 
         self.ctx = ctx
+        self.done_mark = check_mark()
 
         self.status_label = label(font_size="14dp", valign="middle", size_hint_y=None, height="24dp")
         self.run_label = label(font_size="17dp", valign="middle", size_hint_y=None, height="52dp")
@@ -267,7 +279,7 @@ class LostChapterTabLayout(BoxLayout):
                 requirement += " (game over)"
 
             if checked:
-                widget.text = f"[color={COLOR_DONE}]{data.TITLES[number]}  {requirement}, done[/color]"
+                widget.text = f"[color={COLOR_DONE}]{data.TITLES[number]}  {requirement}{self.done_mark}[/color]"
             else:
                 if stat and connected and stat in ctx.status:
                     requirement += f" [color={COLOR_VALUE}](now {ctx.status[stat]})[/color]"
