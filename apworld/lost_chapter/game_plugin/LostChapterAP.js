@@ -2431,7 +2431,7 @@
             names.push("\\c[" + COLOR_SOUL_SHOP + "]Soul Shop (" + soulTotal() + " souls)\\c[0]");
             if (!OFFLINE) {
                 menus.push("boons");
-                names.push("\\c[" + COLOR_BOON_SHOP + "]Boon Shop\\c[0]");
+                names.push("\\c[" + COLOR_BOON_SHOP + "]Boon Shop (" + soulTotal() + " souls)\\c[0]");
             }
             names.push("Back");
         }
