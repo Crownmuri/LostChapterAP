@@ -1022,7 +1022,7 @@
         32: {"The Man Is in the Wrong %": "Max LP +5", "The Woman Is in the Wrong %": "Max RP +5"},
         33: {"Receive clothes": "ends Nude", "Refuse the offer": "FAITH -5", "Don't Need Anything": "FAITH -5"},
         34: {"Buy -30 G": "Random Stat +1", "Buy -50 G": "chosen Stat +1", "Invest Lose ＜Investment＞": "better goods from now on", "Attack from behind": "Pieris"},
-        35: {"Drink the Blue Potion": "Max LP +5", "Drink the Red Potion": "breasts larger or smaller", "Drink the Yellow Potion": "ends Regression"},
+        35: {"Drink the Blue Potion": "Max LP +5", "Drink the Red Potion": "Bosomy on or off", "Drink the Yellow Potion": "ends Regression"},
         36: {"Bet on Heads": "heads: Gold +200, tails: LP +", "Bet on Tails": "tails: LP ++, heads: Gold +100", "Bet your life": "Clown Mask, Pieris"},
         37: {"Pick It Up": "LP -2, Forget-Me-Not", "Water It": "lose Pretty Water, all Stats +1"},
         38: {"Obtain": "Promise Pendant", "Overlook": "Promise Pendant", "Can't Do That": "LP damage, ends the Monster quest", "Tell Her the Location of the Man's Grave": "Promise Pendant"},
@@ -1031,7 +1031,7 @@
         41: {"Yes": "Moon Hair Ornament, VIRTUE +5", "No": "FAITH -5", "Play With Her": "RP +5", "Dodge Her Question": "FAITH -5"},
         42: {"Leave him alone＜HEALING＞ Lost": "Dusk Ring, VIRTUE +5", "So Be It Lose ＜Healing＞": "Dusk Ring, VIRTUE +5", "Can't Do Anything": "Collar Key", "Free him from suffering": "Pieris", "Accept His Request": "Collar Key"},
         43: {"Beckon Dog Over": "Max RP +5", "Unlock the Dog's Collar": "obtain Faithful Dog Lassi", "Release from curse": "Pieris"},
-        44: {"Pat": "LEWD +2, LEWD ≧ 10: a card", "Hug": "Bosom Enlargement, else LEWD +2"},
+        44: {"Pat": "LEWD +2, LEWD ≧ 10: a card", "Hug": "Bosomy, else LEWD +2"},
         45: {"Rummage Through Their Belongings %": "Gold, VIRTUE -3", "Rummage Again %": "Gold, VIRTUE -3", "Flee": "lose Lassi, VIRTUE -10", "Resign Yourself": "lose that Gold, LEWD +3", "Make up your mind": "fight: Pieris", "Give in to their demands": "lose that Gold, LEWD +3"},
         46: {"Entrust": "ends Nude and Torn Clothes", "Attack from behind": "Pieris"},
         47: {"Cross the River %": "LP -2, DEF +1, fail: LP -4", "Take a Detour": "AGL +1"},
@@ -2146,7 +2146,8 @@
     // The name of an event in the floor choice, with its open checks behind it
     const offerName = eventId => {
         const left = checksLeft(eventId);
-        if (left === null) {
+        // An event that is still locked cannot be picked, how much it holds says nothing there
+        if (left === null || !state().events.includes(eventId)) {
             return eventName(eventId);
         }
         return eventName(eventId) + (left ? " (" + left + ")" : " \\c[8](0)\\c[0]");
@@ -3312,7 +3313,7 @@
             reset: "\uff1cHealing\uff1e required: VIRTUE +5",
         },
         // Cat, whose own card only exists with the DLC
-        44: { scenes: [{ kind: 8, id: 39, label: "Max RP +5", optional: true }], reset: "LEWD +2 / Bosom Enlargement" },
+        44: { scenes: [{ kind: 8, id: 39, label: "Max RP +5", optional: true }], reset: "LEWD +2 / Bosomy" },
         // Throne
         59: { scenes: [{ kind: 9, id: 59, label: "LP +10" }], reset: "Seduce the King" },
     };
