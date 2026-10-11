@@ -161,14 +161,16 @@
     // Boons: souls -> [bonus id of common event 418, name, the switch it turns on if it is one, needs the
     // Regression State]. BOON_TIERS names the price groups.
     const COMMON_EVENT_BONUS = 418;
-    const BOON_TIERS = { 200: "Training", 300: "Resources", 400: "Body", 600: "Combat", 800: "Great Boons" };
+    const BOON_TIERS = { 200: "Training", 300: "Minor Boons", 400: "Body", 600: "Combat", 800: "Great Boons" };
+    const COLOR_SOUL_SHOP = 4; // text colors of the game's window skin: light blue
+    const COLOR_BOON_SHOP = 2; // orange
     const BOONS = {
         200: [
             [1, "STR +2"], [2, "DEF +2"], [3, "MAG +2"], [4, "AGL +2"], [5, "Max LP +10"], [6, "Max RP +10"],
             [7, "LP Regen +1"], [8, "RP Regen +1"], [17, "FAITH +10"], [18, "FAITH -10"], [19, "VIRTUE +10"],
-            [20, "VIRTUE -10"], [109, "Acquired Gold +100 G", 232],
+            [20, "VIRTUE -10"],
         ],
-        300: [[9, "Gold +200"], [10, "LEWD +5"], [21, "Rare Drop Rate +3"]],
+        300: [[9, "Gold +200"], [109, "Acquired Gold +100 G", 232], [10, "LEWD +5"], [21, "Rare Drop Rate +3"]],
         400: [
             [15, "Womb Crest"], [16, "Bosomy", 0, true], [117, "Swimsuit"], [118, "Beastification"],
             [107, "Regression", 0, true],
@@ -180,7 +182,7 @@
         ],
     };
     const SHOP_LIMITS = { forgetMeNot: 2, pieris: 1 }; // how many of each a run can buy
-    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 100, pieris: 200, heal: 20, cards: 20, vial: 50 };
+    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 150, pieris: 300, heal: 20, cards: 20, vial: 50 };
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
     // common event 16 takes the choice while its switch is on
     const SWITCH_DROP_CONTROL = 16;
@@ -2239,11 +2241,6 @@
         if (regression && regression.name.startsWith("Regression") && actor.isStateAffected(STATE_REGRESSION)) {
             entries.push(entry("Yellow Vial: ends Regression", "vial", () => actor.removeState(STATE_REGRESSION)));
         }
-        if (!OFFLINE) {
-            entries.push(["Boons", true, () => {
-                AP.standbyMenu = "boons";
-            }]);
-        }
         entries.push(
             entry("LP +" + SHOP_HEAL, "heal", () => heal(() => actor.gainHp(SHOP_HEAL))),
             entry("RP +" + SHOP_HEAL, "heal", () => heal(() => actor.gainMp(SHOP_HEAL))),
@@ -2304,7 +2301,7 @@
             }
         }
         entries.push(["Back (" + soulTotal() + " souls)", true, () => {
-            AP.standbyMenu = price ? "boons" : "shop";
+            AP.standbyMenu = price ? "boons" : null;
         }]);
         askStandby(interpreter, entries);
     };
@@ -2380,25 +2377,33 @@
         AP.offer = { floor: floor, events: offered };
         const switchIds = [SWITCH_FIGHT].concat(offered);
         const names = ["Battle"].concat(offered.map(offerName));
+        const menus = [];
         if (shop) {
             // Back is also what cancelling does. The roll of the floor stands, so a relic bought in the shop can be
             // used from the standby screen before the floor is chosen.
-            names.push("Soul Shop (" + soulTotal() + " souls)", "Back");
+            // The shops stand out from the floor events by their color. Offline the game has its own bonus shop.
+            menus.push("shop");
+            names.push("\\c[" + COLOR_SOUL_SHOP + "]Soul Shop (" + soulTotal() + " souls)\\c[0]");
+            if (!OFFLINE) {
+                menus.push("boons");
+                names.push("\\c[" + COLOR_BOON_SHOP + "]Boon Shop\\c[0]");
+            }
+            names.push("Back");
         }
         $gameMessage.setChoices(names, 0, shop ? names.length - 1 : -1);
         if (canGray) {
-            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked), [true, true]));
+            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked), menus.map(() => true), [true]));
         }
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);
         $gameMessage.setChoiceCallback(index => {
-            if (index > switchIds.length) {
+            if (index >= switchIds.length + menus.length) {
                 AP.standbyChoice = false;
                 AP.standbyBack = true;
                 return;
             }
-            if (index === switchIds.length) {
-                AP.standbyMenu = "shop";
+            if (index >= switchIds.length) {
+                AP.standbyMenu = menus[index - switchIds.length];
                 AP.standbyAgain = true;
                 return;
             }
