@@ -62,6 +62,7 @@
     const IMAGE_RETRIES = 3;
     const IMAGE_RETRY_MS = 250;
     const SESSION_FILE = "archipelago_session.json";
+    const LOG_FILE = "archipelago_log.txt";
     const MAP_TITLE = 3;
 
     // Keep in sync with apworld/lost_chapter/data.py
@@ -453,7 +454,47 @@
     // Every floor event is open, relics and cards are where the game has them, and the bonus shop is back.
     const OFFLINE = !!(SESSION && SESSION.offline);
 
+    // A log of the session next to the game, started anew with every launch: the game is shipped without the
+    // developer console, so this is where its errors and the plugin's own messages can be read afterwards
+    const writeLog = text => {
+        if (!SESSION) {
+            return;
+        }
+        try {
+            const file = require("path").join(gameFolder(), LOG_FILE);
+            const frame = typeof Graphics !== "undefined" ? Graphics.frameCount : 0;
+            require("fs").appendFileSync(file, new Date().toISOString() + " f" + frame + " " + text + "\n");
+        } catch (error) {
+            // A log that cannot be written is no reason to stop
+        }
+    };
+    AP.log = writeLog;
+
     if (SESSION) {
+        try {
+            require("fs").writeFileSync(require("path").join(gameFolder(), LOG_FILE), "");
+        } catch (error) {
+            // See writeLog
+        }
+        writeLog("plugin " + VERSION + " started, session " + JSON.stringify(SESSION));
+        window.addEventListener("error", event => {
+            writeLog("ERROR " + event.message + " at " + event.filename + ":" + event.lineno + "\n" +
+                (event.error && event.error.stack ? event.error.stack : ""));
+        });
+        window.addEventListener("unhandledrejection", event => {
+            writeLog("REJECTION " + (event.reason && event.reason.stack ? event.reason.stack : event.reason));
+        });
+        for (const level of ["log", "warn", "error"]) {
+            const original = console[level];
+            console[level] = function() {
+                const text = Array.from(arguments).map(String).join(" ");
+                // Of the ordinary messages only the plugin's own
+                if (level !== "log" || text.startsWith("[AP]")) {
+                    writeLog(level.toUpperCase() + " " + text);
+                }
+                return original.apply(this, arguments);
+            };
+        }
         // The game now and then fails to load a picture and shows nothing in its place, with or without this
         // plugin: a card on the deck screen for one. A picture that failed is asked for again, a few times.
         const _Bitmap_onError = Bitmap.prototype._onError;
@@ -735,6 +776,7 @@
     // The last things that happened around the standby screen, for "/dev stuck"
     const trace = text => {
         AP.traced = (AP.traced || []).concat([Graphics.frameCount + " " + text]).slice(-TRACE_LENGTH);
+        writeLog("trace " + text);
     };
 
     const _Game_Switches_setValue = Game_Switches.prototype.setValue;
@@ -2841,8 +2883,11 @@
             return "The game has not finished loading";
         }
         try {
-            return handler(words.slice(1));
+            const result = handler(words.slice(1));
+            writeLog("dev " + words.join(" ") + "\n" + result);
+            return result;
         } catch (error) {
+            writeLog("dev " + words.join(" ") + " failed\n" + error.stack);
             return "Failed: " + error.message;
         }
     };

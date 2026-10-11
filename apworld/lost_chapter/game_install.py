@@ -14,6 +14,7 @@ PLUGIN_NAME = "LostChapterAP"
 PLUGIN_FILE = f"{PLUGIN_NAME}.js"
 BACKUP_SUFFIX = ".ap_backup"
 SESSION_FILE = "archipelago_session.json"
+LOG_FILE = "archipelago_log.txt"
 
 _ENTRY_PATTERN = re.compile(r',?\r?\n\{"name":"' + PLUGIN_NAME + r'".*?\}\}(?=\r?\n)')
 
@@ -121,8 +122,10 @@ def uninstall_plugin(game_path: str) -> None:
 
     plugin_file = os.path.join(game_path, "js", "plugins", PLUGIN_FILE)
 
-    if os.path.exists(plugin_file):
-        os.remove(plugin_file)
+    # The plugin and the log it keeps of a session
+    for leftover in (plugin_file, os.path.join(game_path, LOG_FILE)):
+        if os.path.exists(leftover):
+            os.remove(leftover)
 
     clear_session(game_path)
 
