@@ -3953,6 +3953,49 @@
         }
     };
 
+    // Fights (common event 65): an enemy that was not defeated yet in this multiworld is likelier to be the one of
+    // a fight, so its first victory does not wait on luck. With none of those left the game's own roll stands.
+    const COMMON_EVENT_FIGHT = 65;
+    const VARIABLE_TROOP_ROLL = 21;
+    const UNFOUGHT_ENEMY_WEIGHT = 6; // times as likely as an enemy that was defeated before
+    const LAST_BASE_TROOP = 21;
+    AP.rollEnemy = () => {
+        if (!shuffled() || !option("first_victories")) {
+            return;
+        }
+        // Three more enemies with every 20 floors, the ones of the DLC from floor 161 on
+        const floor = Math.max($gameVariables.value(VARIABLE_FLOOR), 1);
+        const top = floor > 160 ? AP.troopMax : Math.min(LAST_BASE_TROOP, 3 * Math.ceil(floor / BOSS_FLOOR_INTERVAL));
+        const open = troopId =>
+            (troopId <= LAST_BASE_TROOP || !!option("include_dlc")) && !isSent(TROOP_OFFSET + troopId);
+        const troops = [];
+        for (let troopId = 1; troopId <= Math.min(top, AP.troopMax); troopId++) {
+            troops.push(troopId);
+        }
+        if (!troops.some(open)) {
+            return;
+        }
+        const weight = troopId => (open(troopId) ? UNFOUGHT_ENEMY_WEIGHT : 1);
+        let roll = Math.random() * troops.reduce((sum, troopId) => sum + weight(troopId), 0);
+        const picked = troops.find(troopId => (roll -= weight(troopId)) < 0) || troops[troops.length - 1];
+        $gameVariables.setValue(VARIABLE_TROOP_ROLL, picked);
+    };
+
+    const patchFight = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_FIGHT].list;
+        const fights = list.filter(item => item.code === 301 && item.parameters[0] === 0);
+        const first = list.findIndex(item => {
+            const p = item.parameters;
+            return item.code === 111 && item.indent === 0 && p[0] === 1 && p[1] === VARIABLE_TROOP_ROLL && p[3] === 1;
+        });
+        if (first < 0 || fights.length === 0) {
+            console.error("[AP] Common event 65 has an unexpected layout, the enemies are rolled as the game does");
+            return;
+        }
+        AP.troopMax = Math.min(CHECK_TROOP_MAX, Math.max(...fights.map(item => item.parameters[1])));
+        list.splice(first, 0, command(355, 0, ["LostChapterAP.rollEnemy();"]));
+    };
+
     const patchCheckpoint = () => {
         const list = $dataCommonEvents[COMMON_EVENT_STANDBY_START].list;
         const autosave = list.findIndex(item => item.code === 355 && String(item.parameters[0]).includes("requestAutosave"));
@@ -4103,6 +4146,7 @@
             patchStandbyVerse();
             patchStandbyTip();
             patchCheckpoint();
+            patchFight();
             patchDeckSlots();
             patchDrops();
             patchCardRolls();
