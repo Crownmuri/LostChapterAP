@@ -358,12 +358,12 @@
 
     // The cards floor events hand out. Which of them are checks comes with the slot data.
     const CARD_ITEMS = [39, 40, 60, 71, 74, 76, 77, 78, 79, 80];
-    // What taking a received card into the deck costs in souls: 100 for Strip, 200 for the other lewd cards (Ride
-    // Back, Encase, Taunt, Candylick, Ride On, Projection, Temptation), and for Faithful Dog Lassi and Shadow Cat
+    // What taking a received card into the deck costs in souls: 400 for Ride On, Ride Back, Encase and Candylick,
+    // 200 for the other lewd cards (Strip, Taunt, Projection, Temptation), and for Faithful Dog Lassi and Shadow Cat
     // Assam what the game's score gives for holding them (111 and 222), which they do not add either.
     // 15, 17, 18 and 24 are the single cards of the bonus shop (BONUS_CARDS of apworld/lost_chapter/data.py)
     const CARD_COSTS = {
-        15: 100, 17: 100, 18: 100, 24: 100, 77: 100, 60: 200, 71: 200, 74: 200, 76: 200, 78: 200, 79: 200, 80: 200,
+        15: 100, 17: 100, 18: 100, 24: 100, 77: 200, 60: 400, 71: 400, 74: 200, 76: 400, 78: 400, 79: 200, 80: 200,
         40: 111, 39: 222,
     };
     // The deck screen shows the card under the cursor as two pictures named after its item id: "<id>" is the card,
