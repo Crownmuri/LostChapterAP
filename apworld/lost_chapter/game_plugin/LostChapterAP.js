@@ -3623,6 +3623,45 @@
         list.splice(erased + 1, 0, ...again);
     };
 
+    // A floor event that rolls which of several cards it hands out (Debauch): while one of them is a check that is
+    // still open, the roll does not land on one that was sent already.
+    AP.rollOpenCard = (variableId, cards) => {
+        const open = value => {
+            const itemId = cards[value];
+            return cardChecks().includes(itemId) && !state().checked.includes(CARD_OFFSET + itemId);
+        };
+        const values = Object.keys(cards).map(Number).filter(open);
+        if (bound() && values.length > 0 && !open($gameVariables.value(variableId))) {
+            $gameVariables.setValue(variableId, values[Math.floor(Math.random() * values.length)]);
+        }
+    };
+
+    const patchCardRolls = () => {
+        for (const eventId of allEvents()) {
+            const list = eventData(eventId).list;
+            for (let i = list.length - 1; i >= 0; i--) {
+                const p = list[i].parameters;
+                if (list[i].code !== 122 || p[0] !== p[1] || p[2] !== 0 || p[3] !== 2) {
+                    continue;
+                }
+                // The branches on the rolled value that follow it, each handing out one card
+                const cards = {};
+                for (let j = i + 1; j < list.length && list[j].indent >= list[i].indent; j++) {
+                    const q = list[j].parameters;
+                    const gain = list[j + 1];
+                    const asksRoll = list[j].code === 111 && q[0] === 1 && q[1] === p[0] && q[2] === 0 && q[4] === 0;
+                    if (asksRoll && gain && gain.code === 126 && gain.parameters[1] === 0) {
+                        cards[q[3]] = gain.parameters[0];
+                    }
+                }
+                if (Object.keys(cards).length > 1) {
+                    const script = "LostChapterAP.rollOpenCard(" + p[0] + ", " + JSON.stringify(cards) + ");";
+                    list.splice(i + 1, 0, command(355, list[i].indent, [script]));
+                }
+            }
+        }
+    };
+
     // A floor event that hands out a card asks "has card n" the same way
     const patchCardConditions = () => {
         for (const eventId of allEvents()) {
@@ -3706,6 +3745,7 @@
             patchStandbyTip();
             patchDeckSlots();
             patchDrops();
+            patchCardRolls();
             patchCardConditions();
             createCardEvent();
             patchRelicConditions();
