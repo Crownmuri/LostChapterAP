@@ -64,10 +64,6 @@ connected. The same commands work in the game's console as `LostChapterAP.dev("f
 | `/dev next` | Leave the standby screen, as a click on it does |
 | `/dev stuck` | What the game is doing right now, for a screen that takes no input |
 
-The game ships without the developer console, so the plugin keeps a log of each session in
-`archipelago_log.txt` in the game folder: errors of the game, the plugin's own messages, the standby trace and
-what the dev commands answered. It starts anew with every launch.
-
 | `/dev stat NAME N` | Set `maxlp`, `maxrp`, `str`, `def`, `mag`, `agl`, `faith`, `virtue` or `lewd` |
 | `/dev card NAME [COUNT]`, `/dev relic NAME [COUNT]` | Give a card or relic, a negative count takes it away |
 | `/dev title N` | Meet the condition of title N |
@@ -75,6 +71,10 @@ what the dev commands answered. It starts anew with every launch.
 | `/dev var ID [VALUE]`, `/dev switch ID [on\|off]` | Read or write a game variable or switch |
 | `/dev god [on\|off]` | LP and RP cannot go down |
 | `/dev speed N` | Game speed 1-4 |
+
+The game ships without the developer console, so the plugin keeps a log of each session in
+`archipelago_log.txt` in the game folder: errors of the game, the plugin's own messages, the standby trace and
+what the dev commands answered. It starts anew with every launch.
 
 Setting the floor, a title or a switch sends the matching checks like normal play would.
 
