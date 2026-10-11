@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import settings
 
@@ -249,6 +249,11 @@ class LostChapterWorld(World):
 
         return events + self.random.sample(candidates, min(missing, len(candidates)))
 
+    def battle_rewards(self) -> Dict[str, Tuple[int, int]]:
+        stretches = data.battle_stretches(self.options.final_boss_floor.value)
+
+        return data.battle_rewards(self.options.battle_rewards.value, stretches)
+
     def included_locations(self) -> Dict[str, int]:
         included: set = set(self.location_name_to_id)
 
@@ -265,7 +270,7 @@ class LostChapterWorld(World):
         included |= {f"Card: {name}" for name in self.cards().values()}
 
         included -= self.location_name_groups["Battle Rewards"]
-        included |= set(data.battle_rewards(self.options.battle_rewards.value))
+        included |= set(self.battle_rewards())
 
         if not self.options.include_dlc:
             included -= self.location_name_groups["DLC Bosses"]
@@ -314,7 +319,7 @@ class LostChapterWorld(World):
                 lambda state, floor=floor: self.can_reach_floor(state, floor)
             )
 
-        for name, (_, floor) in data.battle_rewards(self.options.battle_rewards.value).items():
+        for name, (_, floor) in self.battle_rewards().items():
             self.get_location(name).access_rule = lambda state, floor=floor: self.can_reach_floor(state, floor)
 
         for event_id, name in self.events().items():

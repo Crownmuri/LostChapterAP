@@ -129,7 +129,8 @@ Game changes in a session (the plugin patches the event data in memory at load, 
   The Prison event is a normal event unlock and the Recollection menu is open.
 - The bonus shop and its currency are skipped. Received card sets (Boxer Card Set, ...) are taken in the deck
   screen with the received cards, each once a run and for free.
-- With the `battle_rewards` option each stretch of 20 floors up to floor 100 has that many battle reward checks:
+- With the `battle_rewards` option each stretch of 20 floors up to `final_boss_floor` has that many battle reward
+  checks (5 with the final boss on floor 160 are 40):
   while one is open, one of the three cards of a won fight is an Archipelago card (Shift shows what it sends),
   and taking it sends the check in place of a card.
 - Souls are counted live with the game's own score formula, less what the run started with (the origin, the

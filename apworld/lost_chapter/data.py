@@ -30,10 +30,15 @@ VARIABLE_FLOOR = 11
 BOSS_FLOOR_INTERVAL = 20
 FLOOR_CHECKS = range(10, 81, 10)
 
-# Battle rewards: after a won fight the cards on offer can be passed up for a check. Each stretch of 20 floors up
-# to floor 100 has its own, as many as the battle_rewards option says.
-BATTLE_STRETCHES = 5
+# Battle rewards: one of the cards a won fight offers is a check. Each stretch of 20 floors up to the floor of the
+# final boss (the final_boss_floor option, 100 to 200) has its own, as many as the battle_rewards option says.
+BATTLE_STRETCHES = 10
 BATTLE_REWARDS_MAX = 10
+
+
+def battle_stretches(final_boss_floor: int) -> int:
+    """The stretches of 20 floors up to the boss floor the final boss waits on."""
+    return -(-final_boss_floor // BOSS_FLOOR_INTERVAL)
 
 
 def battle_reward(stretch: int, number: int) -> str:
@@ -43,13 +48,13 @@ def battle_reward(stretch: int, number: int) -> str:
     return f"Floors {first}-{first + BOSS_FLOOR_INTERVAL - 1}: Battle Reward {number}"
 
 
-def battle_rewards(count: int = BATTLE_REWARDS_MAX) -> Dict[str, Tuple[int, int]]:
+def battle_rewards(count: int = BATTLE_REWARDS_MAX, stretches: int = BATTLE_STRETCHES) -> Dict[str, Tuple[int, int]]:
     """Battle reward location name -> its id and the first floor of its stretch."""
     return {
         battle_reward(stretch, number): (
             BATTLE_OFFSET + 100 * stretch + number, (stretch - 1) * BOSS_FLOOR_INTERVAL + 1
         )
-        for stretch in range(1, BATTLE_STRETCHES + 1)
+        for stretch in range(1, stretches + 1)
         for number in range(1, count + 1)
     }
 

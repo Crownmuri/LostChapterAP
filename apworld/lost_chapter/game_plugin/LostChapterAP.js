@@ -187,9 +187,8 @@
     const SWITCH_DROP_START = 17;
     const REROLL_KEY = "pagedown"; // W
     const REROLL_Y = 520;
-    // Battle rewards (the battle_rewards option): BATTLE_OFFSET and BATTLE_STRETCHES of apworld/lost_chapter/data.py
+    // Battle rewards (the battle_rewards option): BATTLE_OFFSET of apworld/lost_chapter/data.py
     const BATTLE_OFFSET = 11000;
-    const BATTLE_STRETCHES = 5;
     const COMMON_EVENT_DROP_START = 17;
     const VARIABLE_DROP_FIRST = 6; // variables 6-8 are the item ids of the three cards on offer
     const DROP_CARDS = 3;
@@ -1281,7 +1280,8 @@
     // The next open battle reward of the stretch of 20 floors the player is on, 0 when there is none
     const battleReward = () => {
         const stretch = Math.ceil($gameVariables.value(VARIABLE_FLOOR) / BOSS_FLOOR_INTERVAL);
-        if (!bound() || stretch < 1 || stretch > BATTLE_STRETCHES) {
+        // The stretches go up to the boss floor of the final boss
+        if (!bound() || stretch < 1 || stretch > Math.ceil(finalBossFloor() / BOSS_FLOOR_INTERVAL)) {
             return 0;
         }
         for (let number = 1; number <= (option("battle_rewards") || 0); number++) {

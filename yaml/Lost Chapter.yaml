@@ -40,7 +40,7 @@ Lost Chapter:
   # Expected by floor 21, 41, 61, 81 and 101
   field_exploration: 5
 
-  # 0-10. Battle reward checks for each stretch of 20 floors up to floor 100: one of the three cards of a won
+  # 0-10. Battle reward checks for each stretch of 20 floors up to final_boss_floor: one of the three cards of a won
   # fight is an Archipelago card, taking it sends the next one in place of a card. 0 for none
   battle_rewards: 5
 
