@@ -42,14 +42,13 @@ Defeating the last boss, which needs all four Heavenly Kings defeated first. The
 
 - `normal_end`: any win over the last boss.
 - `true_end`: a win in a run that would get ENDING 1, which takes a climax count of 20 or less.
-- `true_virgin`: the true end with the Virginity status intact.
 - `dlc_end`: defeat Magislilia, the last boss of the DLC. She waits behind **The Last Door**, behind the hallway
   of a boss floor, once Migwarners (White Door, takes the White Key) and Bordosegeia (Black Door, takes the Black
   Key) are both defeated in the same run. Needs the `include_dlc` option.
-- `dlc_virgin`: the DLC end with the Virginity status intact. Needs the `include_dlc` option.
 
-With one of the two virgin goals, losing the Virginity status ends the run on the spot and the "Lose Virginity"
-title check only holds filler. They have no story difference and are only there for those who want the challenge.
+The `virgin_run` option adds to any of these that the Virginity status has to be intact. Losing it then ends the
+run on the spot and the "Lose Virginity" title check only holds filler. It has no story difference and is only
+there for those who want the challenge.
 
 ## Which locations are checks?
 

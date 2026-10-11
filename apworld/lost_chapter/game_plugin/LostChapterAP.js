@@ -101,10 +101,7 @@
     // The values of the goal option of apworld/lost_chapter/options.py
     const GOAL_NORMAL_END = 0;
     const GOAL_TRUE_END = 1;
-    const GOAL_TRUE_VIRGIN = 2;
     const GOAL_DLC_END = 3;
-    const GOAL_DLC_VIRGIN = 4;
-    const VIRGIN_GOALS = [GOAL_TRUE_VIRGIN, GOAL_DLC_VIRGIN];
 
     const COMMON_EVENT_NEXT_FLOOR = 86;
     const COMMON_EVENT_STANDBY = 11;
@@ -726,31 +723,36 @@
 
     const isVirgin = () => $gameActors.actor(1).isStateAffected(STATE_VIRGINITY);
 
+    // The virgin_run option: a win only counts with the Virginity state intact
+    const winCounts = () => !option("virgin_run") || isVirgin();
+
     const lastBossDefeated = () => {
+        if (!winCounts()) {
+            return;
+        }
         const goals = [GOAL_NORMAL_END];
         // The ending map plays the TRUE END below this climax count
         if ($gameVariables.value(VARIABLE_CLIMAX_COUNT) < TRUE_END_CLIMAX_LIMIT) {
             goals.push(GOAL_TRUE_END);
-            if (isVirgin()) {
-                goals.push(GOAL_TRUE_VIRGIN);
-            }
         }
         reachGoals(goals);
     };
 
     const dlcLastBossDefeated = () => {
-        reachGoals(isVirgin() ? [GOAL_DLC_END, GOAL_DLC_VIRGIN] : [GOAL_DLC_END]);
+        if (winCounts()) {
+            reachGoals([GOAL_DLC_END]);
+        }
     };
 
     const checkTitle = title => check(SWITCH_OFFSET + TITLE_SWITCH_BASE + title);
 
-    // Virgin goals: losing the Virginity state ends the run the way running out of LP does. The fight is lost, or
+    // Virgin run: losing the Virginity state ends the run the way running out of LP does. The fight is lost, or
     // the event plays out and the game over follows on the way to the next floor.
     const _Game_Battler_removeState = Game_Battler.prototype.removeState;
     Game_Battler.prototype.removeState = function(stateId) {
         const lost = stateId === STATE_VIRGINITY && this.isStateAffected(stateId) && this === $gameActors.actor(1);
         _Game_Battler_removeState.apply(this, arguments);
-        if (lost && bound() && VIRGIN_GOALS.includes(option("goal")) && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
+        if (lost && bound() && option("virgin_run") && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             checkTitle(TITLE_LOSE_VIRGINITY);
             notify("Virginity lost, this run is over");
             // An event can go on to heal the player (a night at the Inn), so the run is marked as over as well
@@ -1641,7 +1643,7 @@
         }
         const s = state();
         if (AP.pendingDeath && $gameVariables.value(VARIABLE_FLOOR) >= 1 && !s.runOver) {
-            // Like a virgin goal that is lost: the fight is lost, or the game over follows before the next floor
+            // Like a virgin run that is lost: the fight is lost, or the game over follows before the next floor
             notify("DeathLink: " + AP.pendingDeath + " died, this run is over");
             AP.pendingDeath = null;
             AP.deathReceived = true;

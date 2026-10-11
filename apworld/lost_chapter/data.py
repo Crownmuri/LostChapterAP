@@ -525,9 +525,7 @@ EXPLORATION_FLOORS = (21, 41, 61, 81, 101)
 DLC_LAST_BOSS = "Magislilia"
 
 # Names of the goal option. The plugin reports the values of the goals a win reaches.
-DLC_GOALS = ("dlc_end", "dlc_virgin")
-VIRGIN_GOALS = ("true_virgin", "dlc_virgin")
-VIRGIN_GOAL_VALUES = (2, 4)  # the same goals as slot data has them
+DLC_GOALS = ("dlc_end",)
 
 VICTORY = "Victory"
 ENDING_EVENT = "Reach the Ending"

@@ -14,25 +14,30 @@ class Goal(Choice):
     Normal End: defeat the last boss.
     True End: defeat the last boss in a run that would get ENDING 1 "Beyond the Blue Sky", which takes a climax count
     of 20 or less.
-    True Virgin: the True End with the Virginity status intact.
     DLC End: defeat Magislilia, the last boss of the DLC, who waits behind the last door once Migwarners (White
     Door) and Bordosegeia (Black Door) are defeated in the same run. Needs Include DLC.
-    DLC Virgin: the DLC End with the Virginity status intact.
 
-    With a Virgin goal, losing the Virginity status ends the run on the spot, like running out of LP. These two have
-    no story difference, they are only there for those who want the challenge.
+    Virgin Run adds to any of these that the Virginity status has to be intact.
     """
     display_name = "Goal"
     option_normal_end = 0
     option_true_end = 1
-    option_true_virgin = 2
     option_dlc_end = 3
-    option_dlc_virgin = 4
     default = 0
 
     @classmethod
     def get_option_name(cls, value: int) -> str:
         return super().get_option_name(value).replace("Dlc", "DLC")
+
+
+class VirginRun(Toggle):
+    """
+    The goal only counts with the Virginity status intact, whichever goal it is.
+
+    Losing the Virginity status ends the run on the spot, like running out of LP, and the "Lose Virginity" title
+    check only holds filler. This has no story difference, it is only there for those who want the challenge.
+    """
+    display_name = "Virgin Run"
 
 
 class IncludeDLC(Toggle):
@@ -245,6 +250,7 @@ class SoulMultiplier(Range):
 @dataclass
 class LostChapterOptions(PerGameCommonOptions):
     goal: Goal
+    virgin_run: VirginRun
     include_dlc: IncludeDLC
     relicsanity: Relicsanity
     shuffle_keys: ShuffleKeys
