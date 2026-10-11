@@ -219,7 +219,8 @@ is open (`patchGirl`), adding the gift to the event where the game does not have
 the White Key are relics like the others in every seed, and there is no option for the patch.
 
 `finisher_move` decides about Kick Balls, the card drawn the turn after the enemy climaxes: `vanilla`, `shuffle`
-(only once the useful item Kick Balls is found) or `remove`.
+(only once the useful item Kick Balls is found), `remove` or `boon_shop` (only once it is bought in the Boon Shop
+for 1000 souls, which holds for every later run too).
 
 `field_exploration` (0 to 5, default 5) puts that many Progressive Field Exploration items into the pool. Each
 adds a floor event to the two a floor lets you choose from. Logic expects one by floor 21, two by 41, three by 61,

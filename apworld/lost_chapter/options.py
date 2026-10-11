@@ -96,11 +96,14 @@ class FinisherMove(Choice):
     Vanilla: it turns up as in the normal game.
     Shuffle: it only turns up once you have found the Kick Balls item, which is shuffled into the multiworld.
     Remove: it never turns up.
+    Boon Shop: it only turns up once you have bought it in the Boon Shop for 1000 souls, which then holds for every
+    later run as well.
     """
     display_name = "Finisher Move"
     option_vanilla = 0
     option_shuffle = 1
     option_remove = 2
+    option_boon_shop = 3
     default = 0
 
 

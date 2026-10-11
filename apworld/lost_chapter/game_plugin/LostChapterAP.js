@@ -129,6 +129,8 @@
     const MAP_ENDING = 11;
     const FINISHER_SHUFFLE = 1; // the finisher_move option
     const FINISHER_REMOVE = 2;
+    const FINISHER_BOON_SHOP = 3;
+    const FINISHER_PRICE = 1000; // souls, in the Boon Shop
     const COMMON_EVENT_POND = 54;
     const COMMON_EVENT_LOCKSMITH = 57;
     // Switch 12 is on in the Pond while there is filth on the body (variable 209)
@@ -2320,6 +2322,16 @@
                     }]);
                 }
             }
+            // The finisher_move option on "boon_shop": bought once, Kick Balls is had for the rest of the multiworld
+            if (option("finisher_move") === FINISHER_BOON_SHOP) {
+                const had = !!state().finisher;
+                const text = "Kick Balls" + (had ? " (owned)" : " (" + FINISHER_PRICE + ")");
+                entries.push([text, !had && soulTotal() >= FINISHER_PRICE, () => {
+                    spendSouls(FINISHER_PRICE);
+                    state().finisher = true;
+                    notify("Kick Balls turns up after the enemy climaxes from now on");
+                }]);
+            }
         } else {
             for (const boon of BOONS[price].filter(boonAvailable)) {
                 // A boon that is a switch of the game is had for the rest of the run
@@ -3255,7 +3267,10 @@
             return false;
         }
         const mode = option("finisher_move");
-        return mode === FINISHER_REMOVE ? false : mode === FINISHER_SHUFFLE ? !!state().finisher : true;
+        if (mode === FINISHER_REMOVE) {
+            return false;
+        }
+        return mode === FINISHER_SHUFFLE || mode === FINISHER_BOON_SHOP ? !!state().finisher : true;
     };
 
     const patchFinisher = () => {

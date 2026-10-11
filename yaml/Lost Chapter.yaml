@@ -34,6 +34,7 @@ Lost Chapter:
   # vanilla: as in the normal game
   # shuffle: only once the Kick Balls item is found
   # remove: never
+  # boon_shop: only once it is bought in the Boon Shop for 1000 souls
   finisher_move: vanilla
 
   # 0-5. Progressive Field Exploration items in the pool, each adds a floor event to the two you choose from.
