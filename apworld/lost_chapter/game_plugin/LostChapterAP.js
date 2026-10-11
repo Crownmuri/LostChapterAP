@@ -580,6 +580,13 @@
         }
     };
 
+    // The highest floor reached in this multiworld. Saves from before it was kept go by their floor checks.
+    const bestFloor = () => {
+        const s = state();
+        const checked = CHECK_FLOORS.filter(floor => s.checked.includes(FLOOR_OFFSET + floor));
+        return Math.max(s.best || 0, checked.length > 0 ? checked[checked.length - 1] : 0);
+    };
+
     // The goals the wins of this save have reached are kept, and sent again whenever the client connects
     const sendGoal = () => {
         const s = state();
@@ -706,6 +713,9 @@
             return;
         }
         const s = state();
+        if (s && value > (s.best || 0)) {
+            s.best = value;
+        }
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
@@ -2195,10 +2205,31 @@
     // The standby screen is reserved, not called. From the second run on this runs in a parallel event of Map006
     // whose page ends once the floor is 1 or more, which stops whatever that event is still doing a frame later.
     // The game's own call gets away with it because nothing in it waits after the floor is set.
-    AP.startRun = () => {
-        state().holdFloor = true;
-        $gameVariables.setValue(VARIABLE_FLOOR, 1);
-        $gameTemp.reserveCommonEvent(COMMON_EVENT_STANDBY);
+    AP.startRun = interpreter => {
+        const start = floor => {
+            state().holdFloor = true;
+            $gameVariables.setValue(VARIABLE_FLOOR, floor);
+            $gameTemp.reserveCommonEvent(COMMON_EVENT_STANDBY);
+        };
+        // A floor that was reached before in this multiworld can be started from: the first floor after each
+        // boss floor. The bosses below it are not fought in that run.
+        const floors = [];
+        for (let floor = 1; bound() && floor <= bestFloor(); floor += BOSS_FLOOR_INTERVAL) {
+            floors.push(floor);
+        }
+        if (floors.length < 2 || !interpreter) {
+            start(1);
+            return;
+        }
+        $gameMessage.setBackground(2);
+        $gameMessage.setPositionType(1);
+        $gameMessage.add("Start from which floor?");
+        $gameMessage.setChoices(floors.map(floor => "Floor " + floor), 0, -1);
+        limitChoiceRows();
+        $gameMessage.setChoiceBackground(0);
+        $gameMessage.setChoicePositionType(2);
+        $gameMessage.setChoiceCallback(index => start(floors[index]));
+        interpreter.setWaitMode("message");
     };
 
     // Replaces the floor increment of common event 86
@@ -2626,7 +2657,7 @@
     const patchRunStart = list => {
         for (let i = list.length - 1; i >= 0; i--) {
             if (list[i].code === 117 && list[i].parameters[0] === COMMON_EVENT_NEXT_FLOOR) {
-                overrideRange(list, i, i, [command(355, 0, ["LostChapterAP.startRun();"])]);
+                overrideRange(list, i, i, [command(355, 0, ["LostChapterAP.startRun(this);"])]);
             }
         }
     };

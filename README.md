@@ -135,6 +135,10 @@ Game changes in a session (the plugin patches the event data in memory at load, 
   `soul_multiplier` option, is its souls: they add up over the runs of a seed and are spent in the soul shop, the last entry of the floor choice: a new set of floor
   events (10), a floor event of your choice among the unlocked ones (50), a Forget-Me-Not (30), a Pieris (40, DLC),
   10 LP or 10 RP (20 each). While the three cards of a won fight are up, W buys three other ones (20). The prices double with every 20 floors. Souls no longer send checks. The standby screen shows the total and the next milestone.
+- A later run of a seed can start further up: once the floor after a boss floor was reached (21, 41, 61, ...),
+  a new run asks which of those floors to start from. The bosses below it are not fought in that run.
+- The soul shop also sells a Yellow Vial (50) that ends the Regression State, and "Back" in the floor choice
+  returns to the standby screen with the same floor events.
 - The "Once upon a time" questions are replaced by one list of the nine origins with their effects. The
   description and the Correct / Wrong confirmation are unchanged.
 
