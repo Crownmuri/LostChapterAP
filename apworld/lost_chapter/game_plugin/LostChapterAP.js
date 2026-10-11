@@ -1049,7 +1049,7 @@
         24: {"Pass Through the Forest %": "AGL +1, fail: LP -5", "Take a Detour": "LP -2"},
         25: {"Rest in a Cheap Room -50 G": "LP & RP +1/3", "Rest in an Expensive Room -150 G": "LP & RP full", "Cheap Room -50 G": "LP & RP +1/3", "Expensive Room -150 G": "LP & RP full", "I Don't Mind": "LEWD +2, then rest", "Take Off Underwear": "RP -2", "Expose Vagina": "RP -10, Gold, LEWD +3", "Can't Do That": "LEWD +2, rest", "Flee": "LEWD +2, rest", "Answer": "more Gold", "Disregard": "less Gold"},
         26: {"Drink": "LP +3, FAITH +5 or Lust", "Refuse": "FAITH -5"},
-        27: {"Drink": "LP +3, FAITH +5 or Lust", "Refuse": "FAITH -5", "Beg For His Semen": "LEWD +2, ends Lust", "Ignore Him and Move On": "Lust stays", "Get Revenge on the Man": "Pieris, VIRTUE -10"},
+        27: {"Drink": "LP +3, FAITH +5 or Lust", "Refuse": "FAITH -5", "Beg For His Semen": "LEWD +2, +3 from LEWD 30, ends Lust", "Ignore Him and Move On": "Lust stays", "Get Revenge on the Man": "Pieris, VIRTUE -10"},
         28: {"Ask for Assistance": "LP + or Forget-Me-Not", "Ask for Salvation": "FAITH +5, Womb Crest off or on", "Ask for Mercy": "Gold +60 or LEWD +2"},
         29: {"Ask for Assistance": "LP + or Forget-Me-Not", "Ask for Salvation": "FAITH +5, Womb Crest off or on", "Ask for Mercy": "Gold +60 or LEWD +2"},
         30: {"Pray": "FAITH +5", "Rush Over": "＜Cure＞ saves him, else he dies", "Abandon": "VIRTUE -5", "Save Lose ＜Cure＞": "Recovery Misanga", "Talk About the Woman": "Recovery Misanga", "Say Nothing": "Recovery Misanga"},
