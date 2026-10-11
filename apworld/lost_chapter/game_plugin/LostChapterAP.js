@@ -1830,7 +1830,7 @@
             AP.granting = false;
         };
         const entries = [
-            entry("New Floor Events", "reroll", () => {
+            entry("Reroll Floor Events", "reroll", () => {
                 AP.offer = null;
                 AP.standbyMenu = null;
             }),
