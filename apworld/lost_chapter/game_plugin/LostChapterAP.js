@@ -324,11 +324,14 @@
 
     // event id -> id of the common event that runs it, for the floor events this version of the game has
     const eventCommon = {};
+    // Floor events that go by another name than the game gives them: switch id -> name (EVENTS of data.py)
+    const EVENT_NAMES = { 161: "Costume Room" }; // "Change to Swimsuit"
     const mapEvents = () => {
         for (const commonEvent of $dataCommonEvents) {
             const id = commonEvent ? commonEvent.switchId : 0;
             if (commonEvent && commonEvent.trigger === 1 && EVENT_RANGES.some(range => id >= range[0] && id <= range[1])) {
                 eventCommon[id] = commonEvent.id;
+                commonEvent.name = EVENT_NAMES[id] || commonEvent.name;
             }
         }
     };

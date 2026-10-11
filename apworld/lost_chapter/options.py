@@ -230,7 +230,7 @@ class StartingEvents(OptionSet):
     River, Gold and Silver Treasures, Debauch, Sea, Snowy Mountain, Suspension Bridge, Pond, Highway, Lake Shore,
     Locksmith, Corridor, Throne, Hill, Prison.
 
-    With Include DLC also: Change to Swimsuit, Barracks, Farm Village, Old Woman, Checkpoint, Clinic, Slave Market,
+    With Include DLC also: Costume Room, Barracks, Farm Village, Old Woman, Checkpoint, Clinic, Slave Market,
     Graveyard, Girl with Flower Crown, Sculptor, Treasury.
     """
     display_name = "Starting Events"

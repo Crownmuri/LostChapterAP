@@ -302,7 +302,7 @@ EVENTS: Dict[int, str] = {
 # The floor events of the DLC "Dark Abyss" content. They run while switch n is on like the others, but their common
 # events are 591-601. All of them are only offered from floor 41 on. Only part of a seed with include_dlc.
 DLC_EVENTS: Dict[int, str] = {
-    161: "Change to Swimsuit",
+    161: "Costume Room",
     162: "Barracks",
     163: "Farm Village",
     164: "Old Woman",
