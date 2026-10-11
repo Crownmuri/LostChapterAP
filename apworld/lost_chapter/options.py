@@ -218,9 +218,10 @@ class StartingEvents(OptionSet):
 
 class SoulMultiplier(Range):
     """
-    The souls a run earns, as a percentage: 100 is what the game counts, 200 twice that. Souls add up over the runs of a seed and are spent in the soul shop of the
-    standby screen: a new set of floor events to choose from, a floor event of your choice, a Forget-Me-Not, a
-    Pieris (DLC), or 10 LP or RP. The prices double with every 20 floors.
+    The souls a run earns, as a percentage: 100 is what the game counts, 200 twice that. Souls add up over the runs
+    of a seed and are spent in the soul shop of the standby screen: a new set of floor events to choose from, a
+    floor event of your choice, a Forget-Me-Not, a Pieris (DLC), 10 LP or RP, or a Yellow Vial that ends the
+    Regression State. The prices double with every 20 floors.
     """
     display_name = "Soul Multiplier"
     range_start = 100

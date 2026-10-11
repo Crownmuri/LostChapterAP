@@ -157,7 +157,7 @@
     const FLOOR_EVENT_CHOICES = 2;
     const LABEL_STANDBY = "ArchipelagoStandby";
     // The soul shop of the standby screen. The prices double with every 20 floors.
-    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 30, pieris: 40, heal: 20, cards: 20 };
+    const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 30, pieris: 40, heal: 20, cards: 20, vial: 50 };
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
     // common event 16 takes the choice while its switch is on
     const SWITCH_DROP_CONTROL = 16;
@@ -1915,6 +1915,11 @@
         const pieris = $dataWeapons[WEAPON_PIERIS];
         if (option("include_dlc") && pieris && pieris.name === "Pieris") {
             entries.push(entry("Pieris", "pieris", relic(WEAPON_PIERIS)));
+        }
+        // What the yellow potion of the Small Room does. Only offered to a regressed player.
+        const regression = $dataStates[STATE_REGRESSION];
+        if (regression && regression.name.startsWith("Regression") && actor.isStateAffected(STATE_REGRESSION)) {
+            entries.push(entry("Yellow Vial: ends Regression", "vial", () => actor.removeState(STATE_REGRESSION)));
         }
         entries.push(
             entry("LP +" + SHOP_HEAL, "heal", () => heal(() => actor.gainHp(SHOP_HEAL))),
