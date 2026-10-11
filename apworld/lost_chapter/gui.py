@@ -288,8 +288,11 @@ class LostChapterTabLayout(BoxLayout):
             square.show(SQUARE, effect)
 
         self.titles_label.text = f"Titles: {done}/{len(self.title_rows)}"
+        # Short enough for one line at the tab's smallest width
+        colors = ["".join(f"{round(part * 255):02x}" for part in color) for color in (IN_LOGIC, BY_GRINDING, OUT_OF_LOGIC)]
         self.legend_label.text = (
-            f"[color={COLOR_DONE}]filled square: effect unlocked.  name green in logic, yellow by grinding, red not yet[/color]"
+            f"[color={COLOR_DONE}]filled: effect unlocked[/color]   [color={colors[0]}]in logic[/color]   "
+            f"[color={colors[1]}]grinding[/color]   [color={colors[2]}]not yet[/color]"
         )
 
     def update_events(self) -> None:
