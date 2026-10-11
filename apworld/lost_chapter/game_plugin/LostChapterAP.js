@@ -190,8 +190,12 @@
     // Battle rewards (the battle_rewards option): BATTLE_OFFSET and BATTLE_STRETCHES of apworld/lost_chapter/data.py
     const BATTLE_OFFSET = 11000;
     const BATTLE_STRETCHES = 5;
-    const BATTLE_REWARD_KEY = "pageup"; // Q
-    const BATTLE_REWARD_Y = 554;
+    const COMMON_EVENT_DROP_START = 17;
+    const VARIABLE_DROP_FIRST = 6; // variables 6-8 are the item ids of the three cards on offer
+    const DROP_CARDS = 3;
+    const REWARD_CARD = 9000; // stands for the battle reward among them, no item has this id
+    const CARD_WIDTH = 140;
+    const CARD_HEIGHT = 210;
     const SHOP_HEAL = 10;
     const WEAPON_FORGET_ME_NOT = 74;
     const WEAPON_PIERIS = 75;
@@ -1267,7 +1271,6 @@
         this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
         this._archipelagoCards = createCardButton(this);
         this._archipelagoReroll = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, REROLL_Y, NOTICE_WIDTH, "center");
-        this._archipelagoBattle = createLabel(this, (Graphics.width - 960) / 2, BATTLE_REWARD_Y, 960, "center");
     };
 
     // The next open battle reward of the stretch of 20 floors the player is on, 0 when there is none
@@ -1285,26 +1288,86 @@
         return 0;
     };
 
-    // While the cards of a won fight are up, they can be passed up for the next battle reward of the multiworld.
-    // The check is sent and the card choice is left the way cancelling it leaves it (dropSkipped below).
-    const updateBattleReward = scene => {
-        const location = AP.battleDrop && $gameSwitches.value(SWITCH_DROP_CONTROL) ? battleReward() : 0;
-        const found = location ? scoutLabel(location) : null;
-        const text = "[Q] Take the Archipelago card instead" + (found ? ": " + found : "");
-        updateLabel(scene._archipelagoBattle, location !== 0, text, "#b0e0a0");
-        if (location && Input.isTriggered(BATTLE_REWARD_KEY)) {
-            SoundManager.playOk();
-            check(location);
-            AP.battleDrop = false;
-            AP.dropSkip = true;
+    // One of the three cards of a won fight is the next battle reward, as a card of its own. Runs in common event
+    // 17 once the cards are rolled: the variable of one of them gets an id no card has, whose pictures are drawn
+    // by drawRewardCard below instead of being loaded.
+    AP.rollDrop = () => {
+        AP.dropLocation = AP.battleDrop ? battleReward() : 0;
+        if (AP.dropLocation) {
+            $gameVariables.setValue(VARIABLE_DROP_FIRST + Math.floor(Math.random() * DROP_CARDS), REWARD_CARD);
         }
     };
 
-    // Part of the "cancel" condition of the card choice (common event 16)
-    AP.dropSkipped = () => {
-        const skipped = !!AP.dropSkip;
-        AP.dropSkip = false;
-        return skipped;
+    // Replaces the "gain the chosen card" of common event 16: the reward card sends its check instead
+    AP.takeDrop = variableId => {
+        const itemId = $gameVariables.value(variableId);
+        if (itemId !== REWARD_CARD) {
+            $gameParty.gainItem($dataItems[itemId], 1);
+            return;
+        }
+        if (AP.dropLocation) {
+            check(AP.dropLocation);
+        }
+        AP.dropLocation = 0;
+        AP.battleDrop = false;
+    };
+
+    const rewardIcon = new Image();
+    rewardIcon.src = AP_ICON;
+
+    // The pictures of the reward card, the size of a card of the game: "<id>" is its face, "<id>s" what Shift
+    // shows in its place (what the check holds, as far as the client told), and a card from id 51 on has a third
+    // picture below it, which stays empty.
+    const drawRewardCard = name => {
+        if (name === "5" + REWARD_CARD + "s") {
+            return new Bitmap(1, 1);
+        }
+        if (name !== String(REWARD_CARD) && name !== REWARD_CARD + "s") {
+            return null;
+        }
+        const bitmap = new Bitmap(CARD_WIDTH, CARD_HEIGHT);
+        const scout = AP.scouts[AP.dropLocation];
+        const text = (line, y, size, color) => {
+            bitmap.fontFace = $gameSystem.mainFontFace();
+            bitmap.fontSize = size;
+            bitmap.textColor = color;
+            bitmap.drawText(line, 6, y, CARD_WIDTH - 12, size + 6, "center");
+        };
+        bitmap.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT, "#c9a227");
+        bitmap.gradientFillRect(3, 3, CARD_WIDTH - 6, CARD_HEIGHT - 6, "#1d2a44", "#0c111d", true);
+        if (name === String(REWARD_CARD)) {
+            if (rewardIcon.complete && rewardIcon.naturalWidth > 0) {
+                bitmap.context.drawImage(rewardIcon, (CARD_WIDTH - 88) / 2, 34, 88, 88);
+            }
+            text("Archipelago", 136, 18, "#b0e0a0");
+            text("Battle Reward", 164, 15, "#ffffff");
+        } else {
+            const progression = scout && scout.flags & ITEM_FLAG_PROGRESSION;
+            text("Sends", 14, 15, "#b0b0b0");
+            // The name of the item, broken into lines that fit the card
+            const lines = [];
+            bitmap.fontSize = 16;
+            for (const word of String(scout ? scout.item : "an unknown item").split(" ")) {
+                const last = lines.length - 1;
+                if (last >= 0 && bitmap.measureTextWidth(lines[last] + " " + word) <= CARD_WIDTH - 12) {
+                    lines[last] += " " + word;
+                } else {
+                    lines.push(word);
+                }
+            }
+            lines.slice(0, 5).forEach((line, i) => text(line, 44 + 22 * i, 16, progression ? "#d0a0ff" : "#ffffff"));
+            if (scout && scout.player) {
+                text("to", 160, 15, "#b0b0b0");
+                text(scout.player, 180, 16, "#b0e0a0");
+            }
+        }
+        bitmap.baseTexture.update();
+        return bitmap;
+    };
+
+    const _ImageManager_loadPicture = ImageManager.loadPicture;
+    ImageManager.loadPicture = function(filename) {
+        return (bound() && drawRewardCard(String(filename))) || _ImageManager_loadPicture.apply(this, arguments);
     };
 
     // While the cards of a won fight are up, souls buy three new ones
@@ -1324,7 +1387,6 @@
 
     const updateSoulCounter = scene => {
         updateCardReroll(scene);
-        updateBattleReward(scene);
         // Only on the standby screen itself, its Title Collection, deck and item screens have that corner in use
         const shown =
             bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL) && $gameVariables.value(VARIABLE_SCREEN) === 0;
@@ -3342,16 +3404,24 @@
         }
     };
 
-    // The card choice after a fight is also left when a battle reward was taken in its place
-    const patchDropControl = () => {
-        const cancel = $dataCommonEvents[COMMON_EVENT_DROP_CONTROL].list.find(item => {
-            const p = item.parameters;
-            return item.code === 111 && item.indent === 0 && p[0] === 11 && p[1] === "cancel";
+    // The cards of a won fight: one of them can be a battle reward (rollDrop and takeDrop)
+    const patchDrops = () => {
+        const start = $dataCommonEvents[COMMON_EVENT_DROP_START].list;
+        const shown = start.findIndex(item => {
+            const script = item.code === 355 ? String(item.parameters[0]) : "";
+            return item.indent === 0 && script.startsWith("$gameScreen.showPicture(51,$gameVariables.value(6)");
         });
-        if (cancel) {
-            cancel.parameters = [12, "Input.isTriggered('cancel') || LostChapterAP.dropSkipped()"];
-        } else {
-            console.error("[AP] Common event 16 has an unexpected layout, battle rewards cannot be taken");
+        const gains = $dataCommonEvents[COMMON_EVENT_DROP_CONTROL].list.filter(item => {
+            const script = item.code === 355 ? String(item.parameters[0]) : "";
+            return /^\$gameParty\.gainItem\(\$dataItems\[\$gameVariables\.value\([678]\)\], 1\)$/.test(script);
+        });
+        if (shown < 0 || gains.length !== DROP_CARDS) {
+            console.error("[AP] Common events 16 and 17 have an unexpected layout, battle rewards are not offered");
+            return;
+        }
+        start.splice(shown, 0, command(355, 0, ["LostChapterAP.rollDrop();"]));
+        for (const item of gains) {
+            item.parameters = ["LostChapterAP.takeDrop(" + /value\((\d)\)/.exec(item.parameters[0])[1] + ");"];
         }
     };
 
@@ -3465,7 +3535,7 @@
             patchStandbyVerse();
             patchStandbyTip();
             patchDeckSlots();
-            patchDropControl();
+            patchDrops();
             patchCardConditions();
             createCardEvent();
             patchRelicConditions();

@@ -130,7 +130,8 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - The bonus shop and its currency are skipped. Received card sets (Boxer Card Set, ...) are taken in the deck
   screen with the received cards, each once a run and for free.
 - With the `battle_rewards` option each stretch of 20 floors up to floor 100 has that many battle reward checks:
-  while the cards of a won fight are up, Q passes them up for the next one.
+  while one is open, one of the three cards of a won fight is an Archipelago card (Shift shows what it sends),
+  and taking it sends the check in place of a card.
 - Souls are counted live with the game's own score formula, less what the run started with (the origin, the
   starting set and received relics are worth nothing, so every run starts at 0) and less what a received item or
   a card taken from the multiworld adds to it. The best score the current run reached, times the

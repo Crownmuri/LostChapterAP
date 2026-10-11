@@ -115,8 +115,9 @@ class FieldExploration(Range):
 
 class BattleRewards(Range):
     """
-    Adds checks to the fights. After a won fight the cards on offer can be passed up for the next of these checks
-    instead. Each stretch of 20 floors up to floor 100 (1-20, 21-40, ...) has this many of them, 0 for none.
+    Adds checks to the fights. While one of them is open, one of the three cards of a won fight is an Archipelago
+    card, and taking it sends the check in place of a card. Each stretch of 20 floors up to floor 100 (1-20,
+    21-40, ...) has this many of them, 0 for none.
     """
     display_name = "Battle Rewards"
     range_start = 0
