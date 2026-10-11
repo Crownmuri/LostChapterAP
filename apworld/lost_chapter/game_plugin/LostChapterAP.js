@@ -1105,7 +1105,7 @@
         30: {"Pray": "FAITH +5", "Rush Over": "＜Cure＞ saves him, else he dies", "Abandon": "VIRTUE -5", "Save Lose ＜Cure＞": "Recovery Misanga", "Talk About the Woman": "Recovery Misanga", "Say Nothing": "Recovery Misanga"},
         31: {"Donate -20 G": "VIRTUE +5", "Advise": "VIRTUE ≧ 70: VIRTUE +5", "For Their Sake": "gives all Gold, the Corridor returns it ×3"},
         32: {"The Man Is in the Wrong %": "Max LP +5", "The Woman Is in the Wrong %": "Max RP +5"},
-        33: {"Receive clothes": "ends Nude", "Refuse the offer": "FAITH -5", "Don't Need Anything": "FAITH -5"},
+        33: {"Receive clothes": "ends Nude", "Thank Him": "VIRTUE +5", "Refuse the offer": "FAITH -5", "Don't Need Anything": "FAITH -5"},
         34: {"Buy -30 G": "Random Stat +1", "Buy -50 G": "chosen Stat +1", "Invest Lose ＜Investment＞": "better goods from now on", "Attack from behind": "Pieris"},
         35: {"Drink the Blue Potion": "Max LP +5", "Drink the Red Potion": "Bosomy on or off", "Drink the Yellow Potion": "ends Regression"},
         36: {"Bet on Heads": "heads: Gold +200, tails: LP +", "Bet on Tails": "tails: LP ++, heads: Gold +100", "Bet your life": "Clown Mask, Pieris"},
