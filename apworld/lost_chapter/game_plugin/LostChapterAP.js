@@ -1033,6 +1033,16 @@
 
     const stripConditions = text => text.replace(CHOICE_SHOWN, "").replace(CHOICE_ENABLED, "");
 
+    // "the origin The New Ruler" for a choice only that origin has, null when the condition is about anything else
+    const originRequirement = condition => {
+        const match = /^\s*v\[(\d+)\]\s*==\s*(\d+)\s*$/.exec(condition);
+        const origin = match && Number(match[1]) === VARIABLE_ORIGIN
+            ? ORIGINS.concat([DLC_ORIGIN]).find(other => other[0] === Number(match[2]))
+            : null;
+        const name = origin ? /\[(.+?)\]/.exec(origin[1]) : null;
+        return name ? "the origin " + name[1] : null;
+    };
+
     // switch id -> the floor events that turn it on
     let switchSetters = null;
     const findSwitchSetters = () => {
@@ -1079,7 +1089,10 @@
             .replace(/\\c\[\d+\]/gi, "")
             .trim();
         const requirement =
-            (CHOICE_REQUIREMENTS[eventId] || {})[key] || statRequirement(failed[1]) || eventRequirement(eventId, failed[1]);
+            (CHOICE_REQUIREMENTS[eventId] || {})[key] ||
+            statRequirement(failed[1]) ||
+            eventRequirement(eventId, failed[1]) ||
+            originRequirement(failed[1]);
         if (!requirement) {
             return text;
         }
