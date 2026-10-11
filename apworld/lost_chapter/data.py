@@ -416,7 +416,8 @@ BLACK_KEY = "Black Key"
 # First pass read from the event commands, not yet confirmed in play.
 RELIC_SOURCES: Dict[str, Dict[str, List[str]]] = {
     "Old Iron Hammer": {"events": ["Marsh"], "relics": []},
-    "Memento Chisel": {"events": ["Checkpoint"], "relics": []},
+    # The guard only hands it over for the message of the Old Woman, or after she was robbed
+    "Memento Chisel": {"events": ["Old Woman", "Checkpoint"], "relics": []},
     "Crown of Forget-Me-Not": {"events": ["Girl with Flower Crown"], "relics": []},
     "Crown of Pieris": {"events": ["Girl with Flower Crown"], "relics": []},
     "Recovery Misanga": {"events": ["Collapse", "Cherry Blossoms"], "relics": []},
