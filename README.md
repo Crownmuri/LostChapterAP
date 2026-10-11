@@ -32,6 +32,8 @@ reports them. Everything Archipelago-related lives in the Python client, which:
 | `tools/build_apworld.py` | Packs `build/lost_chapter.apworld` |
 | `docs/endings.md` | How the base game decides its endings |
 | `docs/souls.md` | What makes souls go up: the game's score formula, source by source |
+| `docs/event_conditions.md` | Every floor event: when the game offers it, what it asks of other events, every condition inside it |
+| `tools/dump_conditions.py` | Regenerates `docs/event_conditions.md` from a snapshot in `dump/` |
 | `tools/dump_events.py` | Regenerates `docs/events.md`: every floor event, its decisions and what they change |
 | `tools/dump_game_data.py` | Dumps switch/variable/event outlines into `dump/` for reverse engineering |
 | `tools/snapshot_game_data.py` | Copies the game's data files into `dump/<name>/`, one copy for each version of the game |
