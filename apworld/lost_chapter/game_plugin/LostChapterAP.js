@@ -339,6 +339,16 @@
     const SWITCH_DECK_CONTROL = 75;
     const COMMON_EVENT_DECK_DISPLAY = 75;
     const VARIABLE_DECK_COUNT = 81;
+    // The deck screen (common event 75): three rows of five cards to a page, pictures 31-45
+    const VARIABLE_DECK_PAGE = 75;
+    const VARIABLE_DECK_X = 241;
+    const VARIABLE_DECK_Y = 242;
+    const DECK_PICTURE_BASE = 31;
+    const DECK_PAGE_SLOTS = 15;
+    const DECK_ROW_SLOTS = 5;
+    const DECK_SLOT_WIDTH = 150;
+    const DECK_SLOT_HEIGHT = 220;
+    const CARD_ITEM_FIRST = 11; // its picture stands in for an empty slot
     const DECK_LIMIT = 30;
     // The game's own Forget-Me-Not and Pieris counts (picture 46) are moved left by this much, so that the three
     // lines stay in one column and the key at the end of the first fits on the screen
@@ -3065,6 +3075,33 @@
     // The DLC shows a tip about a new kind of card on the first standby screen of a save. It uses the picture the
     // standby screen takes its clicks with and erases it afterwards, which leaves the screen deaf to the mouse.
     // The picture is put back after the tip.
+    // The deck screen takes its clicks through the pictures of the cards, so an empty slot, which is where a
+    // Pieris is used, only answers to the keyboard. With a Pieris the empty slots of the page get a picture that
+    // is as good as invisible, and the game makes a button of it like of any card.
+    AP.showEmptySlots = () => {
+        const pieris = $dataWeapons[WEAPON_PIERIS];
+        if (!bound() || !pieris || pieris.name !== "Pieris" || !$gameParty.hasItem(pieris, false)) {
+            return;
+        }
+        const first = $gameVariables.value(VARIABLE_DECK_PAGE) === 1 ? 0 : DECK_PAGE_SLOTS;
+        const blank = String(CARD_ITEM_FIRST);
+        for (let slot = 0; slot < DECK_PAGE_SLOTS; slot++) {
+            if (first + slot >= $gameVariables.value(VARIABLE_DECK_COUNT)) {
+                const x = $gameVariables.value(VARIABLE_DECK_X) + DECK_SLOT_WIDTH * (slot % DECK_ROW_SLOTS);
+                const y = $gameVariables.value(VARIABLE_DECK_Y) + DECK_SLOT_HEIGHT * Math.floor(slot / DECK_ROW_SLOTS);
+                $gameScreen.showPicture(DECK_PICTURE_BASE + slot, blank, 1, x, y, 100, 100, 1, 0);
+            }
+        }
+    };
+
+    const patchDeckSlots = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_DECK_DISPLAY].list;
+        const button = list.findIndex(item => item.code === 357 && item.parameters[0] === "ButtonPicture");
+        if (button >= 0) {
+            list.splice(button, 0, command(355, list[button].indent, ["LostChapterAP.showEmptySlots();"]));
+        }
+    };
+
     const patchStandbyTip = () => {
         const list = $dataCommonEvents[COMMON_EVENT_STANDBY_START].list;
         const isButton = item =>
@@ -3166,6 +3203,7 @@
             patchConclusions();
             patchStandbyVerse();
             patchStandbyTip();
+            patchDeckSlots();
             patchCardConditions();
             createCardEvent();
             patchRelicConditions();
