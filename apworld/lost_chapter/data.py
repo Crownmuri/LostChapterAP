@@ -479,6 +479,15 @@ DLC_CARDS: Dict[int, str] = {
 }
 CARDS.update(DLC_CARDS)
 
+# The single cards of the game's bonus shop. No event hands them out: they are items only, and like every received
+# card they are bought into the deck from the deck screen.
+BONUS_CARDS: Dict[int, str] = {
+    15: "Healing",
+    17: "Inspiration",
+    18: "Refresh",
+    24: "Psych Up",
+}
+
 # card name -> what it takes: the floor events, the relics, and whether LEWD has to go up first (the Cat only hands
 # out a card from LEWD 10 on). Ride On comes from the Cat or from Debauch depending on the version of the game, so
 # it asks for both. First pass read from the event commands, not yet confirmed in play.

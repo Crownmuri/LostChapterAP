@@ -57,7 +57,7 @@ def item_table() -> Dict[str, int]:
     table[data.FINISHER] = data.FINISHER_ID
     table[data.EXPLORATION] = data.EXPLORATION_ID
 
-    for item_id, name in data.CARDS.items():
+    for item_id, name in list(data.CARDS.items()) + list(data.BONUS_CARDS.items()):
         table[f"Card: {name}"] = data.CARD_OFFSET + item_id
 
     for weapon_id, name in data.RELICS.items():
@@ -140,7 +140,7 @@ class LostChapterWorld(World):
         "Door Keys": set(data.DOOR_KEYS.values()),
         "Title Effects": {f"Unlock Title Effect: {name}" for name in data.TITLES.values()},
         "Card Sets": set(data.STARTING_SETS.values()),
-        "Cards": {f"Card: {name}" for name in data.CARDS.values()},
+        "Cards": {f"Card: {name}" for name in list(data.CARDS.values()) + list(data.BONUS_CARDS.values())},
         "Traps": set(data.TRAPS.values()),
     }
     location_name_groups = {
@@ -448,6 +448,7 @@ class LostChapterWorld(World):
         pool += [self.create_item(data.EXPLORATION) for _ in range(self.options.field_exploration.value)]
         pool += [self.create_item(name) for name in self.relic_items()]
         pool += [self.create_item(f"Card: {name}") for name in self.cards().values()]
+        pool += [self.create_item(f"Card: {name}") for name in data.BONUS_CARDS.values()]
 
         # The rest is filler, a share of it traps
         filler = len(self.included_locations()) - len(pool)

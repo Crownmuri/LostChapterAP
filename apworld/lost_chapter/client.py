@@ -47,6 +47,10 @@ class LostChapterCommandProcessor(CommandProcessor):
         """Launch Lost Chapter for the connected slot, patching it first if needed."""
         self.ctx.launch_game()
 
+    def _cmd_offline(self) -> None:
+        """Launch Lost Chapter with the plugin but nothing shuffled, on a save of its own. Needs no server."""
+        self.ctx.launch_game(offline=True)
+
     def _cmd_speed(self, speed: str = "2") -> None:
         """Set the game speed, 1 to 4. F7 in the game toggles between 1x and 2x."""
         Utils.async_start(self.ctx.bridge.send({"cmd": "Speed", "speed": speed}))
@@ -144,13 +148,22 @@ class LostChapterContext(Context):
 
         CommonClient.logger.info(f"Plugin installed into {game_path}. Restart the game if it is running.")
 
-    def launch_game(self) -> None:
+    def launch_game(self, offline: bool = False) -> None:
         game_path = self.game_path
 
         if game_path is None:
             CommonClient.logger.error(
                 "Lost Chapter install not found. Set lost_chapter_options.game_path in host.yaml."
             )
+            return
+
+        if offline:
+            if not game_install.is_plugin_current(game_path):
+                self.install_plugin()
+
+            folder = game_install.write_session(game_path, "offline", 0, offline=True)
+            CommonClient.logger.info(f"Launching Lost Chapter offline, nothing shuffled, with its own save ({folder}).")
+            game_install.launch_game()
             return
 
         if not self.slot or not self.seed_name:

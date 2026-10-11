@@ -131,7 +131,7 @@ def save_folder(seed: str, slot: int) -> str:
     return f"save_ap_{re.sub(r'[^A-Za-z0-9]', '', str(seed))}_{slot}"
 
 
-def write_session(game_path: str, seed: str, slot: int) -> str:
+def write_session(game_path: str, seed: str, slot: int, offline: bool = False) -> str:
     """
     Tells the plugin which multiworld slot the next game start belongs to. The game then saves into a folder of
     its own for that slot instead of its normal save folder.
@@ -147,7 +147,7 @@ def write_session(game_path: str, seed: str, slot: int) -> str:
         shutil.copyfile(config, os.path.join(save_path, "config.rmmzsave"))
 
     with open(os.path.join(game_path, SESSION_FILE), "w", encoding="utf-8") as f:
-        json.dump({"seed": seed, "slot": slot, "save": folder}, f)
+        json.dump({"seed": seed, "slot": slot, "save": folder, "offline": offline}, f)
 
     return folder
 

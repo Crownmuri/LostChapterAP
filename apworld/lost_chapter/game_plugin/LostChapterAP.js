@@ -157,6 +157,27 @@
     const FLOOR_EVENT_CHOICES = 2;
     const LABEL_STANDBY = "ArchipelagoStandby";
     // The soul shop of the standby screen. The prices double with every 20 floors.
+    // Boons: souls -> [bonus id of common event 418, name, the switch it turns on if it is one, needs the
+    // Regression State]. BOON_TIERS names the price groups.
+    const COMMON_EVENT_BONUS = 418;
+    const BOON_TIERS = { 200: "Training", 300: "Resources", 400: "Body", 600: "Combat", 800: "Great Boons" };
+    const BOONS = {
+        200: [
+            [1, "STR +2"], [2, "DEF +2"], [3, "MAG +2"], [4, "AGL +2"], [5, "Max LP +10"], [6, "Max RP +10"],
+            [7, "LP Regen +1"], [8, "RP Regen +1"], [17, "FAITH +10"], [18, "FAITH -10"], [19, "VIRTUE +10"],
+            [20, "VIRTUE -10"], [109, "Acquired Gold +100 G", 232],
+        ],
+        300: [[9, "Gold +200"], [10, "LEWD +5"], [21, "Rare Drop Rate +3"]],
+        400: [
+            [15, "Womb Crest"], [16, "Bosomy", 0, true], [117, "Swimsuit"], [118, "Beastification"],
+            [107, "Regression", 0, true],
+        ],
+        600: [[111, "Dealt Combat Damage +10%", 234], [112, "Received Combat Damage -10%", 235]],
+        800: [
+            [113, "All Stats +2"], [114, "Max LP +20"], [115, "Max RP +20"], [116, "LEWD +10"],
+            [110, "Double LEWD Rate", 233],
+        ],
+    };
     const SHOP_LIMITS = { forgetMeNot: 2, pieris: 1 }; // how many of each a run can buy
     const SHOP_PRICES = { reroll: 10, pick: 50, forgetMeNot: 100, pieris: 200, heal: 20, cards: 20, vial: 50 };
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
@@ -331,7 +352,11 @@
     // What taking a received card into the deck costs in souls: 100 for Strip, 200 for the other lewd cards (Ride
     // Back, Encase, Taunt, Candylick, Ride On, Projection, Temptation), and for Faithful Dog Lassi and Shadow Cat
     // Assam what the game's score gives for holding them (111 and 222), which they do not add either.
-    const CARD_COSTS = { 77: 100, 60: 200, 71: 200, 74: 200, 76: 200, 78: 200, 79: 200, 80: 200, 40: 111, 39: 222 };
+    // 15, 17, 18 and 24 are the single cards of the bonus shop (BONUS_CARDS of apworld/lost_chapter/data.py)
+    const CARD_COSTS = {
+        15: 100, 17: 100, 18: 100, 24: 100, 77: 100, 60: 200, 71: 200, 74: 200, 76: 200, 78: 200, 79: 200, 80: 200,
+        40: 111, 39: 222,
+    };
     // The deck screen shows the card under the cursor as two pictures named after its item id: "<id>" is the card,
     // "<id>s" its description, which the screen puts into picture 47
     const PICTURE_CARD_PREVIEW = 48;
@@ -419,6 +444,9 @@
 
     const SESSION = readSession();
     AP.session = SESSION;
+    // The /offline command of the client: the game as it is in a multiworld, with nothing shuffled and no client.
+    // Every floor event is open, relics and cards are where the game has them, and the bonus shop is back.
+    const OFFLINE = !!(SESSION && SESSION.offline);
 
     if (SESSION) {
         // The game now and then fails to load a picture and shows nothing in its place, with or without this
@@ -543,8 +571,42 @@
     };
 
     // Ties the loaded save to the connected seed and reports what it already has
+    // What a slot of a multiworld with nothing shuffled would be
+    const offlineSlot = () => ({
+        connected: true,
+        seed: SESSION.seed,
+        slot: SESSION.slot,
+        name: "Offline",
+        slot_data: {
+            goal: 0,
+            include_dlc: $dataWeapons[WEAPON_PIERIS] && $dataWeapons[WEAPON_PIERIS].name === "Pieris" ? 1 : 0,
+            relicsanity: 0,
+            shuffle_keys: 0,
+            first_victories: 0,
+            shuffle_title_effects: 0,
+            finisher_move: 0,
+            field_exploration: 0,
+            final_boss_floor: FREE_DOORS_FLOOR,
+            soul_multiplier: 100,
+            death_link: 0,
+            battle_rewards: 0,
+            soul_milestones: [],
+            starting_events: [],
+            event_groups: {},
+            events: allEvents(),
+            relics: [],
+            cards: [],
+        },
+    });
+
     const bindSave = () => {
         const s = state();
+        if (OFFLINE && s) {
+            AP.slot = offlineSlot();
+            // Nothing is locked: every floor event and every door of the Heavenly Kings
+            allEvents().forEach(eventId => remember(s.events, eventId));
+            KING_SWITCHES.forEach(kingSwitch => remember(s.bosses, kingSwitch));
+        }
         if (!SESSION || !AP.slot || !s) {
             return;
         }
@@ -1126,7 +1188,11 @@
     };
 
     // Souls spent on cards are gone, the milestones they reached before stay checked
-    const soulTotal = () => state().souls + state().runSouls - (state().spent || 0);
+    // 0 without a session: the labels that show it are asked for their text in the normal game too
+    const soulTotal = () => {
+        const s = state();
+        return s ? (s.souls || 0) + (s.runSouls || 0) - (s.spent || 0) : 0;
+    };
 
     const soulMilestones = () => option("soul_milestones") || LEGACY_SOUL_MILESTONES;
 
@@ -1271,6 +1337,9 @@
     const connectionStatus = () => {
         if (!SESSION) {
             return ["Archipelago: off (normal game, normal save)", "#b0b0b0"];
+        }
+        if (OFFLINE) {
+            return ["Archipelago: offline (nothing shuffled, its own save)", "#80ff90"];
         }
         if (!AP.socket || AP.socket.readyState !== WebSocket.OPEN) {
             return ["Archipelago: waiting for the client...", "#ffd060"];
@@ -2037,6 +2106,11 @@
         if (regression && regression.name.startsWith("Regression") && actor.isStateAffected(STATE_REGRESSION)) {
             entries.push(entry("Yellow Vial: ends Regression", "vial", () => actor.removeState(STATE_REGRESSION)));
         }
+        if (!OFFLINE) {
+            entries.push(["Boons", true, () => {
+                AP.standbyMenu = "boons";
+            }]);
+        }
         entries.push(
             entry("LP +" + SHOP_HEAL, "heal", () => heal(() => actor.gainHp(SHOP_HEAL))),
             entry("RP +" + SHOP_HEAL, "heal", () => heal(() => actor.gainMp(SHOP_HEAL))),
@@ -2048,6 +2122,57 @@
                 },
             ]
         );
+        askStandby(interpreter, entries);
+    };
+
+    // The boons of the game's bonus shop, which a multiworld has no visit to: sold here for souls, at prices that
+    // stay the same on every floor. A boon is carried out by the bonus shop's own event (common event 418), which
+    // goes by the bonus id in the "selected" variable and never waits.
+    const boonAvailable = boon => {
+        const list = $dataCommonEvents[COMMON_EVENT_BONUS].list;
+        const known = list.some(item => {
+            const p = item.parameters;
+            return item.code === 111 && item.indent === 0 && p[0] === 1 && p[1] === VARIABLE_SELECTED && p[3] === boon[0];
+        });
+        const regression = $dataStates[STATE_REGRESSION];
+        // Only the versions of the game with the Regression State have the two boons about it
+        return known && (!boon[3] || (regression && regression.name.startsWith("Regression")));
+    };
+
+    const giveBoon = boon => {
+        const selected = $gameVariables.value(VARIABLE_SELECTED);
+        $gameVariables.setValue(VARIABLE_SELECTED, boon[0]);
+        const interpreter = new Game_Interpreter();
+        interpreter.setup($dataCommonEvents[COMMON_EVENT_BONUS].list);
+        // What a boon adds to the score is no soul earned
+        withoutSouls(() => interpreter.update());
+        $gameVariables.setValue(VARIABLE_SELECTED, selected);
+        redrawGui();
+    };
+
+    const offerBoons = (interpreter, price) => {
+        const entries = [];
+        if (!price) {
+            for (const tier of Object.keys(BOONS).map(Number)) {
+                if (BOONS[tier].some(boonAvailable)) {
+                    entries.push([BOON_TIERS[tier] + " (" + tier + " each)", true, () => {
+                        AP.standbyMenu = "boons:" + tier;
+                    }]);
+                }
+            }
+        } else {
+            for (const boon of BOONS[price].filter(boonAvailable)) {
+                // A boon that is a switch of the game is had for the rest of the run
+                const had = boon[2] && $gameSwitches.value(boon[2]);
+                entries.push([boon[1] + (had ? " (active)" : " (" + price + ")"), !had && soulTotal() >= price, () => {
+                    spendSouls(price);
+                    giveBoon(boon);
+                }]);
+            }
+        }
+        entries.push(["Back (" + soulTotal() + " souls)", true, () => {
+            AP.standbyMenu = price ? "boons" : "shop";
+        }]);
         askStandby(interpreter, entries);
     };
 
@@ -2176,6 +2301,10 @@
         }
         if (AP.standbyMenu === "pick") {
             offerPick(interpreter, floor);
+            return;
+        }
+        if (String(AP.standbyMenu).startsWith("boons")) {
+            offerBoons(interpreter, Number(String(AP.standbyMenu).split(":")[1]) || 0);
             return;
         }
         const offered = offerFloorEvents(
@@ -2770,12 +2899,16 @@
     };
 
     // Map001: the branch of the "Correct" choice that applies the origin
+    // A multiworld has the soul shop in its place. Offline the game keeps its own.
+    AP.skipsBonusShop = () => bound() && !OFFLINE;
+
     // Map003: a new run goes to the bonus shop (Map008) from the second playthrough on
     const patchBonusShop = list => {
         for (const item of list) {
             const p = item.parameters;
             if (item.code === 111 && p[0] === 1 && p[1] === VARIABLE_PLAYTHROUGH && p[3] === 2 && p[4] === 1) {
-                item.parameters = [12, "!LostChapterAP.bound() && $gameVariables.value(" + VARIABLE_PLAYTHROUGH + ") >= 2"];
+                const visits = "!LostChapterAP.skipsBonusShop() && $gameVariables.value(" + VARIABLE_PLAYTHROUGH + ") >= 2";
+                item.parameters = [12, visits];
             }
         }
     };
@@ -3010,10 +3143,15 @@
 
     const sceneIsCheck = scene => bound() && (scene.kind === 9 ? relicChecks() : cardChecks()).includes(scene.id);
 
-    const sceneOffered = scene =>
-        !!scene.label &&
-        sceneIsCheck(scene) &&
-        state().checked.includes((scene.kind === 9 ? RELIC_OFFSET : CARD_OFFSET) + scene.id);
+    // The relic or card of a scene was handed out: its check was sent, or where it is no check, the player has it
+    const sceneTaken = scene => {
+        if (sceneIsCheck(scene)) {
+            return state().checked.includes((scene.kind === 9 ? RELIC_OFFSET : CARD_OFFSET) + scene.id);
+        }
+        return $gameParty.hasItem((scene.kind === 9 ? $dataWeapons : $dataItems)[scene.id], scene.equip);
+    };
+
+    const sceneOffered = scene => !!scene.label && bound() && sceneTaken(scene);
 
     // Asked before the first of the scenes: is there one to revisit? Also forgets the answer of the last visit.
     AP.concluded = eventId => {
@@ -3024,7 +3162,9 @@
     // Replaces "has relic n" and "has card n" in front of a scene: the player asked for it
     AP.revisits = (eventId, index) => {
         const scene = CONCLUSIONS[eventId].scenes[index];
-        if (!sceneIsCheck(scene)) {
+        // The game's own question where nothing is asked: outside a multiworld, and for a scene that is never
+        // revisited and whose relic is in the player's hands
+        if (!bound() || (!scene.label && !sceneIsCheck(scene))) {
             return $gameParty.hasItem((scene.kind === 9 ? $dataWeapons : $dataItems)[scene.id], scene.equip);
         }
         // A scene that is `blocked` gives way to what the event holds further down, the grave of the Collapse
@@ -3337,5 +3477,7 @@
         }
     };
 
-    connect();
+    if (!OFFLINE) {
+        connect();
+    }
 })();

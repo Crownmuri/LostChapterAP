@@ -141,6 +141,15 @@ Game changes in a session (the plugin patches the event data in memory at load, 
   a new run asks which of those floors to start from. The bosses below it are not fought in that run.
 - The soul shop also sells a Yellow Vial (50) that ends the Regression State, and "Back" in the floor choice
   returns to the standby screen with the same floor events.
+- The soul shop has a Boons menu with the boons of the game's bonus shop at fixed prices: stats, regen, FAITH and
+  VIRTUE and "Acquired Gold +100 G" (200), Gold +200, LEWD +5 and Rare Drop Rate +3 (300), the body changes (400),
+  dealt damage +10% and received damage -10% (600), all stats +2, Max LP or RP +20, LEWD +10 and Double LEWD Rate
+  (800). The four single cards of the bonus shop (Healing, Inspiration, Refresh, Psych Up) are items, bought into
+  the deck for 100 G like the other received cards.
+- `/offline` in the client launches the game with the plugin but nothing shuffled and no server: every floor event
+  is open, relics and cards are where the game has them, and the game's own bonus shop is back (the Boons menu
+  is left out). The floor choice, the soul shop, the choice effects and revisit / reset stay. It has a save of
+  its own (`save_ap_offline_0`).
 - The "Once upon a time" questions are replaced by one list of the nine origins with their effects. The
   description and the Correct / Wrong confirmation are unchanged.
 
