@@ -178,6 +178,7 @@ class ClimaxTrapWeight(TrapWeight):
     with each other: with all of them the same, every kind is as likely. 0 leaves a kind out.
     """
     display_name = "Climax Trap Weight"
+    default = 5
 
 
 class ConfusionTrapWeight(TrapWeight):
@@ -206,10 +207,8 @@ class AcidTrapWeight(TrapWeight):
 class EcstasyTrapWeight(TrapWeight):
     """
     How likely a trap is an Ecstasy Trap, which puts you in Lust: a card that weakens you is added to your hand.
-    It can decide a fight, so it starts out rarer than the other traps.
     """
     display_name = "Ecstasy Trap Weight"
-    default = 5
 
 
 class StartingEventCount(Range):
