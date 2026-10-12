@@ -158,6 +158,8 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - Checkpoints: the first floor after a boss floor (21, 41, 61, ...) is saved to a file of its own
   (`checkpoint1.rmmzsave` is floor 21). A new run asks whether to start over or go on from one of them, with
   everything the run had there. A later run that gets there overwrites it.
+- A player in the Orgasm State cannot move: the enemy's grab for her underwear is not shaken off for an AP and
+  Step dodges nothing while it lasts (`patchImmobile`).
 - An asterisk behind a floor event (`Old Woman*`) says something is left to do there that is no check, but opens
   one in another event.
 - The soul shop also sells a Yellow Vial (50) that ends the Regression State, and "Back" in the floor choice

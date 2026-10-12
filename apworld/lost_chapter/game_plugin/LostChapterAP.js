@@ -2322,6 +2322,33 @@
         list.unshift(command(355, 0, ["LostChapterAP.turnStart();"]));
     };
 
+    // A player who just climaxed cannot move: what she would shake off for an AP (the Grudge going for her
+    // underwear) or dodge with Step is not shaken off or dodged while the Orgasm State lasts. The game leaves her
+    // both, as if nothing had happened.
+    const STATE_ORGASM = 8;
+    const VARIABLE_AP = 86;
+    const COMMON_EVENT_STRIP_UNDERWEAR = 212;
+    AP.immobile = () => shuffled() && $gameActors.actor(1).isStateAffected(STATE_ORGASM);
+    AP.cannotShakeOff = () => $gameVariables.value(VARIABLE_AP) === 0 || AP.immobile();
+    AP.dodges = () => $gameActors.actor(1).isStateAffected(STATE_STEP) && !AP.immobile();
+
+    const patchImmobile = () => {
+        const noAp = $dataCommonEvents[COMMON_EVENT_STRIP_UNDERWEAR].list.find(item => {
+            const p = item.parameters;
+            return item.code === 111 && p[0] === 1 && p[1] === VARIABLE_AP && p[2] === 0 && p[3] === 0 && p[4] === 0;
+        });
+        const step = $dataCommonEvents[COMMON_EVENT_ENEMY_ACTION].list.find(item => {
+            const p = item.parameters;
+            return item.code === 111 && p[0] === 4 && p[2] === 6 && p[3] === STATE_STEP;
+        });
+        if (!noAp || !step) {
+            console.error("[AP] Common event 212 or 107 has an unexpected layout, a climax does not hold the player");
+            return;
+        }
+        noAp.parameters = [12, "LostChapterAP.cannotShakeOff()"];
+        step.parameters = [12, "LostChapterAP.dodges()"];
+    };
+
     const patchTimeStop = () => {
         const ticks = $dataCommonEvents[COMMON_EVENT_ACTION_END].list;
         const resist = $dataCommonEvents[COMMON_EVENT_RESIST].list;
@@ -4839,6 +4866,7 @@
             patchEnemyAction();
             patchBrainwashPose();
             patchTimeStop();
+            patchImmobile();
             patchTurnStart();
             findScoreCommands();
         } else if (object === $dataTroops && !object._archipelagoPatched) {
