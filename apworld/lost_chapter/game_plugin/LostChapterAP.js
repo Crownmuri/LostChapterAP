@@ -78,6 +78,7 @@
     const CARD_OFFSET = 9000;
 
     const SWITCH_CLEARED = 1;
+    const SWITCH_GALLERY = 295; // on in the Recollection of the title screen, which replays fights and scenes
     const SWITCH_BEFORE_BOSS = 62;
     const SWITCH_LAST_BOSS = 64;
     const SWITCH_FIGHT = 65;
@@ -641,9 +642,13 @@
     };
 
     // The save has been played in a multiworld. Stays true while offline.
+    // The Recollection replays fights and scenes outside of any run. Nothing in it is the multiworld's: no checks,
+    // no goal, no items or traps, no DeathLink.
+    const inGallery = () => !!$gameSwitches && $gameSwitches.value(SWITCH_GALLERY);
+
     const bound = () => {
         const s = state();
-        return !!(SESSION && s && s.seed !== null);
+        return !!(SESSION && s && s.seed !== null) && !inGallery();
     };
     AP.bound = bound;
 
@@ -768,7 +773,7 @@
 
     const check = locationId => {
         const s = state();
-        if (!s) {
+        if (!s || inGallery()) {
             return;
         }
         if (!s.checked.includes(locationId)) {
@@ -799,6 +804,9 @@
     };
 
     const reachGoals = goals => {
+        if (inGallery()) {
+            return;
+        }
         const s = state();
         s.goals = s.goals || [];
         goals.forEach(goal => remember(s.goals, goal));
@@ -985,10 +993,10 @@
         AP.battleDrop = true;
         if (troopId >= 1 && troopId <= CHECK_TROOP_MAX) {
             check(TROOP_OFFSET + troopId);
-        } else if (troopId === TROOP_LAST_BOSS && state()) {
+        } else if (troopId === TROOP_LAST_BOSS && bound()) {
             state().lastBossSeen = true;
             lastBossDefeated();
-        } else if (troopId === TROOP_DLC_LAST_BOSS && state()) {
+        } else if (troopId === TROOP_DLC_LAST_BOSS && bound()) {
             dlcLastBossDefeated();
         }
         _BattleManager_processVictory.apply(this, arguments);
