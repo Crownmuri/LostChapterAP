@@ -4717,6 +4717,7 @@
     // was laid to rest already (DLC). In a multiworld the key is a check, and while that is open he hands it over
     // whatever became of the dog.
     const COMMON_EVENT_BATTLEFIELD = 42;
+    const REVIVAL_KNIGHT_LEFT = 290; // "Quest: Knight of the Beginning"
     const LASSI_GONE_SWITCHES = [243, 270];
     AP.lassiGone = switchId => {
         const sent = state().checked.includes(RELIC_OFFSET + WEAPON_COLLAR_KEY);
@@ -4724,13 +4725,53 @@
         return $gameSwitches.value(switchId) && !open;
     };
 
+    // The knight's two relics sit behind everything else the Battlefield can be: his quest (once the flag flies on
+    // the Hill) and the scene of a player who opened the Prison both end the event before he is asked for
+    // anything. While one of the two checks is open a multiworld goes to that part first.
+    const VARIABLE_MAX_LP = 41;
+    const LABEL_KNIGHT_RELICS = "archipelago knight relics";
+    const relicOpen = weaponId =>
+        shuffled() && relicChecks().includes(weaponId) && !state().checked.includes(RELIC_OFFSET + weaponId);
+    AP.knightRelics = () => relicOpen(WEAPON_DUSK_RING) || relicOpen(WEAPON_COLLAR_KEY);
+    // He only asks a player at full LP to free his dog, and heals another one instead
+    AP.knightAsks = () =>
+        $gameVariables.value(VARIABLE_MAX_LP) === $gameVariables.value(VARIABLE_LP) || relicOpen(WEAPON_COLLAR_KEY);
+
     const patchBattlefield = () => {
-        for (const item of $dataCommonEvents[COMMON_EVENT_BATTLEFIELD].list) {
+        const list = $dataCommonEvents[COMMON_EVENT_BATTLEFIELD].list;
+        for (const item of list) {
             const p = item.parameters;
             if (item.code === 111 && p[0] === 0 && LASSI_GONE_SWITCHES.includes(p[1]) && p[2] === 0) {
                 item.parameters = [12, "LostChapterAP.lassiGone(" + p[1] + ")"];
             }
+            if (item.code === 111 && p[0] === 1 && p[1] === VARIABLE_MAX_LP && p[2] === 1 && p[3] === VARIABLE_LP) {
+                item.parameters = [12, "LostChapterAP.knightAsks()"];
+            }
         }
+        const story = list.findIndex(item => {
+            const p = item.parameters;
+            return item.code === 111 && p[0] === 0 && p[1] === REVIVAL_KNIGHT_LEFT && p[2] === 0;
+        });
+        // Where the question of an event that reached its conclusion was put: in front of the scenes of the relics
+        const concluded = "LostChapterAP.concluded(" + COMMON_EVENT_BATTLEFIELD + ")";
+        const relics = list.findIndex((item, i) => {
+            const p = item.parameters;
+            return i > story && item.code === 111 && p[0] === 12 && p[1] === concluded;
+        });
+        if (story < 0 || relics < 0) {
+            console.error("[AP] Common event 42 has an unexpected layout, the knight's relics stay behind his quest");
+            return;
+        }
+        const indent = list[story].indent;
+        list.splice(relics, 0, command(118, indent, [LABEL_KNIGHT_RELICS]));
+        list.splice(
+            story,
+            0,
+            command(111, indent, [12, "LostChapterAP.knightRelics()"]),
+            command(119, indent + 1, [LABEL_KNIGHT_RELICS]),
+            command(0, indent + 1, []),
+            command(412, indent, [])
+        );
     };
 
     const patchRevivals = () => {
