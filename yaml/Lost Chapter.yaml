@@ -61,7 +61,7 @@ Lost Chapter:
   acid_trap_weight: 20        # dissolves your clothes
   ecstasy_trap_weight: 20     # Lust: a card that weakens you is added to your hand
   time_stop_trap_weight: 5    # for three turns all you can do is resist. Only with include_dlc
-  brainwash_trap_weight: 20   # up to five Brainwash cards land in your hand
+  brainwash_trap_weight: 20   # up to five Brainwash Start cards land in your discard pile
 
   # 0-36. Floor event unlocks you start with, picked at random from the events of the first 40 floors.
   # Desert, Temple, Hot Spring, Market and Small Room are one unlock for two events each

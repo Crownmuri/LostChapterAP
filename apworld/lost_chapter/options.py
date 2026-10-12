@@ -75,7 +75,8 @@ class ShuffleKeys(Toggle):
 
     True: No longer requires the 6 relics and access to Locksmith in order to obtain the Keys.
     False: Force the 6 relics and Locksmith to be in logic before the DLC boss / Monster questline.
-    Needs Relicsanity, the keys are always made at the Locksmith without it.
+    
+    This option is skipped if Relicsanity is false.
     """
     display_name = "Shuffle Keys"
 
@@ -225,7 +226,8 @@ class TimeStopTrapWeight(TrapWeight):
 class BrainwashTrapWeight(TrapWeight):
     """
     How likely a trap is a Brainwash Trap, which brainwashes you like an enemy's spell does: up to five Brainwash
-    cards land in your hand.
+    Start cards land in your discard pile and turn up once it is shuffled back into the deck. Together with the
+    cards of the Confusion Trap there are never more than ten of them.
     """
     display_name = "Brainwash Trap Weight"
 
