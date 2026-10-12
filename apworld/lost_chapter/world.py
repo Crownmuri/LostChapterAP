@@ -415,8 +415,9 @@ class LostChapterWorld(World):
         source = data.RELIC_SOURCES[name]
         late = any(data.EVENT_IDS[event] >= data.LATE_EVENT_FIRST for event in source["events"])
 
+        # "needs": events that have to be visited first, without the relic being found in them
         return (
-            all(self.can_visit(state, event) for event in source["events"])
+            all(self.can_visit(state, event) for event in source["events"] + source.get("needs", []))
             and self.can_reach_floor(state, data.LATE_EVENT_FLOOR if late else 1)
             and all(self.has_relic(state, relic) for relic in source["relics"])
         )

@@ -427,7 +427,9 @@ RELIC_SOURCES: Dict[str, Dict[str, List[str]]] = {
     "Plushie": {"events": ["Market"], "relics": []},
     "Music Box": {"events": ["Market"], "relics": []},
     "Clown Mask": {"events": ["Amusement Center"], "relics": []},
-    "Promise Pendant": {"events": ["Cherry Blossoms"], "relics": []},
+    # She only parts with it once the man of the Collapse is dead or saved. The Monster quest is another way to
+    # it, but that takes the Black Key, which is made of this pendant.
+    "Promise Pendant": {"events": ["Cherry Blossoms"], "relics": [], "needs": ["Collapse"]},
     "Collar Key": {"events": ["Battlefield"], "relics": []},
     "Pretty Water": {"events": ["Pond"], "relics": []},
     "Moon Hair Ornament": {"events": ["Girl"], "relics": []},
