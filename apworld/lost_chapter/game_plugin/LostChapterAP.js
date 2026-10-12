@@ -4763,11 +4763,14 @@
             return;
         }
         const indent = list[story].indent;
+        // The game with the DLC fades the screen in inside the branches that are passed over here
+        const fadesIn = list.slice(0, story).some(item => item.code === 222);
         list.splice(relics, 0, command(118, indent, [LABEL_KNIGHT_RELICS]));
         list.splice(
             story,
             0,
             command(111, indent, [12, "LostChapterAP.knightRelics()"]),
+            ...(fadesIn ? [] : [command(222, indent + 1, [])]),
             command(119, indent + 1, [LABEL_KNIGHT_RELICS]),
             command(0, indent + 1, []),
             command(412, indent, [])
