@@ -4625,13 +4625,14 @@
 
     // Girl: the patch of the game that restores its cut content has her give the Moon Hair Ornament to a player in
     // the Regression State. In the game without it there is neither the state nor the gift, and with it no White
-    // Key. In a multiworld she hands the ornament out on any visit while its check is open, in every version.
+    // Key. In a multiworld she hands the ornament out on any visit, in every version: the first time that is its
+    // check, and an event that was reset plays the same scene again (VIRTUE +5) and not the one of a player she
+    // has nothing for (RP +5).
     AP.girlGift = () => {
         if ($gameActors.actor(1).isStateAffected(STATE_REGRESSION)) {
             return true;
         }
-        const location = RELIC_OFFSET + WEAPON_MOON_HAIR_ORNAMENT;
-        return bound() && relicChecks().includes(WEAPON_MOON_HAIR_ORNAMENT) && !state().checked.includes(location);
+        return bound() && relicChecks().includes(WEAPON_MOON_HAIR_ORNAMENT);
     };
 
     const patchGirl = () => {
