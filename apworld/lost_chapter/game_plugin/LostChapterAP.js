@@ -1359,6 +1359,33 @@
         return null;
     };
 
+    // What else those choices take: the conditions inside the part that they sit behind, in words. The Dog's
+    // "Release from curse" is behind "no Collar Key" and, inside that, behind the origin The New Ruler.
+    const partConditions = (eventId, list, from, indent) => {
+        const open = {}; // indent -> [conditional branch, whether its Else was passed]
+        for (let i = from + 1; i < list.length && list[i].indent > indent; i++) {
+            const item = list[i];
+            if (item.code === 102) {
+                const words = [];
+                for (let depth = indent + 1; depth < item.indent; depth++) {
+                    const condition = open[depth] ? branchCondition(eventId, open[depth][0].parameters) : null;
+                    if (condition) {
+                        words.push(open[depth][1] ? condition.unmet : condition.met);
+                    }
+                }
+                return words;
+            }
+            if (item.code === 111) {
+                open[item.indent] = [item, false];
+            } else if (item.code === 411 && open[item.indent]) {
+                open[item.indent][1] = true;
+            } else if (item.code === 412) {
+                delete open[item.indent];
+            }
+        }
+        return [];
+    };
+
     const wrapText = (text, width) => {
         const lines = [""];
         for (const word of text.split(" ")) {
@@ -1396,7 +1423,8 @@
         // The part that is passed over: the branch itself, or what comes after its Else
         const passed = taken ? otherwise : at;
         const choices = passed < 0 ? null : partChoices(list, passed, item.indent);
-        const takes = taken ? condition.unmet : condition.met;
+        const inner = passed < 0 ? [] : partConditions(eventId, list, passed, item.indent);
+        const takes = [taken ? condition.unmet : condition.met].concat(inner).join(", and ");
         const named = part =>
             (part || []).map(choice => effectKey(String(choice))).filter(name => /[a-z]/i.test(name));
         // The part that runs instead can offer the same (the Desert asks to advance dressed or not, only what
