@@ -101,7 +101,17 @@
     // The values of the goal option of apworld/lost_chapter/options.py
     const GOAL_NORMAL_END = 0;
     const GOAL_TRUE_END = 1;
-    const GOAL_DLC_END = 3;
+    const GOAL_DLC_NORMAL = 3;
+    const GOAL_DLC_TRUE = 4;
+    // The fight against Magislilia (common event 69) sets the "END4 Flag" from these when it starts: ENDING 3 takes
+    // one of LEWD up to 20, VIRTUE from 70, the Monster quest finished or Memory of the Moon, and not Footsteps
+    // of the Night
+    const SWITCH_END4 = 184;
+    const SWITCH_MEMORY_OF_MOON = 271;
+    const SWITCH_MONSTER_END = 276;
+    const SWITCH_FOOTSTEPS = 277;
+    const END3_LEWD = 20;
+    const END3_VIRTUE = 70;
 
     const COMMON_EVENT_NEXT_FLOOR = 86;
     const COMMON_EVENT_STANDBY = 11;
@@ -802,8 +812,17 @@
 
     const dlcLastBossDefeated = () => {
         if (winCounts()) {
-            reachGoals([GOAL_DLC_END]);
+            reachGoals($gameSwitches.value(SWITCH_END4) ? [GOAL_DLC_NORMAL] : [GOAL_DLC_NORMAL, GOAL_DLC_TRUE]);
         }
+    };
+
+    // The ending a win over Magislilia would get as the run stands: what common event 69 goes by
+    const dlcEnding = () => {
+        if ($gameSwitches.value(SWITCH_FOOTSTEPS)) {
+            return 4;
+        }
+        const stats = $gameVariables.value(VARIABLE_LEWD) <= END3_LEWD || $gameActors.actor(1).param(7) >= END3_VIRTUE;
+        return stats || $gameSwitches.value(SWITCH_MONSTER_END) || $gameSwitches.value(SWITCH_MEMORY_OF_MOON) ? 3 : 4;
     };
 
     const checkTitle = title => check(SWITCH_OFFSET + TITLE_SWITCH_BASE + title);
@@ -894,6 +913,7 @@
             cards: $gameVariables.value(VARIABLE_DECK_COUNT),
             souls: state() ? soulTotal() : 0,
             climaxes: $gameVariables.value(VARIABLE_CLIMAX_COUNT),
+            dlc_ending: dlcEnding(),
         };
         const text = JSON.stringify(status);
         if (text !== AP.lastStatus) {
@@ -1219,50 +1239,124 @@
     };
 
     // Not every option of a floor event is a choice that can be shown grayed out: some sit in a part of the event
-    // that is passed over as a whole (the cursed dog is only released by a player with the Collar Key). A notice
-    // names the first choice of such a part and what it takes, as far as the condition is one that can be named.
-    const SKIP_NOTICES = 2; // a visit
-    const branchRequirement = (eventId, p) => {
-        if (p[0] === 0 && p[2] === 0) {
-            return switchRequirement(eventId, p[1]);
+    // that is passed over as a whole (the cursed dog is only released by a player with the Collar Key), and a
+    // state like Regression sends a whole scene another way. A text box in the scene names the choices that are
+    // passed over and what they take, as far as the condition is one that can be named.
+    const SKIP_NOTICES = 3; // a visit
+    const SKIP_NOTICE_CHOICES = 3; // named in one notice
+    const SKIP_NOTICE_WIDTH = 58; // characters of a line of the text box
+    const BRANCH_STATS = { 49: "FAITH", 50: "VIRTUE", 51: "LEWD", 59: "Gold" };
+    // The comparisons of a conditional branch on a variable, and the one that holds when each does not
+    const BRANCH_SIGNS = ["=", "\u2267", "\u2266", ">", "<", "\u2260"];
+    const BRANCH_OPPOSITES = [5, 4, 3, 2, 1, 0];
+    // The same for one on the gold: at least, at most, less than
+    const GOLD_SIGNS = [["\u2267", "<"], ["\u2266", ">"], ["<", "\u2267"]];
+
+    // What a conditional branch asks, as { kind, met, unmet }: the words for it holding and for it not holding.
+    // null for anything that cannot be named, like the scratch values of an event.
+    const branchCondition = (eventId, p) => {
+        if (p[0] === 0) {
+            const name = switchRequirement(eventId, p[1]);
+            const words = [name, "not having seen " + name];
+            return name ? { kind: "switch", met: words[p[2]], unmet: words[1 - p[2]] } : null;
         }
         if (p[0] === 1 && p[1] === VARIABLE_ORIGIN && p[2] === 0 && p[4] === 0) {
-            return originRequirement("v[" + VARIABLE_ORIGIN + "]==" + p[3]);
+            const name = originRequirement("v[" + VARIABLE_ORIGIN + "]==" + p[3]);
+            return name ? { kind: "origin", met: name, unmet: "another origin than " + name.slice(11) } : null;
         }
-        const list = eventData(eventId).list;
-        // Not the relic the event itself hands out: that question is whether it was taken
-        const handsOut = other => other.code === 127 && other.parameters[0] === p[1] && other.parameters[1] === 0;
-        return p[0] === 9 && $dataWeapons[p[1]] && !list.some(handsOut) ? $dataWeapons[p[1]].name : null;
+        if (p[0] === 1 && p[2] === 0 && BRANCH_STATS[p[1]]) {
+            const words = sign => BRANCH_STATS[p[1]] + " " + BRANCH_SIGNS[sign] + " " + p[3];
+            return { kind: "stat", met: words(p[4]), unmet: words(BRANCH_OPPOSITES[p[4]]) };
+        }
+        if (p[0] === 4 && p[2] === 6 && $dataStates[p[3]] && $dataStates[p[3]].name) {
+            const name = effectKey($dataStates[p[3]].name).replace(/ State$/, "");
+            return { kind: "state", met: "the " + name + " State", unmet: "not being in the " + name + " State" };
+        }
+        if (p[0] === 7 && GOLD_SIGNS[p[2]]) {
+            return { kind: "stat", met: "Gold " + GOLD_SIGNS[p[2]][0] + " " + p[1],
+                     unmet: "Gold " + GOLD_SIGNS[p[2]][1] + " " + p[1] };
+        }
+        if (p[0] === 8 && $dataItems[p[1]] && $dataItems[p[1]].name) {
+            const name = effectKey($dataItems[p[1]].name);
+            return { kind: "card", met: "the card " + name, unmet: "not having the card " + name };
+        }
+        if (p[0] === 9 && $dataWeapons[p[1]] && $dataWeapons[p[1]].name) {
+            // Not the relic the event itself hands out: that question is whether it was taken
+            const handsOut = other => other.code === 127 && other.parameters[0] === p[1] && other.parameters[1] === 0;
+            const name = $dataWeapons[p[1]].name;
+            return eventData(eventId).list.some(handsOut)
+                ? null
+                : { kind: "relic", met: name, unmet: "not holding " + name };
+        }
+        return null;
     };
 
-    const noteSkipped = (list, at, taken, eventId) => {
+    // The first choices of the part of an event that starts behind `from` and is indented deeper than `indent`
+    const partChoices = (list, from, indent) => {
+        for (let i = from + 1; i < list.length && list[i].indent > indent; i++) {
+            if (list[i].code === 102) {
+                return list[i].parameters[0];
+            }
+        }
+        return null;
+    };
+
+    const wrapText = (text, width) => {
+        const lines = [""];
+        for (const word of text.split(" ")) {
+            const line = lines[lines.length - 1];
+            if (line && (line + " " + word).length > width) {
+                lines.push(word);
+            } else {
+                lines[lines.length - 1] = line ? line + " " + word : word;
+            }
+        }
+        return lines;
+    };
+
+    // In a text box of its own where the scene has none open, else on the notice line
+    const showSceneNote = (interpreter, text) => {
+        if ($gameMessage.isBusy()) {
+            notify(text);
+            return;
+        }
+        $gameMessage.setBackground(1);
+        $gameMessage.setPositionType(1);
+        wrapText("\\c[18][Archipelago]\\c[0] " + text, SKIP_NOTICE_WIDTH).forEach(line => $gameMessage.add(line));
+        interpreter.setWaitMode("message");
+    };
+
+    const noteSkipped = (interpreter, list, at, taken, eventId) => {
         const item = list[at];
-        const p = item.parameters;
-        let from = at;
-        let requirement = null;
-        if (!taken) {
-            requirement = branchRequirement(eventId, p);
-        } else if (p[0] === 0 && p[2] === 1) {
-            // "the switch is off" held: what comes after its Else takes the switch
-            from = list.findIndex((other, i) => i > at && other.indent <= item.indent);
-            requirement = from >= 0 && list[from].code === 411 ? switchRequirement(eventId, p[1]) : null;
-        }
-        if (!requirement) {
-            return;
-        }
-        let choices = null;
-        for (let i = from + 1; i < list.length && list[i].indent > item.indent && !choices; i++) {
-            choices = list[i].code === 102 ? list[i].parameters[0] : null;
-        }
         const notes = AP.skipNotes || (AP.skipNotes = []);
-        if (!choices || notes.length >= SKIP_NOTICES || notes.includes(at)) {
+        const condition = branchCondition(eventId, item.parameters);
+        if (!condition || notes.length >= SKIP_NOTICES || notes.includes(at)) {
             return;
         }
-        notes.push(at);
-        const text = effectKey(String(choices[0]));
-        notify(/[a-z]/i.test(text)
-            ? "\"" + text + "\" is not offered: requires " + requirement
-            : "Another scene of this event requires " + requirement);
+        const end = list.findIndex((other, i) => i > at && other.indent <= item.indent);
+        const otherwise = end >= 0 && list[end].code === 411 ? end : -1;
+        // The part that is passed over: the branch itself, or what comes after its Else
+        const passed = taken ? otherwise : at;
+        const choices = passed < 0 ? null : partChoices(list, passed, item.indent);
+        const takes = taken ? condition.unmet : condition.met;
+        let text = null;
+        if (choices) {
+            const names = choices.map(choice => effectKey(String(choice))).filter(name => /[a-z]/i.test(name));
+            const named = names.slice(0, SKIP_NOTICE_CHOICES).map(name => "\"" + name + "\"");
+            const verb = names.length > named.length ? " and more are" : named.length > 1 ? " are" : " is";
+            text = named.length > 0
+                ? named.join(", ") + verb + " not offered here. That takes: " + takes + "."
+                : "Another scene of this event takes: " + takes + ".";
+        } else if (taken && ["state", "relic", "card", "origin"].includes(condition.kind)) {
+            // Nothing to choose from is passed over, but the branch leaves for another part of the event
+            const jumps = other => other.code === 119 && other.indent === item.indent + 1;
+            const leaves = list.some((other, i) => i > at && i < end && jumps(other));
+            text = leaves ? "This scene goes another way because of: " + condition.met + "." : null;
+        }
+        if (text) {
+            notes.push(at);
+            showSceneNote(interpreter, text);
+        }
     };
 
     const _Game_Interpreter_command111 = Game_Interpreter.prototype.command111;
@@ -1273,7 +1367,7 @@
         const result = _Game_Interpreter_command111.apply(this, arguments);
         const eventId = bound() && list && list[at] && list[at].code === 111 ? floorEventOf(list) : 0;
         if (eventId) {
-            noteSkipped(list, at, !!this._branch[indent], eventId);
+            noteSkipped(this, list, at, !!this._branch[indent], eventId);
         }
         return result;
     };
@@ -1636,6 +1730,13 @@
         // The True End goal is lost for the run once the climax count passes the limit
         const climaxes = $gameVariables.value(VARIABLE_CLIMAX_COUNT);
         const limit = TRUE_END_CLIMAX_LIMIT - 1;
+        if (option("goal") === GOAL_DLC_TRUE) {
+            // The DLC True goal takes ENDING 3
+            const ending = dlcEnding();
+            const color = ending === 3 ? "#b0e0a0" : "#e08080";
+            updateLabel(scene._archipelagoClimaxes, shown, "DLC Ending " + ending, color);
+            return;
+        }
         const counted = shown && option("goal") === GOAL_TRUE_END;
         const text = "Climaxes " + climaxes + " / " + limit;
         updateLabel(scene._archipelagoClimaxes, counted, text, climaxes > limit ? "#e08080" : "#b0e0a0");

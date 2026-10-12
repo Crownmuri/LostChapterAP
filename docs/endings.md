@@ -69,15 +69,20 @@ still off:
 
 - The plugin keeps "game cleared" on from the start, so no ending ever rolls from the last boss and every run is in
   the lap state described above.
-- With `goal: normal_end` or `goal: true_end`, Magisdusk's introduction and the scripted phases of the first fight
+- With `goal: ending_normal` or `goal: ending_true`, Magisdusk's introduction and the scripted phases of the first fight
   play anyway until he is defeated once (`patchLastBoss`). The win still continues the climb.
-- The goal is sent when Magisdusk is defeated. `goal: normal_end` accepts any win. `goal: true_end` needs a win
-  with a climax count of 20 or less. The standby screen and the tracker show the count with that goal.
-  `goal: dlc_end` is a win over Magislilia. With `virgin_mode: true` the win
+- The goal is sent when Magisdusk is defeated. `goal: ending_normal` accepts any win. `goal: ending_true` needs a
+  win with a climax count of 20 or less. The standby screen and the tracker show the count with that goal.
+  `goal: dlc_normal` is a win over Magislilia, `goal: dlc_true` one with the "END4 Flag" (switch 184) off, which
+  is ENDING 3. Common event 69 sets the flag when the fight starts: on, then off with LEWD of 20 or less, VIRTUE
+  of 70 or more, the Monster quest finished (switch 276) or Memory of the Moon (switch 271, the White Key used in
+  the Corridor), then on again with Footsteps of the Night (switch 277, the same with the origin The New Ruler, or
+  the end of the Sculptor event with it). The standby screen and the tracker say which ending the run would get.
+  With `virgin_mode: true` the win
   also needs the Virginity state intact, whichever goal it is. Losing the state then sets LP to 0, so the run
   ends the way it does without LP, and the "Lose Virginity" title check only ever holds filler.
-- The Sea route still works and plays an ending. It counts like a win over Magisdusk: for `normal_end` always,
-  for `true_end` with a climax count of 20 or less. Logic does not count on it.
+- The Sea route still works and plays an ending. It counts like a win over Magisdusk: for `ending_normal` always,
+  for `ending_true` with a climax count of 20 or less. Logic does not count on it.
 - With the DLC, the ending map names ENDING 1 as ENDING 0 "Beyond the Blue Sky - With You -" once ENDING 3 was
   seen (switch 197). ENDING 3 "Lost Chapter" and ENDING 4 "Dark and deep bottom of darkness" are the two of the
   fight against Magislilia (common event 69).

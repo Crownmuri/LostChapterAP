@@ -25,6 +25,7 @@ COLOR_LOCKED = "e05050"
 COLOR_DONE = "808080"
 COLOR_VALUE = "ffd060"
 GOAL_TRUE_END = 1  # the goal option
+GOAL_DLC_TRUE = 4
 TRUE_END_CLIMAXES = 20  # the climax count the True End allows
 
 # The color of a title's name is where the title stands in logic. The square in front of it only says whether its
@@ -219,6 +220,10 @@ class LostChapterTabLayout(BoxLayout):
         # The True End goal is lost for the run once the climax count is over the limit
         if self.ctx.slot_data.get("goal") == GOAL_TRUE_END and "climaxes" in status:
             first.append(value("Climaxes", "climaxes") + f" / {TRUE_END_CLIMAXES}")
+
+        # The ending a win over Magislilia would get as the run stands
+        if self.ctx.slot_data.get("goal") == GOAL_DLC_TRUE and "dlc_ending" in status:
+            first.append(value("DLC Ending", "dlc_ending") + " (goal: 3)")
 
         # The second line is what the title "Minerva's Owl" adds up, which also counts a fifth of Max LP + Max RP
         self.run_label.text = "\n".join([

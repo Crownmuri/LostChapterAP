@@ -6,10 +6,12 @@ requires:
   version: 0.6.7
 
 Lost Chapter:
-  # normal_end: defeat the last boss, or free the Monster and leave this world at the Sea
-  # true_end: the same with a climax count of 20 or less
-  # dlc_end: defeat Magislilia behind the last door of the DLC. Needs include_dlc
-  goal: normal_end
+  # ending_normal: defeat the last boss, or free the Monster and leave this world at the Sea
+  # ending_true: the same with a climax count of 20 or less (ENDING 1)
+  # dlc_normal: defeat Magislilia behind the last door of the DLC. Needs include_dlc
+  # dlc_true: defeat her in a run that gets ENDING 3: LEWD 20 or less, VIRTUE 70 or more, the Monster freed or
+  #   the White Key used in the Corridor. Needs include_dlc
+  goal: ending_normal
   # The goal only counts with the Virginity status intact, losing it ends the run.
   # No story difference, only for those who want the challenge
   virgin_mode: false

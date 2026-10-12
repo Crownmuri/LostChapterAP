@@ -539,7 +539,7 @@ EXPLORATION = "Progressive Field Exploration"
 EXPLORATION_FLOORS = (21, 41, 61, 81, 101)
 
 # Names of the goal option. The plugin reports the values of the goals a win reaches.
-DLC_GOALS = ("dlc_end",)
+DLC_GOALS = ("dlc_normal", "dlc_true")
 
 VICTORY = "Victory"
 ENDING_EVENT = "Reach the Ending"

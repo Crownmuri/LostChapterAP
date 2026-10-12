@@ -373,8 +373,11 @@ class LostChapterWorld(World):
 
         if self.options.goal.current_key in data.DLC_GOALS:
             # The last door of the DLC opens with both of its bosses defeated in the same run
+            # ENDING 3 is sure with the White Key used in the Corridor. The other ways to it go by stats.
+            true_end = self.options.goal.current_key == "dlc_true"
             self.get_location(data.ENDING_EVENT).access_rule = (
                 lambda state: all(self.has_relic(state, key) for key in data.DLC_BOSS_KEYS.values())
+                and (not true_end or self.can_visit(state, "Corridor"))
             )
         else:
             # The last boss is one of the doors from the final boss floor on, 100 at the least, which takes all four

@@ -9,18 +9,29 @@ class Goal(Choice):
     """
     What counts as completing the game.
 
-    The game counts as cleared from the start, so the climb continues after the last boss. With the Normal End or
-    the True End as the goal, his introduction and scripted phases still play until he is defeated once.
+    The game counts as cleared from the start, so the climb continues after the last boss. With one of the two
+    Ending goals, his introduction and scripted phases still play until he is defeated once.
 
-    Normal End: defeat the last boss, or free the Monster and leave this world at the Sea. The climax count does
+    Ending Normal: defeat the last boss, or free the Monster and leave this world at the Sea. The climax count does
     not matter (over 20 it would be ENDING 2 "Deeper Into the Darkness").
-    True End: the same with a climax count of 20 or less (ENDING 1 "Beyond the Blue Sky").
-    DLC End: defeat Magislilia past the White Door and the Black Door (ENDING 3 "Lost Chapter"). Needs Include DLC.
+    Ending True: the same with a climax count of 20 or less (ENDING 1 "Beyond the Blue Sky").
+    DLC Normal: defeat Magislilia past the White Door and the Black Door, whichever ending follows (the other one
+    is ENDING 4 "Dark and deep bottom of darkness"). Needs Include DLC.
+    DLC True: defeat her in a run that gets ENDING 3 "Lost Chapter". That takes one of LEWD 20 or less, VIRTUE 70 or
+    more, the Monster freed at the Sea, or the White Key used in the Corridor, and not the Footsteps of the Night
+    route of the origin The New Ruler. Needs Include DLC.
+
+    The standby screen and the tracker say where a run stands for the two True goals.
     """
     display_name = "Goal"
-    option_normal_end = 0
-    option_true_end = 1
-    option_dlc_end = 3
+    option_ending_normal = 0
+    option_ending_true = 1
+    option_dlc_normal = 3
+    option_dlc_true = 4
+    # The names these had before
+    alias_normal_end = 0
+    alias_true_end = 1
+    alias_dlc_end = 3
     default = 0
 
     @classmethod

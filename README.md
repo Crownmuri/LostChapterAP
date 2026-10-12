@@ -190,7 +190,9 @@ Desert (Desert, Desert 2), Temple (Goddess Temple, Devil Temple), Hot Spring (Ho
 (Market, Market 2) and Small Room (Small Room, Small Room 2). Each event keeps its own first visit check, named after
 what sets the two apart ("First Visit: Desert - Heal" and "First Visit: Desert - Trap", `EVENT_VISITS`), which is
 sent when the event ends. A choice inside an event whose condition is not met is shown grayed out with what it
-requires instead of being hidden.
+requires instead of being hidden. Where a whole part of a scene is passed over, a text box in the scene names
+its choices and what they take (a state like Regression, a stat, gold, a relic, a card, the origin or another
+event), up to three times a visit (`noteSkipped`).
 
 ### DLC
 
@@ -214,7 +216,8 @@ an event from common event 86, so both follow the installed version.
 The White Door and the Black Door are at the doors of the kings for whoever holds the White Key or the Black Key,
 and again behind the hallway. There the game opens them without a key and walks away once both bosses are
 defeated, to start Magislilia on the next boss floor. In a multiworld the doors behind the hallway take their keys
-too and Magislilia is a third door there (**The Last Door**). Defeating her is the `dlc_end` goal.
+too and Magislilia is a third door there (**The Last Door**). Defeating her is the `dlc_normal` goal, and the `dlc_true` goal when ENDING 3
+follows (`dlcEnding`).
 
 `shuffle_keys` (needs relicsanity) makes the two keys items, and having the Locksmith make one a check.
 
