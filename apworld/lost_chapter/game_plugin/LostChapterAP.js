@@ -3026,9 +3026,12 @@
             case 9: {
                 // An event is gone once the relic it hands out is held (Checkpoint). Where that relic is a check
                 // it is gone once the check was sent: the relic itself can come from anywhere.
-                const handsOut = eventData(eventId).list.some(
-                    item => item.code === 127 && item.parameters[0] === p[1] && item.parameters[1] === 0
-                );
+                // Not a relic the event also takes: the Locksmith asks for the three a key is made of, which he
+                // hands back for the other key, and those have to be in the bag.
+                const changes = operation => item =>
+                    item.code === 127 && item.parameters[0] === p[1] && item.parameters[1] === operation;
+                const list = eventData(eventId).list;
+                const handsOut = list.some(changes(0)) && !list.some(changes(1));
                 if (handsOut && bound() && relicChecks().includes(p[1])) {
                     return state().checked.includes(RELIC_OFFSET + p[1]);
                 }
