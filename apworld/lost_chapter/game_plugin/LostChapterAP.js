@@ -968,10 +968,11 @@
     };
 
     // The origin The New Ruler (DLC) can kill for a Pieris: the man of the Desert, the merchant, Lassi, the ranger
-    // of the Camp, the proprietress. The game never offers the event of a dead one again in that run, and with it
-    // go its checks and what it is good for (the Desert is the way to Lust). In a multiworld they are back on the
-    // next floor. Each of those events still parts with one Pieris a run only.
-    const DEATH_SWITCHES = [247, 254, 243, 245, 246];
+    // of the Camp, the proprietress, the believers of the two Temples, the librarian. The game never offers the
+    // event of a dead one again in that run, and with it go its checks and what it is good for (the Desert is the
+    // way to Lust). In a multiworld they are back on the next floor. Each of those events still parts with one
+    // Pieris a run only. tools/review_events.py lists what a switch locks away.
+    const DEATH_SWITCHES = [247, 254, 243, 245, 246, 248, 249, 250];
     const reviveVictims = () => {
         if (!shuffled()) {
             return;
@@ -3188,8 +3189,6 @@
         return group ? group.name : eventData(eventId).name;
     };
 
-    // How many checks an event has left, null when the client did not say which ones it holds. A pair is counted
-    // together, like in the tracker.
     // The floor events that hand a card out in this version of the game. The world lists a card under every
     // event that has it in any version: Ride On is the Cat's in the base game and Debauch's with the DLC.
     const cardGivers = {};
@@ -3201,7 +3200,9 @@
         return cardGivers[itemId].length === 0 || cardGivers[itemId].includes(eventId);
     };
 
-    const checksLeft = eventId => {
+    // The checks an event has open. A pair is counted together, like in the tracker. null when the client did not
+    // say which ones the events hold.
+    const openChecks = eventId => {
         const held = AP.slot && AP.slot.event_checks;
         if (!held) {
             return null;
@@ -3217,85 +3218,348 @@
                 []
             )
             .filter((location, index, all) => all.indexOf(location) === index)
-            .filter(location => !isSent(location)).length;
+            .filter(location => !isSent(location));
     };
 
-    // The name of an event in the floor choice, with its open checks behind it
+    //-------------------------------------------------------------------------
+    // What a floor event can come to
+
+    // A walk through the commands of an event that follows every way it can go from here: every choice that is
+    // offered, both sides of a question nobody can answer in advance (a roll, a key that is held down) and one
+    // side of every other. `world` answers what is known, by the letters the walk keeps its own changes under:
+    // s(witch), v(ariable), i(tem), w(eapon), t (state of the protagonist), and armor and script besides. Each
+    // returns a value, or undefined for "cannot be known".
+    // The walk says what the event can hand out (gains: "w30", "i40"), what it can change (sets: "s275:true",
+    // "t4:true"), which facts of the world it asked for (facts: "s275" -> true) and the labels it jumped to
+    // without finding them (jumps: the roll of a floor jumps out of its block to roll again).
+    const WALK_LIMIT = 20000;
+    const walkEvent = (list, world) => {
+        const result = { gains: {}, sets: {}, facts: {}, jumps: {} };
+        const labels = {};
+        list.forEach((item, i) => {
+            if (item.code === 118 && !(item.parameters[0] in labels)) {
+                labels[item.parameters[0]] = i;
+            }
+        });
+        const read = (local, kind, id) => {
+            if (id in local[kind]) {
+                return local[kind][id] === null ? undefined : local[kind][id];
+            }
+            const value = world[kind](id);
+            if (value !== undefined && kind !== "v") {
+                result.facts[kind + id] = !!value;
+            }
+            return value;
+        };
+        // The first command behind `i` that is not indented deeper than it
+        const behind = i => {
+            let j = i + 1;
+            while (j < list.length && list[j].indent > list[i].indent) {
+                j++;
+            }
+            return j;
+        };
+        const ask = (p, local) => {
+            switch (p[0]) {
+                case 0: {
+                    const value = read(local, "s", p[1]);
+                    return value === undefined ? undefined : !!value === (p[2] === 0);
+                }
+                case 1: {
+                    const a = read(local, "v", p[1]);
+                    const b = p[2] === 0 ? p[3] : read(local, "v", p[3]);
+                    if (a === undefined || b === undefined) {
+                        return undefined;
+                    }
+                    return [a === b, a >= b, a <= b, a > b, a < b, a !== b][p[4]];
+                }
+                case 4:
+                    if (p[2] === 0) {
+                        // The protagonist is always there, actor 10 never is: the game's way of closing a part
+                        return p[1] === 1 ? true : p[1] === 10 ? false : undefined;
+                    }
+                    return p[2] === 6 && p[1] === 1 ? read(local, "t", p[3]) : undefined;
+                case 8:
+                    return read(local, "i", p[1]);
+                case 9:
+                    return read(local, "w", p[1]);
+                case 10:
+                    return world.armor(p[1]);
+                case 12:
+                    return world.script(String(p[1]));
+                default:
+                    return undefined;
+            }
+        };
+        // The condition MPP_ChoiceEX puts behind a choice: s[n] and v[n] in an expression
+        const offered = (text, local) => {
+            for (const pattern of [CHOICE_SHOWN, CHOICE_ENABLED]) {
+                const match = pattern.exec(text);
+                if (!match) {
+                    continue;
+                }
+                let unknown = false;
+                const reader = kind => new Proxy({}, {
+                    get: (target, id) => {
+                        const value = read(local, kind, Number(id));
+                        unknown = unknown || value === undefined;
+                        return value;
+                    },
+                });
+                let holds = true;
+                try {
+                    holds = !!new Function("s", "v", "return (" + match[1] + ");")(reader("s"), reader("v"));
+                } catch (error) {
+                    unknown = true;
+                }
+                if (!unknown && !holds) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const copy = local => JSON.parse(JSON.stringify(local));
+        const seen = {};
+        const stack = [[0, { s: {}, v: {}, i: {}, w: {}, t: {} }]];
+        let steps = 0;
+        while (stack.length > 0 && steps < WALK_LIMIT) {
+            let [i, local] = stack.pop();
+            while (i < list.length && steps < WALK_LIMIT) {
+                const key = i + JSON.stringify(local);
+                if (seen[key]) {
+                    break;
+                }
+                seen[key] = true;
+                steps++;
+                const item = list[i];
+                const p = item.parameters;
+                if (item.code === 111) {
+                    const answer = ask(p, local);
+                    const other = behind(i);
+                    const otherwise = other < list.length && list[other].code === 411 ? other + 1 : other;
+                    if (answer === undefined) {
+                        stack.push([otherwise, copy(local)]);
+                    }
+                    i = answer === false ? otherwise : i + 1;
+                } else if (item.code === 411) {
+                    // Reached from the branch above it, which is over here
+                    i = behind(i);
+                } else if (item.code === 102) {
+                    for (let j = i + 1; j < list.length && list[j].indent >= item.indent; j++) {
+                        const branch = list[j];
+                        if (branch.indent !== item.indent) {
+                            continue;
+                        }
+                        if (branch.code === 404) {
+                            break;
+                        }
+                        const shown = branch.code === 403 || offered(String(p[0][branch.parameters[0]] || ""), local);
+                        if ((branch.code === 402 || branch.code === 403) && shown) {
+                            stack.push([j + 1, copy(local)]);
+                        }
+                    }
+                    break;
+                } else if (item.code === 402 || item.code === 403) {
+                    // The branch of the choice above is over: on behind the end of the choices
+                    let end = i;
+                    while (end < list.length && !(list[end].code === 404 && list[end].indent === item.indent)) {
+                        end++;
+                    }
+                    i = end + 1;
+                } else if (item.code === 113) {
+                    let end = i;
+                    while (end < list.length && !(list[end].code === 413 && list[end].indent < item.indent)) {
+                        end++;
+                    }
+                    i = end + 1;
+                } else if (item.code === 115) {
+                    break;
+                } else if (item.code === 119) {
+                    if (!(p[0] in labels)) {
+                        result.jumps[p[0]] = true;
+                        break;
+                    }
+                    i = labels[p[0]];
+                } else {
+                    if (item.code === 121) {
+                        for (let id = p[0]; id <= p[1]; id++) {
+                            local.s[id] = p[2] === 0;
+                            result.sets["s" + id + ":" + (p[2] === 0)] = true;
+                        }
+                    } else if (item.code === 122) {
+                        for (let id = p[0]; id <= p[1]; id++) {
+                            const operand = p[3] === 0 ? p[4] : p[3] === 1 ? read(local, "v", p[4]) : undefined;
+                            const current = p[2] === 0 ? 0 : read(local, "v", id);
+                            const known = operand !== undefined && current !== undefined;
+                            const value = [operand, current + operand, current - operand, current * operand,
+                                           Math.floor(current / operand), current % operand][p[2]];
+                            local.v[id] = known && isFinite(value) ? value : null;
+                        }
+                    } else if (item.code === 126 || item.code === 127) {
+                        const kind = item.code === 126 ? "i" : "w";
+                        local[kind][p[0]] = p[1] === 0;
+                        if (p[1] === 0) {
+                            result.gains[kind + p[0]] = true;
+                        }
+                    } else if (item.code === 313 && p[0] === 0 && p[1] <= 1) {
+                        // Actor 0 is the whole party, which is the protagonist
+                        local.t[p[3]] = p[2] === 0;
+                        result.sets["t" + p[3] + ":" + (p[2] === 0)] = true;
+                    }
+                    i++;
+                }
+            }
+        }
+        return result;
+    };
+
+    // For tools/review_events.py, which walks every event through the states a run can be in
+    AP.review = {
+        walk: walkEvent,
+        events: () => allEvents(),
+        list: eventId => eventData(eventId).list,
+        block: eventId => rerollBlocks[eventId] || [],
+        name: eventId => eventData(eventId).name,
+        // The switches the plugin turns off again on the next floor
+        undone: DEATH_SWITCHES.map(switchId => "s" + switchId),
+        // What the floor choice calls every event of the seed as the run stands
+        names: () => eventIds().map(offerName),
+    };
+
+    // The world as it is. The plugin's own questions are asked, except the two that are the player's to answer.
+    const LIVE_ANSWERS = [
+        "relicTaken", "cardTaken", "girlGift", "lassiGone", "knightRelics", "knightAsks", "locksmithRefuses",
+        "storyScene",
+    ];
+    const LIVE_SCRIPTS = new RegExp("^LostChapterAP[.](" + LIVE_ANSWERS.join("|") + ")[(]");
+    const liveWorld = () => {
+        const actor = $gameActors.actor(1);
+        return {
+            s: id => $gameSwitches.value(id),
+            v: id => $gameVariables.value(id),
+            i: id => !!$dataItems[id] && $gameParty.hasItem($dataItems[id]),
+            w: id => !!$dataWeapons[id] && $gameParty.hasItem($dataWeapons[id], true),
+            t: id => actor.isStateAffected(id),
+            armor: id => !!$dataArmors[id] && $gameParty.hasItem($dataArmors[id], true),
+            script: text => {
+                if (!LIVE_SCRIPTS.test(text)) {
+                    return undefined;
+                }
+                AP.simulating = true;
+                try {
+                    return !!new Function("return (" + text + ");")();
+                } catch (error) {
+                    return undefined;
+                } finally {
+                    AP.simulating = false;
+                }
+            },
+        };
+    };
+
+    // `world` with one of its facts the other way around: "s275", "t4"
+    const flipped = (world, fact, value) =>
+        Object.assign({}, world, {
+            [fact[0]]: id => (id === Number(fact.slice(1)) ? value : world[fact[0]](id)),
+        });
+
+    const gainKey = location =>
+        location >= CARD_OFFSET && location < BATTLE_OFFSET ? "i" + (location - CARD_OFFSET)
+            : location >= RELIC_OFFSET && location < RELIC_OFFSET + 1000 ? "w" + (location - RELIC_OFFSET) : null;
+
+    // What an event holds as the run stands: { open, reach, facts } of one event of the seed. `open` are its open
+    // checks, `reach` the ones of them a visit can get now, `facts` what would have to be different for the rest.
+    const surveyEvent = (eventId, world, floor) => {
+        const held = (AP.slot && AP.slot.event_checks && AP.slot.event_checks[eventId]) || [];
+        const isCard = location => location >= CARD_OFFSET && location < BATTLE_OFFSET;
+        const open = held
+            .filter(location => !isCard(location) || givesCard(eventId, location - CARD_OFFSET))
+            .filter(location => !isSent(location));
+        const list = eventData(eventId).list;
+        // The roll of a floor gives an event up by jumping out of its block. There the relic an event hands out
+        // counts as held once its check was sent (blockCondition).
+        const block = rerollBlocks[eventId] || [];
+        const rolled = Object.assign({}, world, { w: id => blockCondition([9, id, true], {}, eventId) });
+        const reached = from => {
+            const late = eventId > 56 && floor <= 40;
+            const away = walkEvent(block, Object.assign({}, rolled, from));
+            // As the run stands the floor choice has the last word, which takes a question it cannot answer for
+            // "offered" where the walk goes both ways
+            const asIs = Object.keys(from).length === 0;
+            const offered = asIs ? eventAvailable(eventId, floor) : !late && Object.keys(away.jumps).length === 0;
+            const walk = offered ? walkEvent(list, Object.assign({}, world, from)) : { gains: {}, sets: {}, facts: {} };
+            return {
+                offered: offered,
+                gets: location => offered && (gainKey(location) === null || !!walk.gains[gainKey(location)]),
+                facts: Object.assign({}, walk.facts, away.facts),
+                sets: walk.sets,
+            };
+        };
+        const now = reached({});
+        const reach = open.filter(now.gets);
+        const blocked = open.filter(location => !reach.includes(location));
+        // A fact stands in the way when the event gets one of those checks with it the other way around
+        const facts = {};
+        // Switches and states only: those are what another event can change
+        const changeable = Object.keys(now.facts).filter(fact => "st".includes(fact[0]));
+        for (const fact of blocked.length > 0 ? changeable : []) {
+            const value = !now.facts[fact];
+            const other = reached({ [fact[0]]: flipped(world, fact, value)[fact[0]] });
+            if (blocked.some(other.gets)) {
+                facts[fact] = value;
+            }
+        }
+        return { open: open, reach: reach, facts: facts, sets: now.sets, offered: now.offered };
+    };
+
+    // Every unlocked event of the seed surveyed, once a frame: the floor choice asks for each of its names
+    let surveyCache = null;
+    const survey = () => {
+        if (surveyCache && surveyCache.frame === Graphics.frameCount) {
+            return surveyCache;
+        }
+        const world = liveWorld();
+        const floor = $gameVariables.value(VARIABLE_FLOOR) + (state().holdFloor ? 0 : 1);
+        const events = {};
+        for (const eventId of eventIds().filter(id => state().events.includes(id))) {
+            events[eventId] = surveyEvent(eventId, world, floor);
+        }
+        // What would have to change for a check that cannot be had now, and the events that can change it
+        const wanted = {};
+        Object.keys(events).forEach(eventId =>
+            Object.keys(events[eventId].facts).forEach(fact => {
+                wanted[fact + ":" + events[eventId].facts[fact]] = true;
+            })
+        );
+        const helps = Object.keys(events)
+            .map(Number)
+            .filter(eventId => events[eventId].offered && Object.keys(events[eventId].sets).some(set => wanted[set]));
+        surveyCache = { frame: Graphics.frameCount, events: events, helps: helps };
+        return surveyCache;
+    };
+
+    // The name of an event in the floor choice, with its open checks behind it: "(2)" when a visit can get them
+    // all now, "(1/2)" when it can get one of two, in the color of a requirement when it can get none. An asterisk
+    // says a visit can change something that a check is waiting for, here or in another event.
     const offerName = eventId => {
-        const left = checksLeft(eventId);
+        const left = openChecks(eventId);
         // An event that is still locked cannot be picked, how much it holds says nothing there
         if (left === null || !state().events.includes(eventId)) {
             return eventName(eventId);
         }
-        // An asterisk: something is left to do here that is no check, but opens one in another event
         const group = eventGroup(eventId);
-        const quest = (group ? group.events : [eventId]).some(member => questEvents().includes(member));
-        return eventName(eventId) + (quest ? "*" : "") + (left ? " (" + left + ")" : " \\c[8](0)\\c[0]");
-    };
-
-    // Whether the branch of `choice` of the choices command at `start` hands out a check that is still open
-    const branchChecks = (list, start, choice) => {
-        const indent = list[start].indent;
-        const found = [];
-        let inBranch = false;
-        for (let i = start + 1; i < list.length; i++) {
-            const item = list[i];
-            const p = item.parameters;
-            if (item.indent === indent) {
-                if (item.code !== 402 && item.code !== 403) {
-                    break;
-                }
-                inBranch = item.code === 402 && p[0] === choice;
-            } else if (inBranch && item.code === 127 && p[1] === 0 && relicChecks().includes(p[0])) {
-                found.push(RELIC_OFFSET + p[0]);
-            } else if (inBranch && item.code === 126 && p[1] === 0 && cardChecks().includes(p[0])) {
-                found.push(CARD_OFFSET + p[0]);
-            }
+        const members = (group ? group.events : [eventId]).filter(member => survey().events[member]);
+        const reach = left.filter(location => members.some(member => survey().events[member].reach.includes(location)));
+        const helps = members.some(member => survey().helps.includes(member));
+        const name = eventName(eventId) + (helps ? "*" : "");
+        if (left.length === 0) {
+            return name + " \\c[8](0)\\c[0]";
         }
-        return found.filter(location => !isSent(location));
-    };
-
-    // The floor events with something left to do that opens a check in another event: the message of the Old
-    // Woman, which the guard of the Checkpoint hands the Memento Chisel over for. A check that one of its choices
-    // already leads to is not waiting on anything.
-    let questCache = null;
-    const questEvents = () => {
-        if (questCache && questCache.frame === Graphics.frameCount) {
-            return questCache.events;
+        if (reach.length === left.length) {
+            return name + " (" + left.length + ")";
         }
-        if (!switchSetters) {
-            findSwitchSetters();
-        }
-        const waiting = {};
-        const ready = [];
-        for (const eventId of eventIds()) {
-            const list = eventData(eventId).list;
-            list.forEach((item, start) => {
-                (item.code === 102 ? item.parameters[0] : []).forEach((text, choice) => {
-                    const shown = CHOICE_SHOWN.exec(String(text));
-                    const match = shown && /^\s*s\[(\d+)\]\s*$/.exec(shown[1]);
-                    const setters = match ? switchSetters[Number(match[1])] || [] : [];
-                    if (setters.length === 0 || setters.length > STORY_SWITCH_EVENTS || setters.includes(eventId)) {
-                        return;
-                    }
-                    for (const location of branchChecks(list, start, choice)) {
-                        if ($gameSwitches.value(Number(match[1]))) {
-                            ready.push(location);
-                        } else {
-                            waiting[location] = (waiting[location] || []).concat(setters);
-                        }
-                    }
-                });
-            });
-        }
-        const events = [];
-        for (const location of Object.keys(waiting).map(Number)) {
-            if (!ready.includes(location)) {
-                waiting[location].forEach(eventId => remember(events, eventId));
-            }
-        }
-        questCache = { frame: Graphics.frameCount, events: events };
-        return events;
+        const count = "(" + reach.length + "/" + left.length + ")";
+        return name + (reach.length === 0 ? " \\c[18]" + count + "\\c[0]" : " " + count);
     };
 
     const startFloorEvent = switchId => {
@@ -4770,6 +5034,9 @@
         // The New Ruler (DLC). Either way the Dusk Ring and the Collar Key go with him.
         { event: 42, off: [290], line: "The knight has left.", revisit: "he has left", reset: "he is back" },
         { event: 42, off: [242], line: "The knight is dead.", revisit: "he is dead", reset: "he lives" },
+        // Collapse: the traveler who was left to die. His grave is all there is from then on, and the Recovery
+        // Misanga went with him. `indent`: the question of the event itself, not the one inside the Monster quest.
+        { event: 30, off: [281], indent: 0, line: "The traveler is dead.", revisit: "his grave", reset: "he lives" },
     ];
     AP.revives = () => shuffled();
 
@@ -4840,18 +5107,22 @@
     // A floor event tells the story first and comes to its relic last. With the Monster quest on (the Prison was
     // opened) the Throne has the king murdered and the Collapse its traveler dead before either is asked for
     // anything, and with the flag on the Hill the king only thanks for it. In a multiworld those scenes wait
-    // while a relic of the event is a check that is still open.
-    const STORY_SWITCHES = [275, 287]; // "Quest: Monster" and "Quest: Hill of Wailing"
+    // while a relic or a card of the event is a check that is still open. The same for the Dog once Lassi was
+    // laid to rest: his card is a check of that event.
+    const STORY_SWITCHES = [275, 287, 270]; // "Quest: Monster", "Quest: Hill of Wailing", "Repose of Lassi"
     const EVENT_COLLAPSE = 30;
     const storyRelics = {}; // event id -> the relics the event hands out
+    const storyCards = {}; // and the cards
+    const cardOpen = itemId =>
+        shuffled() && cardChecks().includes(itemId) && !state().checked.includes(CARD_OFFSET + itemId);
     AP.storyScene = (eventId, switchId) => {
         if (!$gameSwitches.value(switchId)) {
             return false;
         }
-        if (!(storyRelics[eventId] || []).some(relicOpen)) {
+        if (!(storyRelics[eventId] || []).some(relicOpen) && !(storyCards[eventId] || []).some(cardOpen)) {
             return true;
         }
-        if (eventId === EVENT_COLLAPSE && travelerDead()) {
+        if (eventId === EVENT_COLLAPSE && travelerDead() && !AP.simulating) {
             // The Monster quest had him dead on an earlier visit
             $gameSwitches.setValue(SWITCH_TRAVELER_DEAD, false);
         }
@@ -4863,8 +5134,11 @@
             const list = eventData(eventId).list;
             const gains = weaponId => item =>
                 item.code === 127 && item.parameters[0] === weaponId && item.parameters[1] === 0;
+            const hands = itemId => item =>
+                item.code === 126 && item.parameters[0] === itemId && item.parameters[1] === 0;
             storyRelics[eventId] = RELIC_WEAPONS.filter(weaponId => list.some(gains(weaponId)));
-            if (storyRelics[eventId].length === 0) {
+            storyCards[eventId] = CARD_ITEMS.filter(itemId => list.some(hands(itemId)));
+            if (storyRelics[eventId].length + storyCards[eventId].length === 0) {
                 continue;
             }
             for (const item of list) {
@@ -4883,7 +5157,8 @@
             const list = commonEvent ? commonEvent.list : [];
             const gone = list.findIndex(item => {
                 const q = item.parameters;
-                return item.code === 111 && q[0] === 0 && q[1] === revival.off[0] && q[2] === 0;
+                const deep = revival.indent === undefined || item.indent === revival.indent;
+                return item.code === 111 && q[0] === 0 && q[1] === revival.off[0] && q[2] === 0 && deep;
             });
             if (gone < 0) {
                 // The Old Woman is only there with the DLC

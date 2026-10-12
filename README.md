@@ -173,8 +173,11 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - The scenes the Monster quest and the flag on the Hill put in front of an event (the king murdered on the
   Throne, the traveler of the Collapse dead, the merchant gone) wait while a relic of that event is a check that
   is still open (`patchStoryScenes`).
-- An asterisk behind a floor event (`Old Woman*`) says something is left to do there that is no check, but opens
-  one in another event.
+- The number behind a floor event is its open checks: `(2)` when a visit can get them all as the run stands,
+  `(1/2)` when it can get one of two, and in the color of a requirement when it can get none of them. An
+  asterisk (`Old Woman*`) says a visit there can change what such a check is waiting for, in that event or in
+  another. Both come from walking the event's commands through with the run as it is (`walkEvent`, `survey`).
+  `tools/review_events.py` does the same walk for every story switch and prints what each one locks away.
 - The soul shop also sells a Yellow Vial (50) that ends the Regression State and a Repair Kit (50) that mends
   torn clothes and dresses a nude player, each only while there is use for it. Scissors (50) go the other way:
   whole clothes are torn, torn ones are cut off (Nude, with the DLC). And "Back" in the floor choice

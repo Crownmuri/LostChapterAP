@@ -153,7 +153,7 @@ def find_browser() -> Optional[str]:
     return next((path for path in BROWSERS if Path(path).is_file()), None)
 
 
-def page(data: Path) -> str:
+def page(data: Path, report: str = "") -> str:
     source = PLUGIN.read_text(encoding="utf-8")
 
     with open(data / "CommonEvents.json", encoding="utf-8") as f:
@@ -180,7 +180,7 @@ def page(data: Path) -> str:
             f"var MAPS = {json.dumps(maps)};",
             "var $dataMap = null;",
             source,
-            REPORT,
+            report or REPORT,
         ]
     )
 
