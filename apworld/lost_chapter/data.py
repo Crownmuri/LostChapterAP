@@ -429,7 +429,9 @@ RELIC_SOURCES: Dict[str, Dict[str, List[str]]] = {
     "Memento Chisel": {"events": ["Old Woman", "Checkpoint"], "relics": []},
     "Crown of Forget-Me-Not": {"events": ["Girl with Flower Crown"], "relics": []},
     "Crown of Pieris": {"events": ["Girl with Flower Crown"], "relics": []},
-    "Recovery Misanga": {"events": ["Collapse", "Cherry Blossoms"], "relics": []},
+    # The traveler hands it over where he is saved. The Cherry Blossoms are another way to the same scene, not
+    # a place of their own.
+    "Recovery Misanga": {"events": ["Collapse"], "relics": []},
     "Dusk Ring": {"events": ["Battlefield"], "relics": []},
     "Plushie": {"events": ["Market"], "relics": []},
     "Music Box": {"events": ["Market"], "relics": []},

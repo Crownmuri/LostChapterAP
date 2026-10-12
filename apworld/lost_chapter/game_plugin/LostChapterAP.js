@@ -4837,6 +4837,46 @@
         );
     };
 
+    // A floor event tells the story first and comes to its relic last. With the Monster quest on (the Prison was
+    // opened) the Throne has the king murdered and the Collapse its traveler dead before either is asked for
+    // anything, and with the flag on the Hill the king only thanks for it. In a multiworld those scenes wait
+    // while a relic of the event is a check that is still open.
+    const STORY_SWITCHES = [275, 287]; // "Quest: Monster" and "Quest: Hill of Wailing"
+    const EVENT_COLLAPSE = 30;
+    const storyRelics = {}; // event id -> the relics the event hands out
+    AP.storyScene = (eventId, switchId) => {
+        if (!$gameSwitches.value(switchId)) {
+            return false;
+        }
+        if (!(storyRelics[eventId] || []).some(relicOpen)) {
+            return true;
+        }
+        if (eventId === EVENT_COLLAPSE && travelerDead()) {
+            // The Monster quest had him dead on an earlier visit
+            $gameSwitches.setValue(SWITCH_TRAVELER_DEAD, false);
+        }
+        return false;
+    };
+
+    const patchStoryScenes = () => {
+        for (const eventId of allEvents()) {
+            const list = eventData(eventId).list;
+            const gains = weaponId => item =>
+                item.code === 127 && item.parameters[0] === weaponId && item.parameters[1] === 0;
+            storyRelics[eventId] = RELIC_WEAPONS.filter(weaponId => list.some(gains(weaponId)));
+            if (storyRelics[eventId].length === 0) {
+                continue;
+            }
+            for (const item of list) {
+                const p = item.parameters;
+                const asksStory = p[0] === 0 && STORY_SWITCHES.includes(p[1]) && p[2] === 0;
+                if (item.code === 111 && item.indent === 0 && asksStory) {
+                    item.parameters = [12, "LostChapterAP.storyScene(" + eventId + ", " + p[1] + ")"];
+                }
+            }
+        }
+    };
+
     const patchRevivals = () => {
         for (const revival of REVIVALS) {
             const commonEvent = $dataCommonEvents[revival.event];
@@ -5299,6 +5339,7 @@
             patchTimeStop();
             patchStandUp();
             patchLocksmith();
+            patchStoryScenes();
             patchPretend();
             patchImmobile();
             patchTurnStart();
