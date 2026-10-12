@@ -53,7 +53,7 @@ Lost Chapter:
   # 0-100. How much of the filler is traps. The rest is gold, souls and one-time stat boosts for the current run
   trap_percentage: 20
 
-  # 0-100 each. How the traps are split between the eight kinds, compared with each other. 0 leaves a kind out
+  # 0-100 each. How the traps are split between the nine kinds, compared with each other. 0 leaves a kind out
   climax_trap_weight: 5       # forces a climax on your next turn, which can decide a fight
   confusion_trap_weight: 20   # up to five cards of the Confused State land in your discard pile
   sticky_trap_weight: 20      # lowers your AGL
@@ -62,6 +62,7 @@ Lost Chapter:
   ecstasy_trap_weight: 20     # Lust: a card that weakens you is added to your hand
   time_stop_trap_weight: 5    # two Resist cards (6 AP) within two turns, or pinned down until you climax. Only with include_dlc
   brainwash_trap_weight: 20   # up to five Brainwash Start cards land in your discard pile
+  breeze_trap_weight: 20      # your underwear is gone
 
   # 0-36. Floor event unlocks you start with, picked at random from the events of the first 40 floors.
   # Desert, Temple, Hot Spring, Market and Small Room are one unlock for two events each

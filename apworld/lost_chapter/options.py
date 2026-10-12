@@ -157,7 +157,7 @@ class FinalBossFloor(Range):
 class TrapPercentage(Range):
     """
     How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap, Acid Trap, Ecstasy
-    Trap, Time Stop Trap (DLC) and Brainwash Trap. A trap goes off in the fight it arrives in, or at the start of
+    Trap, Time Stop Trap (DLC), Brainwash Trap and Breeze Trap. A trap goes off in the fight it arrives in, or at the start of
     the next one. The card its state adds (Shake Free for Sticky, Masturbate for Ecstasy, Resist for Time Stop)
     is in your hand at once: it takes the place of a card you drew, which goes back to the deck and is drawn again.
     The weight options below set how the traps are split.
@@ -179,7 +179,7 @@ class TrapWeight(Range):
 
 class ClimaxTrapWeight(TrapWeight):
     """
-    How likely a trap is a Climax Trap, which forces a climax on your next turn. The eight trap weights are compared
+    How likely a trap is a Climax Trap, which forces a climax on your next turn. The nine trap weights are compared
     with each other: with all of them the same, every kind is as likely. 0 leaves a kind out.
     """
     display_name = "Climax Trap Weight"
@@ -240,6 +240,11 @@ class BrainwashTrapWeight(TrapWeight):
     A version of the game without these scenes (one that is not patched) confuses you instead.
     """
     display_name = "Brainwash Trap Weight"
+
+
+class BreezeTrapWeight(TrapWeight):
+    """How likely a trap is a Breeze Trap, which takes your underwear like the Steal of an enemy does."""
+    display_name = "Breeze Trap Weight"
 
 
 class StartingEventCount(Range):
@@ -307,6 +312,7 @@ class LostChapterOptions(PerGameCommonOptions):
     ecstasy_trap_weight: EcstasyTrapWeight
     time_stop_trap_weight: TimeStopTrapWeight
     brainwash_trap_weight: BrainwashTrapWeight
+    breeze_trap_weight: BreezeTrapWeight
     starting_event_count: StartingEventCount
     starting_events: StartingEvents
     soul_multiplier: SoulMultiplier

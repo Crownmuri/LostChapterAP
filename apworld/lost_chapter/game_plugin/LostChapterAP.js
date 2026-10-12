@@ -408,7 +408,11 @@
     const TRAP_STATE_NAMES = { 33: "Paralysis" };
     const STATE_REFLECTION = 21;
     // 35: Ecstasy Trap, the Lust state. 36: Time Stop Trap. 37: Brainwash Trap.
-    const TRAP_STATES = { 31: [121], 32: [101], 33: [242], 34: [131], 35: [4], 36: [404, 405], 37: [262] };
+    const TRAP_STATES = { 31: [121], 32: [101], 33: [242], 34: [131], 35: [4], 36: [404, 405], 37: [262], 38: [12] };
+    // The Breeze Trap: the Pantyless State, the way the Steal of an enemy leaves it
+    const ITEM_BREEZE_TRAP = 38;
+    const VARIABLE_UNDERWEAR = 211; // of the standing picture: 0 with underwear, 1 without, more for what follows
+    const SE_STEAL = "Bow2";
     const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
     const TRAP_DELAY_FRAMES = 120; // into a fight before a trap goes off, and between two traps
@@ -2052,6 +2056,12 @@
         }
         if (trap === ITEM_ACID_TRAP && !torn) {
             $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 1);
+        }
+        if (trap === ITEM_BREEZE_TRAP) {
+            AudioManager.playSe({ name: SE_STEAL, volume: 90, pitch: 100, pan: 0 });
+            if ($gameVariables.value(VARIABLE_UNDERWEAR) < 1) {
+                $gameVariables.setValue(VARIABLE_UNDERWEAR, 1);
+            }
         }
         return trap;
     };
