@@ -2204,6 +2204,11 @@
         if (!waiting || !actor || actor.isDead()) {
             return;
         }
+        // Not into a fight that is over: the trap would be gone with it and nothing would have come of it
+        const enemy = $gameTroop.members()[0];
+        if (!enemy || !enemy.isAlive() || !$gameSwitches.value(SWITCH_IN_BATTLE)) {
+            return;
+        }
         if (AP.battleFrames < TRAP_DELAY_FRAMES || $gameMessage.isBusy()) {
             return;
         }
@@ -2497,6 +2502,10 @@
 
     const _BattleManager_endBattle = BattleManager.endBattle;
     BattleManager.endBattle = function() {
+        // A time stop the fight ended under before the enemy got to do anything is not used up
+        if (AP.trapTimeStop && !AP.trapStopTurn && bound()) {
+            state().timeStops = (state().timeStops || 0) + 1;
+        }
         AP.trapBgm = null;
         AP.trapBrainwash = false;
         AP.trapTimeStop = false;
