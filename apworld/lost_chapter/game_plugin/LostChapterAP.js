@@ -195,7 +195,7 @@
         ],
     };
     const SHOP_LIMITS = { forgetMeNot: 2, pieris: 2 }; // how many of each a run can buy
-    const SHOP_PRICES = { reroll: 10, pick: 40, forgetMeNot: 150, pieris: 300, heal: 20, cards: 20, vial: 50 };
+    const SHOP_PRICES = { reroll: 10, pick: 40, forgetMeNot: 150, pieris: 300, heal: 20, cards: 20, vial: 50, repair: 50 };
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
     // common event 16 takes the choice while its switch is on
     const SWITCH_DROP_CONTROL = 16;
@@ -415,6 +415,7 @@
     const ITEM_BREEZE_TRAP = 38;
     const VARIABLE_UNDERWEAR = 211; // of the standing picture: 0 with underwear, 1 without, more for what follows
     const SE_STEAL = "Bow2";
+    const STATE_TORN_CLOTHES = 131;
     const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
     const TRAP_DELAY_FRAMES = 120; // into a fight before a trap goes off, and between two traps
@@ -3098,6 +3099,20 @@
         const regression = $dataStates[STATE_REGRESSION];
         if (regression && regression.name.startsWith("Regression") && actor.isStateAffected(STATE_REGRESSION)) {
             entries.push(entry("Yellow Vial: ends Regression", "vial", () => actor.removeState(STATE_REGRESSION)));
+        }
+        // What the Seamstress does: torn clothes are whole again and a nude player is dressed. Only offered to a
+        // player whose clothes need it.
+        const torn = $gameVariables.value(VARIABLE_TORN_CLOTHES) >= 1 || actor.isStateAffected(STATE_TORN_CLOTHES);
+        const nude = $dataStates[STATE_NUDE] && $dataStates[STATE_NUDE].name === "Nude";
+        if (torn || (nude && actor.isStateAffected(STATE_NUDE))) {
+            entries.push(entry("Repair Kit: mends your clothes", "repair", () => {
+                actor.removeState(STATE_TORN_CLOTHES);
+                if (nude) {
+                    actor.removeState(STATE_NUDE);
+                }
+                $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 0);
+                redrawGui();
+            }));
         }
         entries.push(
             entry("LP +" + SHOP_HEAL, "heal", () => heal(() => actor.gainHp(SHOP_HEAL))),
