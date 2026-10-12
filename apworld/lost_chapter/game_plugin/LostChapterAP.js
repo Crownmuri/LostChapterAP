@@ -1027,7 +1027,7 @@
         }
         const isRelicGain =
             item && amount > 0 && DataManager.isWeapon(item) && RELIC_WEAPONS.includes(item.id);
-        if (isRelicGain && !AP.granting && relicChecks().includes(item.id)) {
+        if (isRelicGain && !AP.granting && !AP.relicReturned && relicChecks().includes(item.id)) {
             // The place of a relic is worth what holding the relic is worth in the game's score, the first time
             // its check is sent. The relic itself adds nothing, wherever it comes from.
             const worth = Math.floor((RELIC_SOULS[item.name] || 0) * soulRate());
@@ -1053,6 +1053,22 @@
             return state().checked.includes(RELIC_OFFSET + weaponId);
         }
         return $gameParty.hasItem($dataWeapons[weaponId], includeEquip);
+    };
+
+    // Change Weapons of a floor event that also takes that relic: the Locksmith hands the three relics of a key
+    // back for the other key. That is the relic itself again and no check. The keys he takes as well, but
+    // making one is their check.
+    const _Game_Interpreter_command127 = Game_Interpreter.prototype.command127;
+    Game_Interpreter.prototype.command127 = function(params) {
+        const p = params || this._params || [];
+        const takes = item => item.code === 127 && item.parameters[0] === p[0] && item.parameters[1] === 1;
+        const isKey = [WEAPON_WHITE_KEY, WEAPON_BLACK_KEY].includes(p[0]);
+        AP.relicReturned = bound() && !isKey && floorEventOf(this._list) !== 0 && this._list.some(takes);
+        try {
+            return _Game_Interpreter_command127.apply(this, arguments);
+        } finally {
+            AP.relicReturned = false;
+        }
     };
 
     // Change Items of a floor event: gainItem above is told where the card comes from
