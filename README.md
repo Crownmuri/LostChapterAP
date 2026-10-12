@@ -166,8 +166,9 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - Next to the soul shop the floor choice has a Boon Shop with the boons of the game's bonus shop at fixed prices:
   Small Boons (200: stats, regen, FAITH and VIRTUE, "Acquired Gold +100 G"), Medium Boons (300: Gold +200,
   LEWD +5, Rare Drop Rate +3), Body (400), Combat (600: dealt damage +10%, received damage -10%) and Large Boons
-  (800: all stats +2, Max LP or RP +20, LEWD +10, Double LEWD Rate). The four single cards of the bonus shop (Healing, Inspiration, Refresh, Psych Up) are items, bought into
-  the deck for 100 G like the other received cards.
+  (800: all stats +2, Max LP or RP +20, LEWD +10, Double LEWD Rate). Every boon is sold once a run. The four
+  single cards of the bonus shop (Healing, Inspiration, Refresh, Psych Up) are items, bought into the deck for
+  100 G like the other received cards.
 - `/offline` in the client launches the game with the plugin but nothing shuffled and no server: every floor event
   is open, relics and cards are where the game has them, and the game's own bonus shop is back (the Boons menu
   is left out). The origin questions, the doors of the boss floors, the last boss and the ending are the game's

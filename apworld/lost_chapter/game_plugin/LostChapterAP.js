@@ -898,6 +898,7 @@
             s.claimed = [];
             s.claimedSets = [];
             s.shopBought = {};
+            s.boons = [];
             s.lastFight = 0;
             s.checkpoint = 0;
             // The souls of the run that ended are kept, the next one adds to them
@@ -2535,10 +2536,14 @@
             }
         } else {
             for (const boon of BOONS[price].filter(boonAvailable)) {
-                // A boon that is a switch of the game is had for the rest of the run
+                // Every boon is sold once a run, like in the game's bonus shop. One that is a switch of the game
+                // is had for the rest of the run.
+                const bought = (state().boons || []).includes(boon[0]);
                 const had = boon[2] && $gameSwitches.value(boon[2]);
-                entries.push([boon[1] + (had ? " (active)" : " (" + price + ")"), !had && soulTotal() >= price, () => {
+                const text = boon[1] + (had ? " (active)" : bought ? " (bought)" : " (" + price + ")");
+                entries.push([text, !had && !bought && soulTotal() >= price, () => {
                     spendSouls(price);
+                    state().boons = (state().boons || []).concat(boon[0]);
                     giveBoon(boon);
                 }]);
             }
