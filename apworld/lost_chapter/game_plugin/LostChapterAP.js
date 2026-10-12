@@ -2067,6 +2067,41 @@
         return true;
     };
 
+    // The standing picture only has the brainwashed scenes for the Regression State, in the versions of the game
+    // that have that state, and it only draws the hands of the enemies that brainwash: the Conjurer and the
+    // Shaman. After a Brainwash Trap any other enemy gets the hands of the Shaman.
+    const COMMON_EVENT_STANDING = 19;
+    const LABEL_EXPOSED = "\u9732\u51fa";
+    const VARIABLE_TROOP = 80;
+    const TROOP_CONJURER = 5;
+    const TROOP_SHAMAN = 17;
+    AP.trapBrainwashPose = () =>
+        !!AP.trapBrainwash && ![TROOP_CONJURER, TROOP_SHAMAN].includes($gameVariables.value(VARIABLE_TROOP));
+
+    const patchBrainwashPose = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_STANDING].list;
+        const label = list.findIndex(item => item.code === 118 && item.parameters[0] === LABEL_EXPOSED);
+        const shaman = label < 0 ? -1 : list.findIndex((item, i) => {
+            const p = item.parameters;
+            return i > label && item.code === 111 && p[0] === 1 && p[1] === VARIABLE_TROOP && p[3] === TROOP_SHAMAN;
+        });
+        const end = shaman < 0 ? -1 : branchEnd(list, shaman);
+        // What the Shaman's branch sets: the hands and the sound written next to them
+        const pose = end < 0 ? [] : list.slice(shaman, end).filter(item => item.code === 122).slice(0, 2);
+        if (pose.length < 2) {
+            return; // a version of the game without these scenes
+        }
+        const indent = list[shaman].indent;
+        list.splice(
+            end + 1,
+            0,
+            command(111, indent, [12, "LostChapterAP.trapBrainwashPose()"]),
+            ...pose.map(item => command(122, indent + 1, item.parameters)),
+            command(0, indent + 1, []),
+            command(412, indent, [])
+        );
+    };
+
     const patchEnemyAction = () => {
         const list = $dataCommonEvents[COMMON_EVENT_ENEMY_ACTION].list;
         // Behind the branch that ends the action of an enemy without LP
@@ -4484,6 +4519,7 @@
             patchFinisher();
             patchLastBoss();
             patchEnemyAction();
+            patchBrainwashPose();
             findScoreCommands();
         } else if (object === $dataTroops && !object._archipelagoPatched) {
             object._archipelagoPatched = true;
