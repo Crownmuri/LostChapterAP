@@ -417,6 +417,8 @@ EVENT_CONDITIONS: Dict[str, Dict[str, List[str]]] = {
     # Both only come up once the Aetolus Flag was hoisted on the Hill, in every run anew
     "Old Woman": {"events": ["Hill"], "relics": ["Aetolus Flag"], "any_relic": []},
     "Sculptor": {"events": ["Hill"], "relics": ["Aetolus Flag"], "any_relic": []},
+    # The Vacant Cabin only comes up for a player in Lust, which the drink of the Desert is the sure way to
+    "Small Room 2": {"events": ["Desert 2"], "relics": [], "any_relic": []},
 }
 
 # relic name -> what it takes to find it: the floor events and the relics it is traded for.
