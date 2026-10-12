@@ -161,9 +161,10 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - The soul shop also sells a Yellow Vial (50) that ends the Regression State, and "Back" in the floor choice
   returns to the standby screen with the same floor events.
 - Next to the soul shop the floor choice has a Boon Shop with the boons of the game's bonus shop at fixed prices:
-  Small Boons (200: stats, regen, FAITH and VIRTUE, "Acquired Gold +100 G"), Medium Boons (300: Gold +200,
+  Small Boons (200: stats, regen, FAITH and VIRTUE), Medium Boons (300: Gold +200,
   LEWD +5, Rare Drop Rate +3), Body (400), Combat (600: dealt damage +10%, received damage -10%) and Large Boons
-  (800: all stats +2, Max LP or RP +20, LEWD +10, Double LEWD Rate). Every boon is sold once a run. The four
+  (800: all stats +2, Max LP or RP +20, LEWD +10, Double LEWD Rate, +100 G on the
+  gold events hand out, double Forget-Me-Not harvest). Every boon is sold once a run. The four
   single cards of the bonus shop (Healing, Inspiration, Refresh, Psych Up) are items, bought into the deck for
   100 G like the other received cards.
 - `/offline` in the client launches the game with the plugin but nothing shuffled and no server: every floor event
@@ -230,8 +231,8 @@ is open (`patchGirl`), adding the gift to the event where the game does not have
 the White Key are relics like the others in every seed, and there is no option for the patch.
 
 `finisher_move` decides about Kick Balls, the card drawn the turn after the enemy climaxes: `vanilla`, `shuffle`
-(only once the useful item Kick Balls is found), `remove` or `boon_shop` (only once it is bought in the Boon Shop
-for 1000 souls, which holds for every later run too).
+(only once the useful item Kick Balls is found), `boon_shop` (only once it is bought in the Boon Shop for 1000
+souls, which holds for every later run too) or `remove`.
 
 `field_exploration` (0 to 5, default 5) puts that many Progressive Field Exploration items into the pool. Each
 adds a floor event to the two a floor lets you choose from. Logic expects one by floor 21, two by 41, three by 61,

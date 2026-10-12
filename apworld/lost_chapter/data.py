@@ -477,6 +477,8 @@ TRAPS: Dict[int, str] = {
     33: "Paralysis Trap",  # state 242
     34: "Acid Trap",       # state 131 "Torn Clothes", the clothes dissolve
     35: "Ecstasy Trap",    # state 4 "Lust"
+    36: "Time Stop Trap",  # states 404-406, DLC only
+    37: "Brainwash Trap",  # state 262
 }
 
 # item id of the card -> name, for the cards floor events hand out. Handing one out is a check ("Card: ..."), and

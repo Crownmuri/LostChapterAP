@@ -40,14 +40,15 @@ the remaining checks stay reachable.
 
 Defeating the last boss, which needs all four Heavenly Kings defeated first. The `goal` option picks one of:
 
-- `normal_end`: any win over the last boss.
-- `true_end`: a win in a run that would get ENDING 1, which takes a climax count of 20 or less.
+- `normal_end`: any win over the last boss, or freeing the Monster and leaving this world at the Sea.
+- `true_end`: the same in a run that would get ENDING 1, which takes a climax count of 20 or less. The standby
+  screen and the tracker show the count.
 - `dlc_end`: defeat Magislilia, the last boss of the DLC. She waits behind **The Last Door**, behind the hallway
   of a boss floor, once Migwarners (White Door, takes the White Key) and Bordosegeia (Black Door, takes the Black
   Key) are both defeated in the same run. Needs the `include_dlc` option.
 
 The `virgin_mode` option adds to any of these that the Virginity status has to be intact. Losing it then ends the
-run on the spot and the "Lose Virginity" title check only holds filler. It has no story difference and is only
+run on the spot and the "Seed of Origin" title check (Lose Virginity) only holds filler. It has no story difference and is only
 there for those who want the challenge.
 
 ## Which locations are checks?

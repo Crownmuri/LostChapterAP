@@ -24,6 +24,8 @@ COLOR_UNLOCKED = "40d060"
 COLOR_LOCKED = "e05050"
 COLOR_DONE = "808080"
 COLOR_VALUE = "ffd060"
+GOAL_TRUE_END = 1  # the goal option
+TRUE_END_CLIMAXES = 20  # the climax count the True End allows
 
 # The color of a title's name is where the title stands in logic. The square in front of it only says whether its
 # effect is unlocked.
@@ -212,11 +214,15 @@ class LostChapterTabLayout(BoxLayout):
         def value(name: str, key: str) -> str:
             return f"{name} [color={COLOR_VALUE}]{status.get(key, '?')}[/color]"
 
+        first = [value("Floor", "floor"), value("FAITH", "faith"), value("VIRTUE", "virtue"), value("Souls", "souls")]
+
+        # The True End goal is lost for the run once the climax count is over the limit
+        if self.ctx.slot_data.get("goal") == GOAL_TRUE_END and "climaxes" in status:
+            first.append(value("Climaxes", "climaxes") + f" / {TRUE_END_CLIMAXES}")
+
         # The second line is what the title "Minerva's Owl" adds up, which also counts a fifth of Max LP + Max RP
         self.run_label.text = "\n".join([
-            "    ".join(
-                [value("Floor", "floor"), value("FAITH", "faith"), value("VIRTUE", "virtue"), value("Souls", "souls")]
-            ),
+            "    ".join(first),
             "    ".join([
                 value("STR", "str"),
                 value("DEF", "def"),

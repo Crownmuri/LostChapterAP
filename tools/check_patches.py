@@ -62,6 +62,7 @@ REPORT = """
 var lines = [];
 try {
     DataManager.onLoad($dataCommonEvents);
+    DataManager.onLoad($dataTroops);
     Object.keys(MAPS).forEach(function(name) { $dataMap = MAPS[name]; DataManager.onLoad($dataMap); });
     lines.push(errors.length + " patches failed");
     errors.forEach(function(error) { lines.push("  " + error); });
@@ -147,6 +148,9 @@ def page(data: Path) -> str:
     with open(data / "CommonEvents.json", encoding="utf-8") as f:
         common_events = json.load(f)
 
+    with open(data / "Troops.json", encoding="utf-8") as f:
+        troops = json.load(f)
+
     maps = {}
 
     for file in sorted(data.glob("Map0*.json")):
@@ -161,6 +165,7 @@ def page(data: Path) -> str:
         + [
             STUBS,
             f"var $dataCommonEvents = {json.dumps(common_events)};",
+            f"var $dataTroops = {json.dumps(troops)};",
             f"var MAPS = {json.dumps(maps)};",
             "var $dataMap = null;",
             source,

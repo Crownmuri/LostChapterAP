@@ -9,15 +9,13 @@ class Goal(Choice):
     """
     What counts as completing the game.
 
-    The game counts as cleared from the start, so the climb continues after the last boss.
+    The game counts as cleared from the start, so the climb continues after the last boss. With the Normal End or
+    the True End as the goal, his introduction and scripted phases still play until he is defeated once.
 
-    Normal End: defeat the last boss.
-    True End: defeat the last boss in a run that would get ENDING 1 "Beyond the Blue Sky", which takes a climax count
-    of 20 or less.
-    DLC End: defeat Magislilia, the last boss of the DLC, who waits behind the last door once Migwarners (White
-    Door) and Bordosegeia (Black Door) are defeated in the same run. Needs Include DLC.
-
-    Virgin Mode adds to any of these that the Virginity status has to be intact.
+    Normal End: defeat the last boss, or free the Monster and leave this world at the Sea. The climax count does
+    not matter (over 20 it would be ENDING 2 "Deeper Into the Darkness").
+    True End: the same with a climax count of 20 or less (ENDING 1 "Beyond the Blue Sky").
+    DLC End: defeat Magislilia past the White Door and the Black Door (ENDING 3 "Lost Chapter"). Needs Include DLC.
     """
     display_name = "Goal"
     option_normal_end = 0
@@ -32,10 +30,10 @@ class Goal(Choice):
 
 class VirginMode(Toggle):
     """
-    The goal only counts with the Virginity status intact, whichever goal it is.
-
-    Losing the Virginity status ends the run on the spot, like running out of LP, and the "Lose Virginity" title
-    check only holds filler. This has no story difference, it is only there for those who want the challenge.
+    The goal only counts with the Virginity status intact. Losing it will force the game to game over, putting the
+    character's LP to 0.
+    The "Seed of Origin" title check will only hold filler to preserve the challenge.
+    This has no story difference, it is only there for those who want the challenge.
     """
     display_name = "Virgin Mode"
 
@@ -45,25 +43,11 @@ class IncludeDLC(Toggle):
     Adds the content of the DLC to the multiworld. Only turn this on when you own the DLC.
 
     This includes checks for the monsters, events, titles and relics of the DLC where applicable: the first visits
-    and unlocks of its floor events, the first victories over its enemies, its two door bosses and the relics its
-    events hand out.
+    and unlocks of its floor events, the first victories over its enemies and the two additional door bosses.
 
     When off, the floor events of the DLC are not offered even if it is installed.
     """
     display_name = "Include DLC"
-
-
-class ShuffleKeys(Toggle):
-    """
-    The White Key and the Black Key are shuffled into the multiworld as relics, and having the Locksmith make one
-    is a check. They open the locked door of the Corridor, the Prison and, with the DLC, the White Door and the
-    Black Door.
-
-    When off, the keys are made at the Locksmith as in the normal game, from relics that are still shuffled.
-
-    Needs Relicsanity, the keys are always made at the Locksmith without it.
-    """
-    display_name = "Shuffle Keys"
 
 
 class Relicsanity(DefaultOnToggle):
@@ -74,6 +58,21 @@ class Relicsanity(DefaultOnToggle):
     display_name = "Relicsanity"
 
 
+class ShuffleKeys(Toggle):
+    """
+    The White Key and the Black Key open the doors in the Corridor and the Prison events for the Monster questline.
+    With the DLC, these also unlock the White Door and the Black Door required to access the DLC final boss.
+
+    With relicsanity these can be shuffled into the multiworld, with the Locksmith becoming late game checks.
+    This setting will give you the option to force the keys to be at their original location.
+
+    True: No longer requires the 6 relics and access to Locksmith in order to obtain the Keys.
+    False: Force the 6 relics and Locksmith to be in logic before the DLC boss / Monster questline.
+    Needs Relicsanity, the keys are always made at the Locksmith without it.
+    """
+    display_name = "Shuffle Keys"
+
+
 class FirstVictories(DefaultOnToggle):
     """The first win against each regular enemy is a check."""
     display_name = "First Victories"
@@ -81,10 +80,9 @@ class FirstVictories(DefaultOnToggle):
 
 class ShuffleTitleEffects(DefaultOnToggle):
     """
-    Releasing a title in the Title Collection also needs its Unlock Title Effect item, which is shuffled into the
-    multiworld. When off, a title is released as soon as its condition is met, as in the normal game.
-
-    Meeting the condition of a title is a check either way.
+    Puts "Unlock Title Effect" items into the pool. Until the Unlock item has been found in the multiworld,
+    Title Effects cannot be revealed in the Title Collection screen, even if you have met the conditions for them.
+    Meeting the condition of a title still remains as a check and is shown accordingly on the tracker.
     """
     display_name = "Shuffle Title Effects"
 
@@ -92,26 +90,25 @@ class ShuffleTitleEffects(DefaultOnToggle):
 class FinisherMove(Choice):
     """
     Kick Balls, the card that turns up after the enemy climaxes and defeats it outright.
+    This move can trivialize most of the game, so this option provides additional restrictions:
 
-    Vanilla: it turns up as in the normal game.
-    Shuffle: it only turns up once you have found the Kick Balls item, which is shuffled into the multiworld.
-    Remove: it never turns up.
-    Boon Shop: it only turns up once you have bought it in the Boon Shop for 1000 souls, which then holds for every
-    later run as well.
+    Vanilla: card is added to the hand as it does in the normal game.
+    Shuffle: card is not added to the hand until it is found as an item in the multiworld.
+    Boon Shop: card is not added to the hand until it is permanently purchased from the Boon Shop for 1000 souls.
+    Remove: card is removed from the game and cannot be used.
     """
     display_name = "Finisher Move"
     option_vanilla = 0
     option_shuffle = 1
-    option_remove = 2
-    option_boon_shop = 3
+    option_boon_shop = 2
+    option_remove = 3
     default = 0
 
 
 class FieldExploration(Range):
     """
-    How many Progressive Field Exploration items are shuffled into the multiworld. Each one adds a floor event to
-    the two you get to choose from on every floor, which makes it easier to find the event you are after.
-
+    Adds a soft-logic layer by adding Progressive Field Exploration, which makes exploring new fields less RNG heavy.
+    Normally you start off with Battle + 2 fields, and each Progressive Field Exploration adds another field.
     The climb expects one of them by floor 21, two by floor 41, three by floor 61, four by floor 81 and five by
     floor 101, as far as there are that many.
     """
@@ -125,8 +122,8 @@ class BattleRewards(Range):
     """
     Adds checks to the fights. While one of them is open, one of the three cards of a won fight is an Archipelago
     card, and taking it sends the check in place of a card. Each stretch of 20 floors (1-20, 21-40, ...) up to
-    the Final Boss Floor has this many of them, 0 for none: 5 of them with the final boss on floor 160 are 40
-    checks. What an earlier stretch still has open is offered first, so nothing is lost by climbing on.
+    the set Final Boss Floor has this many of them, 0 for none. What an earlier stretch still has open is offered
+    first, so nothing is lost by climbing on.
     """
     display_name = "Battle Rewards"
     range_start = 0
@@ -136,11 +133,12 @@ class BattleRewards(Range):
 
 class FinalBossFloor(Range):
     """
-    The floor you have to reach before the final boss can be challenged. He is one of the doors of a boss floor, and
+    The floor you have to reach before the final boss can be challenged. It spawns on the boss floor, and
     those come every 20 floors, so a value in between counts up to the next one.
 
-    The doors of floor 100 and later still let you fight the Heavenly Kings again or keep going, which is how you
-    climb on. This does not change the DLC ending.
+    Normally the game forces an ending on floor 100 but the AP sets the game to post-game environment.
+    You can refight Heavenly Kings (and even the final boss if going for DLC end) for bonus stats.
+    Max is set to 200 to include for possible post-game monster checks that are behind floor 101.
     """
     display_name = "Final Boss Floor"
     range_start = 100
@@ -150,9 +148,9 @@ class FinalBossFloor(Range):
 
 class TrapPercentage(Range):
     """
-    How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap, Acid Trap and
-    Ecstasy Trap. A trap
-    goes off in the fight it arrives in, or in the next one. The weight options below set how the traps are split.
+    How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap, Acid Trap, Ecstasy
+    Trap, Time Stop Trap (DLC) and Brainwash Trap. A trap goes off in the fight it arrives in, or in the next one.
+    The weight options below set how the traps are split.
 
     The rest of the filler is gold, +5 LP or +5 RP restored, one-time stat boosts for the current run (+5 Max
     LP, +5 Max RP, +1 STR, MAG, DEF or AGL) and 10, 25 or 50 souls to spend.
@@ -171,7 +169,7 @@ class TrapWeight(Range):
 
 class ClimaxTrapWeight(TrapWeight):
     """
-    How likely a trap is a Climax Trap, which forces a climax on your next turn. The six trap weights are compared
+    How likely a trap is a Climax Trap, which forces a climax on your next turn. The eight trap weights are compared
     with each other: with all of them the same, every kind is as likely. 0 leaves a kind out.
     """
     display_name = "Climax Trap Weight"
@@ -192,7 +190,7 @@ class StickyTrapWeight(TrapWeight):
 
 
 class ParalysisTrapWeight(TrapWeight):
-    """How likely a trap is a Paralysis Trap, which paralyzes you. This can decide a fight."""
+    """How likely a trap is a Paralysis Trap, which paralyzes you. Mounting actions will not work."""
     display_name = "Paralysis Trap Weight"
 
 
@@ -203,9 +201,26 @@ class AcidTrapWeight(TrapWeight):
 
 class EcstasyTrapWeight(TrapWeight):
     """
-    How likely a trap is an Ecstasy Trap, which puts you in Lust: a card that weakens you is added to your hand.
+    How likely a trap is an Ecstasy Trap, which puts you in Lust state, adding a card to your hand.
     """
     display_name = "Ecstasy Trap Weight"
+
+
+class TimeStopTrapWeight(TrapWeight):
+    """
+    How likely a trap is a Time Stop Trap, which stops time for you like the Devil of the DLC does: for three turns
+    all you can do is resist. Needs Include DLC, without it there are none of them.
+    """
+    display_name = "Time Stop Trap Weight"
+    default = 5
+
+
+class BrainwashTrapWeight(TrapWeight):
+    """
+    How likely a trap is a Brainwash Trap, which brainwashes you like an enemy's spell does: up to five Brainwash
+    cards land in your hand.
+    """
+    display_name = "Brainwash Trap Weight"
 
 
 class StartingEventCount(Range):
@@ -243,7 +258,7 @@ class SoulMultiplier(Range):
     The souls a run earns, as a percentage: 100 is what the game counts, 200 twice that. Souls add up over the runs
     of a seed and are spent in the soul shop of the standby screen: a new set of floor events to choose from, a
     floor event of your choice, a Forget-Me-Not, a Pieris (DLC), 10 LP or RP, or a Yellow Vial that ends the
-    Regression State. The prices are the same on every floor.
+    Regression State. The random boon start also turned into its own one-time purchase shop on the standby screen.
     """
     display_name = "Soul Multiplier"
     range_start = 100
@@ -271,6 +286,8 @@ class LostChapterOptions(PerGameCommonOptions):
     paralysis_trap_weight: ParalysisTrapWeight
     acid_trap_weight: AcidTrapWeight
     ecstasy_trap_weight: EcstasyTrapWeight
+    time_stop_trap_weight: TimeStopTrapWeight
+    brainwash_trap_weight: BrainwashTrapWeight
     starting_event_count: StartingEventCount
     starting_events: StartingEvents
     soul_multiplier: SoulMultiplier

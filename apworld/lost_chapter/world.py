@@ -482,6 +482,9 @@ class LostChapterWorld(World):
             self.options.paralysis_trap_weight.value,
             self.options.acid_trap_weight.value,
             self.options.ecstasy_trap_weight.value,
+            # Time can only be stopped in the game with the DLC
+            self.options.time_stop_trap_weight.value if self.options.include_dlc else 0,
+            self.options.brainwash_trap_weight.value,
         ]
         traps = round(filler * self.options.trap_percentage.value / 100) if any(weights) else 0
 

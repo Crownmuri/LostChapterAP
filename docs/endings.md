@@ -69,8 +69,15 @@ still off:
 
 - The plugin keeps "game cleared" on from the start, so no ending ever rolls from the last boss and every run is in
   the lap state described above.
+- With `goal: normal_end` or `goal: true_end`, Magisdusk's introduction and the scripted phases of the first fight
+  play anyway until he is defeated once (`patchLastBoss`). The win still continues the climb.
 - The goal is sent when Magisdusk is defeated. `goal: normal_end` accepts any win. `goal: true_end` needs a win
-  with a climax count of 20 or less. `goal: dlc_end` is a win over Magislilia. With `virgin_mode: true` the win
+  with a climax count of 20 or less. The standby screen and the tracker show the count with that goal.
+  `goal: dlc_end` is a win over Magislilia. With `virgin_mode: true` the win
   also needs the Virginity state intact, whichever goal it is. Losing the state then sets LP to 0, so the run
   ends the way it does without LP, and the "Lose Virginity" title check only ever holds filler.
-- The Sea route still works and plays an ending, but it does not count as the goal.
+- The Sea route still works and plays an ending. It counts like a win over Magisdusk: for `normal_end` always,
+  for `true_end` with a climax count of 20 or less. Logic does not count on it.
+- With the DLC, the ending map names ENDING 1 as ENDING 0 "Beyond the Blue Sky - With You -" once ENDING 3 was
+  seen (switch 197). ENDING 3 "Lost Chapter" and ENDING 4 "Dark and deep bottom of darkness" are the two of the
+  fight against Magislilia (common event 69).

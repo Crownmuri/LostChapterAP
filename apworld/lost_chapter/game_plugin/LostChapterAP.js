@@ -127,8 +127,8 @@
     const SWITCH_GAME_OVER = 66; // turned on by common event 86 when the floor ends without LP
     const MAP_ENDING = 11;
     const FINISHER_SHUFFLE = 1; // the finisher_move option
-    const FINISHER_REMOVE = 2;
-    const FINISHER_BOON_SHOP = 3;
+    const FINISHER_BOON_SHOP = 2;
+    const FINISHER_REMOVE = 3;
     const FINISHER_PRICE = 1000; // souls, in the Boon Shop
     const COMMON_EVENT_POND = 54;
     const COMMON_EVENT_LOCKSMITH = 57;
@@ -167,7 +167,7 @@
         200: [
             [1, "STR +2"], [2, "DEF +2"], [3, "MAG +2"], [4, "AGL +2"], [5, "Max LP +10"], [6, "Max RP +10"],
             [7, "LP Regen +1"], [8, "RP Regen +1"], [17, "FAITH +10"], [18, "FAITH -10"], [19, "VIRTUE +10"],
-            [20, "VIRTUE -10"], [109, "Acquired Gold +100 G", 232],
+            [20, "VIRTUE -10"],
         ],
         300: [[9, "Gold +200"], [10, "LEWD +5"], [21, "Rare Drop Rate +3"]],
         400: [
@@ -177,7 +177,8 @@
         600: [[111, "Dealt Combat Damage +10%", 234], [112, "Received Combat Damage -10%", 235]],
         800: [
             [113, "All Stats +2"], [114, "Max LP +20"], [115, "Max RP +20"], [116, "LEWD +10"],
-            [110, "Double LEWD Rate", 233],
+            [110, "Double LEWD Rate", 233], [109, "Gold from Events +100 G", 232],
+            [108, "Forget-Me-Not Harvest x2", 231],
         ],
     };
     const SHOP_LIMITS = { forgetMeNot: 2, pieris: 2 }; // how many of each a run can buy
@@ -359,13 +360,20 @@
     // Traps: the Climax Trap empties RP, the others are a state (Confusion, Sticky Fluid, Paralysis, Torn Clothes)
     const ITEM_CLIMAX_TRAP = 30;
     const ITEM_ACID_TRAP = 34;
-    // The common events of the enemy skills behind the traps: Hypnotic Spell, Sticky Fluid and Slash
-    const TRAP_EVENTS = { 31: 221, 32: 201, 34: 231 };
+    const ITEM_TIME_STOP_TRAP = 36;
+    // The common events of the enemy skills behind the traps: Hypnotic Spell, Sticky Fluid, Slash, Time Stop and
+    // Brainwash
+    const TRAP_EVENTS = { 31: 221, 32: 201, 34: 231, 36: 504, 37: 362 };
+    // Time Stop is the DLC's: its three states count the turns down, and the game ends it through this event
+    const STATE_TIME_STOP = 404;
+    const COMMON_EVENT_TIME_STOP_END = 505;
+    const TIME_STOP_VOLUME = 20; // of the music while time stands still, like the skill has it
     // The skill behind the Paralysis Trap has no common event of its own, only an animation
     const TRAP_ANIMATIONS = { 33: 144 };
     const TRAP_STATE_NAMES = { 33: "Paralysis" };
     const STATE_REFLECTION = 21;
-    const TRAP_STATES = { 31: 121, 32: 101, 33: 242, 34: 131, 35: 4 }; // 35: Ecstasy Trap, the Lust state
+    // 35: Ecstasy Trap, the Lust state. 36: Time Stop Trap. 37: Brainwash Trap.
+    const TRAP_STATES = { 31: [121], 32: [101], 33: [242], 34: [131], 35: [4], 36: [404, 405, 406], 37: [262] };
     const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
     const TRAP_DELAY_FRAMES = 120; // into a fight before a trap goes off, and between two traps
@@ -768,6 +776,7 @@
     // The virgin_mode option: a win only counts with the Virginity state intact
     const winCounts = () => !option("virgin_mode") || isVirgin();
 
+    // Also called for the ending the Sea plays once the Monster was freed, which goes by the same climax count
     const lastBossDefeated = () => {
         if (!winCounts()) {
             return;
@@ -778,6 +787,17 @@
             goals.push(GOAL_TRUE_END);
         }
         reachGoals(goals);
+    };
+
+    // With the game cleared from the start the last boss never leads to the ending map, the Sea does: "Leave This
+    // World", once the Monster was freed
+    const _Game_Player_performTransfer = Game_Player.prototype.performTransfer;
+    Game_Player.prototype.performTransfer = function() {
+        const transferring = this.isTransferring();
+        _Game_Player_performTransfer.apply(this, arguments);
+        if (transferring && $gameMap.mapId() === MAP_ENDING && bound()) {
+            lastBossDefeated();
+        }
     };
 
     const dlcLastBossDefeated = () => {
@@ -873,6 +893,7 @@
             gold: $gameParty.gold(),
             cards: $gameVariables.value(VARIABLE_DECK_COUNT),
             souls: state() ? soulTotal() : 0,
+            climaxes: $gameVariables.value(VARIABLE_CLIMAX_COUNT),
         };
         const text = JSON.stringify(status);
         if (text !== AP.lastStatus) {
@@ -917,6 +938,7 @@
         if (troopId >= 1 && troopId <= CHECK_TROOP_MAX) {
             check(TROOP_OFFSET + troopId);
         } else if (troopId === TROOP_LAST_BOSS && state()) {
+            state().lastBossSeen = true;
             lastBossDefeated();
         } else if (troopId === TROOP_DLC_LAST_BOSS && state()) {
             dlcLastBossDefeated();
@@ -1131,7 +1153,7 @@
         47: {"Cross the River %": "LP -2, DEF +1, fail: LP -4", "Take a Detour": "AGL +1"},
         48: {"Help Yourself": "Gold +200, then a trap", "Doubt": "FAITH -5", "! %": "fail: LP -10, Torn Clothes", "Dodge ＜Step＞ Required": "no damage"},
         49: {"Stay": "a card or LEWD +2", "Flee": "FAITH -5", "Follow the Man": "LEWD +2, Womb Crest"},
-        50: {"Hold His Hand": "VIRTUE +20", "Get Revenge on Him": "VIRTUE -20", "Leave This World": "plays an ending"},
+        50: {"Hold His Hand": "VIRTUE +20", "Get Revenge on Him": "VIRTUE -20", "Leave This World": "plays an ending, like a win over the last boss"},
         51: {"Pick It Up": "LP -2, Forget-Me-Not"},
         52: {"Masturbate": "LEWD +5"},
         53: {"Pay": "Gold -60", "Don't Pay": "LP -3", "Seduce": "Gold +100, LEWD +2", "Take Off Underwear": "Gold +100, LEWD +3", "Refuse": "LEWD +1", "Resign Yourself": "LP -3"},
@@ -1477,6 +1499,7 @@
         _Scene_Map_createDisplayObjects.apply(this, arguments);
         this._archipelagoSoulsTitle = createLabel(this, Graphics.width - 336, SOULS_Y, 320, "right");
         this._archipelagoSouls = createLabel(this, Graphics.width - 336, SOULS_Y + 28, 320, "right");
+        this._archipelagoClimaxes = createLabel(this, Graphics.width - 336, SOULS_Y + 56, 320, "right");
         this._archipelagoStatus = createLabel(this, 16, Graphics.height - 44, 720, "left");
         this._archipelagoNotice = createLabel(this, (Graphics.width - NOTICE_WIDTH) / 2, 8, NOTICE_WIDTH, "center");
         this._archipelagoCards = createCardButton(this);
@@ -1610,6 +1633,12 @@
             bound() && $gameSwitches.value(SWITCH_STANDBY_CONTROL) && $gameVariables.value(VARIABLE_SCREEN) === 0;
         updateLabel(scene._archipelagoSoulsTitle, shown, "Souls", "#b0e0a0");
         updateLabel(scene._archipelagoSouls, shown, soulText());
+        // The True End goal is lost for the run once the climax count passes the limit
+        const climaxes = $gameVariables.value(VARIABLE_CLIMAX_COUNT);
+        const limit = TRUE_END_CLIMAX_LIMIT - 1;
+        const counted = shown && option("goal") === GOAL_TRUE_END;
+        const text = "Climaxes " + climaxes + " / " + limit;
+        updateLabel(scene._archipelagoClimaxes, counted, text, climaxes > limit ? "#e08080" : "#b0e0a0");
     };
 
     // [text, color] for the title screen
@@ -1763,7 +1792,10 @@
         } else if (STAT_ITEMS[item.id]) {
             $gameActors.actor(1).addParam(STAT_ITEMS[item.id][0], STAT_ITEMS[item.id][1]);
         } else if (item.id === ITEM_CLIMAX_TRAP || TRAP_STATES[item.id]) {
-            s.traps = (s.traps || []).concat([item.id]);
+            // The Time Stop Trap is only made for a slot with the DLC, a game without it has nothing to cast
+            if (item.id !== ITEM_TIME_STOP_TRAP || $dataStates[STATE_TIME_STOP]) {
+                s.traps = (s.traps || []).concat([item.id]);
+            }
         }
         if (item.id < RELIC_OFFSET) {
             redrawGui();
@@ -1840,12 +1872,19 @@
             spell = unreflected.map(item => command(item.code, item.indent - 1, item.parameters));
         }
         spell = spell.filter(item => item.code !== 339);
+        if (trap === ITEM_TIME_STOP_TRAP) {
+            // The skill turns the music of a regular fight down and its end turns that one up again. A trap can go
+            // off in any fight, so the music that is playing is kept instead.
+            spell = spell.filter(item => item.code !== 241);
+            AP.trapBgm = AudioManager.saveBgm();
+            AudioManager.playBgm(Object.assign({}, AP.trapBgm, { volume: TIME_STOP_VOLUME, pos: undefined }));
+        }
         if (spell.length > 0) {
             const interpreter = new Game_Interpreter();
             interpreter.setup(spell.concat([command(0, 0, [])]));
             interpreter.update();
         }
-        actor.addState(TRAP_STATES[trap]);
+        TRAP_STATES[trap].forEach(stateId => actor.addState(stateId));
         const animation = $dataAnimations[TRAP_ANIMATIONS[trap]];
         if (animation && animation.name === TRAP_STATE_NAMES[trap] && $gameParty.inBattle()) {
             $gameTemp.requestAnimation([actor], animation.id);
@@ -1874,6 +1913,24 @@
         if (trap === ITEM_ACID_TRAP && $gameVariables.value(VARIABLE_TORN_CLOTHES) < 1) {
             $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 1);
         }
+    };
+
+    // The end of a time stop brings back the music the trap turned down
+    const _Game_Interpreter_command241 = Game_Interpreter.prototype.command241;
+    Game_Interpreter.prototype.command241 = function() {
+        const ends = $dataCommonEvents[COMMON_EVENT_TIME_STOP_END];
+        if (AP.trapBgm && ends && this._list === ends.list) {
+            AudioManager.playBgm(Object.assign({}, AP.trapBgm, { pos: undefined }));
+            AP.trapBgm = null;
+            return true;
+        }
+        return _Game_Interpreter_command241.apply(this, arguments);
+    };
+
+    const _BattleManager_endBattle = BattleManager.endBattle;
+    BattleManager.endBattle = function() {
+        AP.trapBgm = null;
+        _BattleManager_endBattle.apply(this, arguments);
     };
 
     const _Scene_Battle_update = Scene_Battle.prototype.update;
@@ -4139,6 +4196,42 @@
         );
     };
 
+    // The last boss has an introduction and, from 80% of his LP on, scripted phases, both only while the game is
+    // not cleared. A multiworld has it cleared from the start, so that the climb goes on after him. With the Normal
+    // End or True End as the goal both play anyway, until he was defeated once.
+    const COMMON_EVENT_LAST_BOSS = 64;
+    const FIRST_LAST_BOSS = "LostChapterAP.firstLastBoss()";
+    AP.firstLastBoss = () => {
+        if (!shuffled()) {
+            return !$gameSwitches.value(SWITCH_CLEARED);
+        }
+        return [GOAL_NORMAL_END, GOAL_TRUE_END].includes(option("goal")) && !state().lastBossSeen;
+    };
+
+    const asksNotCleared = item => {
+        const p = item.parameters;
+        return item.code === 111 && item.indent === 0 && p[0] === 0 && p[1] === SWITCH_CLEARED && p[2] === 1;
+    };
+
+    const patchLastBoss = () => {
+        const introduction = $dataCommonEvents[COMMON_EVENT_LAST_BOSS].list.find(asksNotCleared);
+        if (!introduction) {
+            console.error("[AP] Common event 64 has an unexpected layout, the last boss has no introduction");
+            return;
+        }
+        introduction.parameters = [12, FIRST_LAST_BOSS];
+    };
+
+    const patchLastBossPhases = troops => {
+        const pages = troops[TROOP_LAST_BOSS] ? troops[TROOP_LAST_BOSS].pages : [];
+        const phases = pages.map(page => page.list[0]).find(item => item && asksNotCleared(item));
+        if (!phases) {
+            console.error("[AP] Troop 30 has an unexpected layout, the last boss has no scripted phases");
+            return;
+        }
+        phases.parameters = [12, FIRST_LAST_BOSS];
+    };
+
     const _DataManager_onLoad = DataManager.onLoad;
     DataManager.onLoad = function(object) {
         _DataManager_onLoad.apply(this, arguments);
@@ -4168,7 +4261,11 @@
             patchRelicConditions();
             patchPond();
             patchFinisher();
+            patchLastBoss();
             findScoreCommands();
+        } else if (object === $dataTroops && !object._archipelagoPatched) {
+            object._archipelagoPatched = true;
+            patchLastBossPhases(object);
         } else if (object === $dataMap) {
             patchMap(object);
         }
