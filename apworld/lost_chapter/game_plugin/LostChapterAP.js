@@ -2547,7 +2547,10 @@
         const s = state();
         const claimed = s.claimed || [];
         const cards = (s.cards || []).map((id, index) => ({ id: id, index: index }));
-        return cards.filter(card => !claimed.includes(card.index));
+        // Faithful Dog Lassi can be lost in the run (fleeing from the Camp, leaving him at the Barracks) and is
+        // there to be taken again then
+        const lost = card => card.id === ITEM_LASSI && !$gameParty.hasItem($dataItems[ITEM_LASSI]);
+        return cards.filter(card => !claimed.includes(card.index) || lost(card));
     };
 
     const cardCost = card => CARD_COSTS[card.id] || 0;
