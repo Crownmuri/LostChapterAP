@@ -68,6 +68,8 @@ connected. The same commands work in the game's console as `LostChapterAP.dev("f
 | `/dev stuck` | What the game is doing right now, for a screen that takes no input |
 | `/dev stat NAME N` | Set `maxlp`, `maxrp`, `str`, `def`, `mag`, `agl`, `faith`, `virtue` or `lewd` |
 | `/dev card NAME [COUNT]`, `/dev relic NAME [COUNT]` | Give a card or relic, a negative count takes it away |
+| `/dev state [NAME [on\|off]]` | List the states of the protagonist, or switch one by name or id (`Lust`, `Virginity`, `Brainwash`, ...). Without on or off it flips |
+| `/dev body [NAME [on\|off]]` | List or switch a body type: `bosomy`, `regression`, `crest`, `swimsuit`, `beast`, `nude`, `torn`, `pregnant` |
 | `/dev title N` | Meet the condition of title N |
 | `/dev unlock` | Own every event, boss, title effect and card set unlock on this save |
 | `/dev var ID [VALUE]`, `/dev switch ID [on\|off]` | Read or write a game variable or switch |

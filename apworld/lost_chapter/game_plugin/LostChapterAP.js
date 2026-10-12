@@ -3148,6 +3148,8 @@
         "heal - restore LP and RP",
         "stat " + DEV_PARAMS.join("|") + "|lewd N - set a stat",
         "card NAME [COUNT] / relic NAME [COUNT] - give (negative COUNT takes away)",
+        "state [NAME [on|off]] - list the states, or switch one (Lust, Virginity, Brainwash, ...)",
+        "body [NAME [on|off]] - bosomy, regression, crest, swimsuit, beast, nude, torn, pregnant",
         "title N - meet the condition of title N",
         "unlock - own every event, boss, title effect and card set unlock",
         "var ID [VALUE] / switch ID [on|off] - read or write game data",
@@ -3182,8 +3184,63 @@
 
     const onOff = (word, current) => (word === undefined ? !current : word === "on" || word === "1" || word === "true");
 
+    // What "/dev body" switches: the states and the variables of the standing picture the game sets for each, as
+    // [variable, value when on, value when off]
+    const DEV_BODIES = {
+        bosomy: { states: [225], variables: [[201, 3, 1]], ends: [143] },
+        regression: { states: [143], variables: [], ends: [225] },
+        crest: { states: [], variables: [[206, 1, 0]] },
+        swimsuit: { states: [], variables: [[217, 1, 0]] },
+        beast: { states: [90], variables: [] },
+        nude: { states: [320], variables: [] },
+        torn: { states: [131], variables: [[208, 1, 0]] },
+        pregnant: { states: [316], variables: [[216, 1, 0]] },
+    };
+
     const devCommands = {
         help: () => DEV_HELP,
+        state: words => {
+            const actor = $gameActors.actor(1);
+            const hasSwitch = words.length > 1 && /^(on|off|1|0|true|false)$/.test(words[words.length - 1]);
+            const name = words.slice(0, hasSwitch ? -1 : undefined).join(" ");
+            if (!name) {
+                const names = actor.states().map(entry => entry.name || "state " + entry.id);
+                return "States: " + (names.join(", ") || "none");
+            }
+            const entry = findEntry($dataStates, name);
+            if (!entry) {
+                return "No state called " + name;
+            }
+            const on = onOff(hasSwitch ? words[words.length - 1] : undefined, actor.isStateAffected(entry.id));
+            if (on) {
+                actor.addState(entry.id);
+            } else {
+                actor.removeState(entry.id);
+            }
+            redrawGui();
+            return entry.name + " " + (actor.isStateAffected(entry.id) ? "on" : "off");
+        },
+        body: words => {
+            const actor = $gameActors.actor(1);
+            const body = DEV_BODIES[words[0]];
+            const isOn = other =>
+                other.states.every(id => actor.isStateAffected(id)) &&
+                other.variables.every(entry => $gameVariables.value(entry[0]) === entry[1]);
+            if (!body) {
+                const names = Object.keys(DEV_BODIES).map(name => name + (isOn(DEV_BODIES[name]) ? " on" : " off"));
+                return "Body: " + names.join(", ");
+            }
+            const on = onOff(words[1], isOn(body));
+            const known = id => $dataStates[id] && $dataStates[id].name;
+            if (!body.states.every(known)) {
+                return "This version of the game has no " + words[0];
+            }
+            body.states.forEach(id => (on ? actor.addState(id) : actor.removeState(id)));
+            (on ? body.ends || [] : []).filter(known).forEach(id => actor.removeState(id));
+            body.variables.forEach(entry => $gameVariables.setValue(entry[0], on ? entry[1] : entry[2]));
+            redrawGui();
+            return words[0] + " " + (on ? "on" : "off");
+        },
         floor: words => {
             $gameVariables.setValue(VARIABLE_FLOOR, Number(words[0]));
             return "Floor " + $gameVariables.value(VARIABLE_FLOOR);
