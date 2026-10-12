@@ -1340,7 +1340,7 @@
             const name = $dataItems[itemId] ? $dataItems[itemId].name : "";
             if (name && effect.includes(name)) {
                 const sent = state().checked.includes(CARD_OFFSET + itemId);
-                effect = effect.replace(name, sent ? name + " (found)" : cardLabel(itemId) || name);
+                effect = effect.replace(name, sent ? name + " [DONE]" : cardLabel(itemId) || name);
             }
         }
         // The same for a relic, where the choice hands it out: one that is given up, used or asked for is the
@@ -1350,7 +1350,7 @@
             const name = $dataWeapons[weaponId] ? $dataWeapons[weaponId].name : "";
             if (name && effect.includes(name) && !text.includes(relicLabel(weaponId) || name)) {
                 const sent = state().checked.includes(RELIC_OFFSET + weaponId);
-                effect = effect.replace(name, sent ? name + " (found)" : relicLabel(weaponId) || name);
+                effect = effect.replace(name, sent ? name + " [DONE]" : relicLabel(weaponId) || name);
             } else if (name && effect === name) {
                 return text;
             }
