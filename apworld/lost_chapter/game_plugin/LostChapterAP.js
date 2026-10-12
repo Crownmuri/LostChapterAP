@@ -252,7 +252,7 @@
     // The game calls common event 52 "Small Room" like common event 35, the apworld calls it "Small Room 2"
     const EVENT_ALIASES = { "small room 2": 52 };
     const CHOICE_MAX_ROWS = 5;
-    const STANDBY_MAX_ROWS = 9; // what fits on the standby screen, a longer list scrolls
+    const STANDBY_MAX_ROWS = 10; // what fits on the standby screen, a longer list scrolls
     const STANDBY_CHOICE_Y = 315; // in the 600 high UI area, which sits 60 below the top of the screen
 
     const TITLE_COUNT = 16; // title n is held as armor n once its condition is met
@@ -2822,6 +2822,33 @@
         return SWITCH_BEFORE_BOSS;
     };
 
+    // The game with the DLC lets a player who dies with a score of 5000 or more stand up again, at half her LP and
+    // on the next floor. After a death on a boss floor that would be past its doors without a king defeated,
+    // which the climb of a multiworld does not allow: she turns back like at the doors and climbs those floors again.
+    const COMMON_EVENT_GAME_OVER = 66;
+    const STAND_UP_SCORE = 5000;
+    AP.standUp = () => {
+        if (shuffled() && $gameVariables.value(VARIABLE_FLOOR) % BOSS_FLOOR_INTERVAL === 0) {
+            AP.turnBack();
+            notify("Back to floor " + $gameVariables.value(VARIABLE_FLOOR) + ": the boss floor is not passed");
+        }
+    };
+
+    const patchStandUp = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_GAME_OVER].list;
+        const paid = list.findIndex(item => {
+            const p = item.parameters;
+            return item.code === 122 && p[0] === VARIABLE_SCORE && p[2] === 2 && p[4] === STAND_UP_SCORE;
+        });
+        const next = list.findIndex((item, i) => {
+            return i > paid && item.code === 117 && item.parameters[0] === COMMON_EVENT_STANDBY;
+        });
+        if (paid < 0 || next < 0) {
+            return; // a version of the game without it
+        }
+        list.splice(next, 0, command(355, list[next].indent, ["LostChapterAP.standUp();"]));
+    };
+
     // The "Turn Back" door choice: the floors since the last boss floor are climbed again
     AP.turnBack = () => {
         state().holdFloor = true;
@@ -3428,11 +3455,12 @@
         }
     };
 
-    // Every event of the floor choice is in sight, without scrolling: MPP_ChoiceEX stops at six rows
+    // More of the floor choice is in sight than the six rows MPP_ChoiceEX stops at, and a list that would run
+    // off the screen (every unlocked event, in "Choose the Floor Event") scrolls
     const _Window_ChoiceList_numVisibleRows = Window_ChoiceList.prototype.numVisibleRows;
     Window_ChoiceList.prototype.numVisibleRows = function() {
         if (AP.standbyChoice) {
-            return $gameMessage.choices().length;
+            return Math.min($gameMessage.choices().length, STANDBY_MAX_ROWS);
         }
         return _Window_ChoiceList_numVisibleRows.apply(this, arguments);
     };
@@ -4969,6 +4997,7 @@
             patchEnemyAction();
             patchBrainwashPose();
             patchTimeStop();
+            patchStandUp();
             patchImmobile();
             patchTurnStart();
             findScoreCommands();
