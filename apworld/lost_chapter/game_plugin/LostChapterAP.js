@@ -2034,19 +2034,8 @@
         }
     };
 
-    const applyTraps = () => {
-        const s = bound() ? state() : null;
-        const actor = $gameActors ? $gameActors.actor(1) : null;
-        // The switch comes on at the end of the fight's own setup. A trap waits a little longer and for any message
-        // to be gone, so it lands in the fight proper and not in the middle of it starting.
-        AP.battleFrames = $gameSwitches && $gameSwitches.value(SWITCH_IN_BATTLE) ? (AP.battleFrames || 0) + 1 : 0;
-        if (!s || !s.traps || s.traps.length === 0 || !actor || actor.isDead()) {
-            return;
-        }
-        if (AP.battleFrames < TRAP_DELAY_FRAMES || $gameMessage.isBusy()) {
-            return;
-        }
-        AP.battleFrames = 0;
+    // One of the traps that are waiting goes off
+    const castNextTrap = (s, actor) => {
         // A version of the game without the brainwashed scenes confuses the player instead
         const drawn = s.traps.shift();
         const trap = drawn === ITEM_BRAINWASH_TRAP && !AP.brainwashScenes ? ITEM_CONFUSION_TRAP : drawn;
@@ -2063,6 +2052,102 @@
         }
         if (trap === ITEM_ACID_TRAP && !torn) {
             $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 1);
+        }
+    };
+
+    // The cards in hand, the deck and the pile of discarded cards are variables of the game: five hand slots, forty
+    // deck slots a card is drawn from at random, and the cards the game adds for a state (Resist, Shake Free,
+    // Masturbate, ...), which are never part of the deck and vanish when a turn ends.
+    const VARIABLE_HAND = 141;
+    const HAND_SLOTS = 5;
+    const VARIABLE_HAND_COUNT = 84;
+    const VARIABLE_HAND_SELECTED = 85;
+    const VARIABLE_DECK = 101;
+    const DECK_SLOTS = 40;
+    const VARIABLE_DECK_LEFT = 88;
+    const VARIABLE_DRAW = 151; // the deck slot a draw takes
+    const STATE_CARDS = [81, 108]; // ids of the cards a state adds
+    const SKILL_RESIST = 108;
+    const COMMON_EVENT_HAND = 3;
+    const SWITCH_PLAYER_TURN = 104;
+    const SWITCH_HAND_CONTROL = 5;
+    const SWITCH_CARD_IN_USE = 14;
+
+    // Time stops in the middle of a turn: the cards in hand become Resist cards. The ones that came from the deck
+    // go back to it, and are the first the deck gives out again.
+    const stopHand = () => {
+        const returned = AP.returnedSlots || (AP.returnedSlots = []);
+        for (let i = 0; i < HAND_SLOTS; i++) {
+            const card = $gameVariables.value(VARIABLE_HAND + i);
+            if (!card) {
+                continue;
+            }
+            let slot = -1;
+            for (let j = 0; j < DECK_SLOTS && slot < 0; j++) {
+                slot = $gameVariables.value(VARIABLE_DECK + j) === 0 ? VARIABLE_DECK + j : -1;
+            }
+            if ((card < STATE_CARDS[0] || card > STATE_CARDS[1]) && slot >= 0) {
+                $gameVariables.setValue(slot, card);
+                $gameVariables.setValue(VARIABLE_DECK_LEFT, $gameVariables.value(VARIABLE_DECK_LEFT) + 1);
+                returned.push(slot);
+            }
+            $gameVariables.setValue(VARIABLE_HAND + i, SKILL_RESIST);
+        }
+        $gameVariables.setValue(VARIABLE_HAND_SELECTED, 0);
+        const hand = new Game_Interpreter();
+        hand.setup($dataCommonEvents[COMMON_EVENT_HAND].list);
+        hand.update();
+    };
+
+    // Asked where the turn start picks the deck slot of a draw: a card a time stop sent back comes first
+    AP.drawReturned = () => {
+        AP.returnedSlots = (AP.returnedSlots || []).filter(slot => $gameVariables.value(slot) !== 0);
+        if (AP.returnedSlots.length > 0) {
+            $gameVariables.setValue(VARIABLE_DRAW, AP.returnedSlots[0]);
+        }
+    };
+
+    const startTrapTimeStop = (s, actor, midTurn) => {
+        s.timeStops--;
+        AP.trapTimeStop = true;
+        AP.trapStopTurn = 0;
+        AP.trapPinned = false;
+        actor.removeState(STATE_STEP);
+        castTrap(ITEM_TIME_STOP_TRAP, actor);
+        if (midTurn) {
+            stopHand();
+        }
+        notify("Time Stop Trap: two Resist cards within two turns undo it");
+    };
+
+    const applyTraps = () => {
+        const s = bound() ? state() : null;
+        const actor = $gameActors ? $gameActors.actor(1) : null;
+        // The switch comes on at the end of the fight's own setup. A trap waits a little longer and for any message
+        // to be gone, so it lands in the fight proper and not in the middle of it starting.
+        AP.battleFrames = $gameSwitches && $gameSwitches.value(SWITCH_IN_BATTLE) ? (AP.battleFrames || 0) + 1 : 0;
+        const waiting = s && ((s.traps && s.traps.length > 0) || s.timeStops > 0);
+        if (!waiting || !actor || actor.isDead()) {
+            return;
+        }
+        if (AP.battleFrames < TRAP_DELAY_FRAMES || $gameMessage.isBusy()) {
+            return;
+        }
+        // Time stops first. In the middle of a turn that takes the player to be choosing a card.
+        if (s.timeStops > 0 && !actor.isStateAffected(STATE_TIME_STOP)) {
+            const choosing =
+                $gameSwitches.value(SWITCH_PLAYER_TURN) &&
+                $gameSwitches.value(SWITCH_HAND_CONTROL) &&
+                !$gameSwitches.value(SWITCH_CARD_IN_USE);
+            if (choosing) {
+                AP.battleFrames = 0;
+                startTrapTimeStop(s, actor, true);
+            }
+            return;
+        }
+        if (s.traps && s.traps.length > 0) {
+            AP.battleFrames = 0;
+            castNextTrap(s, actor);
         }
     };
 
@@ -2116,6 +2201,12 @@
         if (!enemy || enemy.isDeathStateAffected()) {
             return false;
         }
+        if (AP.trapCum) {
+            // The enemy never came: the player is let go all the same
+            AP.trapCum = false;
+            actor.removeState(STATE_IRRUMATIO);
+            actor.removeState(STATE_PIN_DOWN);
+        }
         const begged = actor.isStateAffected(STATE_BRAINWASH) && actor.isStateAffected(STATE_PIN_DOWN);
         const skillId = trapStopSkill(actor) || (AP.trapBrainwash && begged ? trapFingeringSkill() : 0);
         if (!skillId || !$dataSkills[skillId]) {
@@ -2127,55 +2218,66 @@
         return true;
     };
 
-    // Runs at the start of every turn of the player, before the cards are drawn
+    // Runs at the start of every turn of the player, before the cards are drawn: a trap that is waiting goes off
+    // here, so that the cards its state adds are in the hand of this turn already (Resist for a time stop, which
+    // comes before the others, Masturbate for Lust, Shake Free for Sticky Fluid).
     AP.turnStart = () => {
         const s = bound() ? state() : null;
         const actor = $gameActors.actor(1);
-        if (!s || !s.timeStops || s.runOver || actor.isDead() || actor.isStateAffected(STATE_TIME_STOP)) {
+        if (!s || s.runOver || actor.isDead()) {
             return;
         }
-        s.timeStops--;
-        AP.trapTimeStop = true;
-        AP.trapStopTurn = 0;
-        AP.trapPinned = false;
-        actor.removeState(STATE_STEP);
-        castTrap(ITEM_TIME_STOP_TRAP, actor);
-        notify("Time Stop Trap: two Resist cards within two turns undo it");
+        if (s.timeStops > 0 && !actor.isStateAffected(STATE_TIME_STOP)) {
+            startTrapTimeStop(s, actor, false);
+        }
+        while (s.traps && s.traps.length > 0) {
+            castNextTrap(s, actor);
+        }
     };
 
     AP.holdsTime = () => !!AP.trapTimeStop;
     AP.trapPinned = false;
     AP.isPinned = () => !!AP.trapTimeStop && !!AP.trapPinned;
 
-    // The enemy comes with her when the climax of a pinned down player ends the time stop: what the game does
-    // for an enemy that climaxes during Irrumatio, without the Refractory Period that would follow for him
-    const STATE_CUM_IN_MOUTH = 313;
-    const SE_CUM_IN_MOUTH = "射精フェラ";
-    const cumInMouth = actor => {
-        const cum = $dataStates[STATE_CUM_IN_MOUTH];
-        if (!cum || cum.name !== "Cum in Mouth") {
-            return;
-        }
-        AudioManager.playSe({ name: SE_CUM_IN_MOUTH, volume: 90, pitch: 100, pan: 0 });
-        $gameScreen.startFlash([255, 255, 255, 170], 30);
-        $gameScreen.startShake(5, 5, 30);
-        actor.addState(STATE_CUM_IN_MOUTH);
-        if (!$gameMessage.isBusy()) {
-            $gameMessage.add(cum.message1.replace("%1", actor.name()));
-        }
-    };
-
+    // The enemy comes with her when the climax of a pinned down player ends the time stop. Out of RP the enemy
+    // climaxes the way the game has it (common event 109: the twitching, the flashes, Cum in Mouth, the count),
+    // only the Refractory Period that would follow for him is left out.
     const endTrapTimeStop = actor => {
         const pinned = AP.trapPinned;
+        const enemy = $gameTroop.members()[0];
         AP.trapTimeStop = false;
         AP.trapPinned = false;
-        if (pinned && $gameParty.inBattle() && actor.isAlive() && actor.mp <= 0) {
-            cumInMouth(actor);
-        }
-        if (pinned) {
+        if (pinned && $gameParty.inBattle() && actor.isAlive() && actor.mp <= 0 && enemy && enemy.isAlive()) {
+            // The game ends Irrumatio and Pin Down itself once the enemy came
+            AP.trapCum = true;
+            enemy.setMp(0);
+        } else if (pinned) {
             actor.removeState(STATE_IRRUMATIO);
             actor.removeState(STATE_PIN_DOWN);
         }
+    };
+
+    const _Game_Battler_addState = Game_Battler.prototype.addState;
+    Game_Battler.prototype.addState = function(stateId) {
+        if (AP.trapCum && stateId === STATE_REFRACTORY && this.isEnemy()) {
+            AP.trapCum = false;
+            return;
+        }
+        _Game_Battler_addState.apply(this, arguments);
+    };
+
+    const patchTurnStart = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_TURN_BEGIN].list;
+        // Only the patched game with the DLC picks a deck slot this way. Elsewhere a card that went back to the
+        // deck comes up like any other.
+        for (let i = list.length - 1; i >= 0; i--) {
+            const p = list[i].parameters;
+            const picks = list[i].code === 122 && p[0] === VARIABLE_DRAW && p[1] === VARIABLE_DRAW && p[3] === 2;
+            if (picks && list[i].indent === 0) {
+                list.splice(i + 1, 0, command(355, 0, ["LostChapterAP.drawReturned();"]));
+            }
+        }
+        list.unshift(command(355, 0, ["LostChapterAP.turnStart();"]));
     };
 
     const patchTimeStop = () => {
@@ -2209,7 +2311,6 @@
             command(0, 1, []),
             command(412, 0, [])
         );
-        $dataCommonEvents[COMMON_EVENT_TURN_BEGIN].list.unshift(command(355, 0, ["LostChapterAP.turnStart();"]));
     };
 
     // The standing picture only has the brainwashed scenes for the Regression State, in the versions of the game
@@ -2298,6 +2399,8 @@
         AP.trapBrainwash = false;
         AP.trapTimeStop = false;
         AP.trapPinned = false;
+        AP.trapCum = false;
+        AP.returnedSlots = [];
         _BattleManager_endBattle.apply(this, arguments);
     };
 
@@ -4690,6 +4793,7 @@
             patchEnemyAction();
             patchBrainwashPose();
             patchTimeStop();
+            patchTurnStart();
             findScoreCommands();
         } else if (object === $dataTroops && !object._archipelagoPatched) {
             object._archipelagoPatched = true;

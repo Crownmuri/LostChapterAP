@@ -157,7 +157,8 @@ class FinalBossFloor(Range):
 class TrapPercentage(Range):
     """
     How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap, Acid Trap, Ecstasy
-    Trap, Time Stop Trap (DLC) and Brainwash Trap. A trap goes off in the fight it arrives in, or in the next one.
+    Trap, Time Stop Trap (DLC) and Brainwash Trap. A trap goes off in the fight it arrives in, or at the start of
+    the next one, where the cards its state adds are in your first hand already.
     The weight options below set how the traps are split.
 
     The rest of the filler is gold, +5 LP or +5 RP restored, one-time stat boosts for the current run (+5 Max
@@ -219,8 +220,9 @@ class EcstasyTrapWeight(TrapWeight):
 
 class TimeStopTrapWeight(TrapWeight):
     """
-    How likely a trap is a Time Stop Trap, which stops time for you at the start of a turn like Transgression of
-    the DLC does: all you hold is Resist cards, and nothing the enemy does can be dodged. Two of them (6 AP) within
+    How likely a trap is a Time Stop Trap, which stops time for you like Transgression of the DLC does: all you
+    hold is Resist cards (the cards in your hand go back to the deck and are drawn again afterwards), and nothing
+    the enemy does can be dodged. Two of them (6 AP) within
     two turns undo it. Otherwise the enemy undresses you and pins you down, and from there you cannot move until
     you climax. Needs Include DLC, without it there are none of them.
     """
