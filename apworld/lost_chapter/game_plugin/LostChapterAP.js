@@ -899,7 +899,6 @@
             s.claimedSets = [];
             s.shopBought = {};
             s.boons = [];
-            s.lastFight = 0;
             s.checkpoint = 0;
             // The souls of the run that ended are kept, the next one adds to them
             s.souls = (s.souls || 0) + (s.runSouls || 0);
@@ -915,9 +914,6 @@
         const troopId = $gameTroop._troopId;
         // The card choice that follows is the one of a fight. Events hand out cards through the same choice.
         AP.battleDrop = true;
-        if (state()) {
-            state().lastFight = $gameVariables.value(VARIABLE_FLOOR);
-        }
         if (troopId >= 1 && troopId <= CHECK_TROOP_MAX) {
             check(TROOP_OFFSET + troopId);
         } else if (troopId === TROOP_LAST_BOSS && state()) {
@@ -2458,7 +2454,7 @@
             }),
             [
                 "Choose the Floor Event (" + shopPrice("pick", floor) + ")",
-                soulTotal() >= shopPrice("pick", floor) && floorsToFight(floor) !== 0,
+                soulTotal() >= shopPrice("pick", floor),
                 () => {
                     AP.standbyMenu = "pick";
                 },
@@ -2584,18 +2580,6 @@
         askStandby(interpreter, entries);
     };
 
-    // Battle rewards are only found in fights, and nothing else makes a player fight: while one is open, a floor
-    // is a fight when none was won on the floors before it. 5 rewards for 20 floors are a fight every 4 floors.
-    // The floors until the next one has to be a fight, 0 for this one, null when nothing forces any.
-    const floorsToFight = floor => {
-        const rewards = option("battle_rewards") || 0;
-        if (!shuffled() || !rewards || !battleReward()) {
-            return null;
-        }
-        const interval = Math.max(1, Math.floor(BOSS_FLOOR_INTERVAL / rewards));
-        return Math.max(0, (state().lastFight || 0) + interval - floor);
-    };
-
     const offerFloorEvents = (interpreter, floor, callback, shop) => {
         // Drawn from every event the floor could hold. The ones without their unlock are shown grayed out, so a
         // few unlocked events do not come up floor after floor.
@@ -2636,15 +2620,7 @@
         }
         AP.offer = { floor: floor, events: offered };
         const switchIds = [SWITCH_FIGHT].concat(offered);
-        const toFight = floorsToFight(floor);
-        const forced = toFight === 0;
-        let battle = "Battle";
-        if (forced) {
-            battle += " \\c[2](a battle reward is open, this floor is a fight)\\c[0]";
-        } else if (toFight !== null) {
-            battle += " \\c[8](forced in " + toFight + (toFight === 1 ? " floor)" : " floors)") + "\\c[0]";
-        }
-        const names = [battle].concat(offered.map(offerName));
+        const names = ["Battle"].concat(offered.map(offerName));
         const menus = [];
         if (shop) {
             // Back is also what cancelling does. The roll of the floor stands, so a relic bought in the shop can be
@@ -2661,8 +2637,7 @@
         $gameMessage.setChoices(names, 0, shop ? names.length - 1 : -1);
         limitChoiceRows(STANDBY_MAX_ROWS);
         if (canGray) {
-            const open = eventId => unlocked(eventId) && !forced;
-            $gameMessage.setChoiceEnables([true].concat(offered.map(open), menus.map(() => true), [true]));
+            $gameMessage.setChoiceEnables([true].concat(offered.map(unlocked), menus.map(() => true), [true]));
         }
         $gameMessage.setChoiceBackground(0);
         $gameMessage.setChoicePositionType(2);

@@ -156,9 +156,6 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - Checkpoints: the first floor after a boss floor (21, 41, 61, ...) is saved to a file of its own
   (`checkpoint1.rmmzsave` is floor 21). A new run asks whether to start over or go on from one of them, with
   everything the run had there. A later run that gets there overwrites it.
-- While a battle reward is open, a floor has to be a fight when none was won on the floors before it (5 rewards
-  for 20 floors are a fight every 4 floors). The floor choice says how many floors are left until then and grays
-  the events out on the floor itself.
 - An asterisk behind a floor event (`Old Woman*`) says something is left to do there that is no check, but opens
   one in another event.
 - The soul shop also sells a Yellow Vial (50) that ends the Regression State, and "Back" in the floor choice

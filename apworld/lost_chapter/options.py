@@ -127,9 +127,6 @@ class BattleRewards(Range):
     card, and taking it sends the check in place of a card. Each stretch of 20 floors (1-20, 21-40, ...) up to
     the Final Boss Floor has this many of them, 0 for none: 5 of them with the final boss on floor 160 are 40
     checks. What an earlier stretch still has open is offered first, so nothing is lost by climbing on.
-
-    While one of them is open, a floor has to be a fight when none was won on the floors before it: with 5 of them
-    a fight every 4 floors, with 10 every 2. The floor choice says how many floors are left until then.
     """
     display_name = "Battle Rewards"
     range_start = 0
