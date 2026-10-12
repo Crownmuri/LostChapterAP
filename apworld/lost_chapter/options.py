@@ -157,8 +157,8 @@ class FinalBossFloor(Range):
 class TrapPercentage(Range):
     """
     How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap, Acid Trap, Ecstasy
-    Trap, Time Stop Trap (DLC), Brainwash Trap and Breeze Trap. A trap goes off in the fight it arrives in, or at the start of
-    the next one. The card its state adds (Shake Free for Sticky, Masturbate for Ecstasy, Resist for Time Stop)
+    Trap, Time Stop Trap (DLC), Brainwash Trap and Breeze Trap. A trap goes off in the fight it arrives in, or at
+    the start of the next one. The card its state adds (Shake Free for Sticky, Masturbate for Ecstasy, Resist for Time Stop)
     is in your hand at once: it takes the place of a card you drew, which goes back to the deck and is drawn again.
     The weight options below set how the traps are split.
 
