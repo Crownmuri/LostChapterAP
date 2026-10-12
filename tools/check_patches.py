@@ -101,6 +101,17 @@ try {
             return command.code === 102 ? command.parameters[0].join(" | ") : command.parameters[1].replace("LostChapterAP.", "");
         }).join(" ; "));
     });
+    // The choices that say "cannot pay", and where each of them jumps to
+    $dataCommonEvents.forEach(function(event) {
+        (event ? event.list : []).forEach(function(command, index, list) {
+            if (command.code === 402 && /cannot pay/.test(command.parameters[1])) {
+                var label = list[index + 1].parameters[0];
+                var at = list.findIndex(function(other) { return other.code === 118 && other.parameters[0] === label; });
+                lines.push("cannot pay: " + event.name + " choice " + command.parameters[0] + " " +
+                    command.parameters[1].split(" \c")[0] + " -> label at " + at + " behind code " + list[at - 1].code);
+            }
+        });
+    });
     // The verse of the standby screen that lost a line break in one version of the game
     $dataCommonEvents[87].list.forEach(function(command) {
         var text = command.code === 357 && command.parameters[3] ? String(command.parameters[3].text) : "";

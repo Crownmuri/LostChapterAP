@@ -331,6 +331,7 @@
     const SWITCH_LAST_DOOR = 193; // both are defeated, the last door is offered
     const SWITCH_FINAL_BOSS = 159; // the floor from which the "Final Boss" door opens is reached
     const SWITCH_LAST_DOOR_FLOOR = 156; // the same for "The Last Door" of the DLC
+    const SWITCH_SHUFFLED = 155; // on in a multiworld, for the choices only it adds to a floor event
     // Market (common event 33): the merchant hands out the Plushie and the Music Box, thanks the player who took
     // both (VIRTUE +5) and is gone from then on. With both as checks he stays, see patchMarket.
     const COMMON_EVENT_MARKET = 33;
@@ -2838,6 +2839,7 @@
         }
         mirrorSwitch(SWITCH_TURN_BACK, shuffled() && !freeDoors());
         mirrorSwitch(SWITCH_FREE_DOORS, freeDoors());
+        mirrorSwitch(SWITCH_SHUFFLED, shuffled());
         mirrorSwitch(SWITCH_FINAL_BOSS, $gameVariables.value(VARIABLE_FLOOR) >= finalBossFloor());
         mirrorSwitch(SWITCH_LAST_DOOR_FLOOR, !dlcGoal() || $gameVariables.value(VARIABLE_FLOOR) >= requiredFloor());
         const sent = weaponId => state().checked.includes(RELIC_OFFSET + weaponId);
@@ -2870,6 +2872,91 @@
         if (shuffled() && $gameVariables.value(VARIABLE_FLOOR) % BOSS_FLOOR_INTERVAL === 0) {
             AP.turnBack();
             notify("Back to floor " + $gameVariables.value(VARIABLE_FLOOR) + ": the boss floor is not passed");
+        }
+    };
+
+    // Where a choice costs gold and a player who cannot pay gets a scene of her own (the toll of the Suspension
+    // Bridge, the rooms of the Inn), a player with the gold never sees that scene. A multiworld adds a choice that
+    // says she cannot pay, which leads there.
+    const PRETEND_SKIPPED = [101, 401, 122, 230, 250, 231, 232, 235, 241, 245, 222, 221, 223, 224, 108, 408, 121];
+    const LABEL_PRETEND = "archipelago cannot pay ";
+    const PRETEND_REACH = 60; // commands behind a label that are looked through for a scene
+
+    // Whether what starts at `from` and is indented deeper than `indent` asks the player something, there or
+    // where it jumps to
+    const leadsToChoices = (list, from, indent) => {
+        for (let i = from + 1; i < list.length && list[i].indent > indent; i++) {
+            if (list[i].code === 102) {
+                return true;
+            }
+            const label = list[i].code === 119 ? list.findIndex(other => {
+                return other.code === 118 && other.parameters[0] === list[i].parameters[0];
+            }) : -1;
+            for (let j = label + 1; label >= 0 && j < list.length && j < label + PRETEND_REACH; j++) {
+                const leaves = list[j].code === 119 && list[j].indent === list[label].indent;
+                if (list[j].indent < list[label].indent || leaves) {
+                    break;
+                }
+                if (list[j].code === 102) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    // One choice that costs gold is given its "cannot pay" twin. False when the list has none left.
+    const addPretendChoice = (eventId, list) => {
+        for (let n = 0; n < list.length; n++) {
+            const branch = list[n];
+            if (branch.code !== 402 || branch._archipelagoPretend) {
+                continue;
+            }
+            let ask = n + 1;
+            while (ask < list.length && list[ask].indent > branch.indent && PRETEND_SKIPPED.includes(list[ask].code)) {
+                ask++;
+            }
+            const asked = list[ask];
+            const p = asked ? asked.parameters : [];
+            if (!asked || asked.code !== 111 || asked.indent !== branch.indent + 1 || p[0] !== 7 || p[2] !== 0) {
+                continue;
+            }
+            const otherwise = list.findIndex((item, i) => i > ask && item.indent <= asked.indent);
+            const asks = item => item.code === 102 && item.indent === branch.indent;
+            const choices = list.slice(0, n).map(asks).lastIndexOf(true);
+            const end = list.findIndex((item, i) => {
+                return i > n && item.indent === branch.indent && (item.code === 403 || item.code === 404);
+            });
+            const hasElse = otherwise >= 0 && list[otherwise].code === 411;
+            const poor = hasElse && leadsToChoices(list, otherwise, asked.indent);
+            branch._archipelagoPretend = true;
+            if (!poor || choices < 0 || end < 0) {
+                continue;
+            }
+            const label = LABEL_PRETEND + eventId + ":" + n;
+            const name = effectKey(String(branch.parameters[1]));
+            const text = name + " \\c[8](say you cannot pay)\\c[0]if(s[" + SWITCH_SHUFFLED + "])";
+            // The later index first, so the earlier one stays where it is
+            list.splice(
+                end,
+                0,
+                command(402, branch.indent, [list[choices].parameters[0].length, text]),
+                command(119, branch.indent + 1, [label]),
+                command(0, branch.indent + 1, [])
+            );
+            list[choices].parameters[0] = list[choices].parameters[0].concat([text]);
+            list.splice(otherwise + 1, 0, command(118, asked.indent + 1, [label]));
+            return true;
+        }
+        return false;
+    };
+
+    const patchPretend = () => {
+        for (const eventId of allEvents()) {
+            const list = eventData(eventId).list;
+            while (addPretendChoice(eventId, list)) {
+                // one at a time: every one of them moves the commands behind it
+            }
         }
     };
 
@@ -5037,6 +5124,7 @@
             patchBrainwashPose();
             patchTimeStop();
             patchStandUp();
+            patchPretend();
             patchImmobile();
             patchTurnStart();
             findScoreCommands();
