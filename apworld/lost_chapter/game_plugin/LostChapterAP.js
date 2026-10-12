@@ -2271,10 +2271,17 @@
         redrawHand();
     };
 
+    // The player is looking at her hand and nothing is going on: no card is being played and nobody climaxes.
+    // The only time a trap goes off in the middle of a turn. A card that is played forces its action on the
+    // player, and a climax that came in between took its place: the card never ended and the fight stood still.
+    const BUSY_SWITCHES = [14, 96, 97, 98, 99, 102, 105]; // card in use, the climaxes, turn end, the enemy's turn
     const isChoosingCard = () =>
         $gameSwitches.value(SWITCH_PLAYER_TURN) &&
         $gameSwitches.value(SWITCH_HAND_CONTROL) &&
-        !$gameSwitches.value(SWITCH_CARD_IN_USE);
+        !BUSY_SWITCHES.some(switchId => $gameSwitches.value(switchId)) &&
+        !BattleManager._subject &&
+        !BattleManager.isActionForced() &&
+        $gameVariables.value(VARIABLE_RP) > 0;
 
     // Asked where the turn start picks the deck slot of a draw: a card a time stop sent back comes first
     AP.drawReturned = () => {
@@ -2323,12 +2330,12 @@
             }
             return;
         }
-        if (s.traps && s.traps.length > 0) {
+        // Any other trap waits for the same moment. One that never finds it goes off at the start of the next turn.
+        if (s.traps && s.traps.length > 0 && isChoosingCard()) {
             AP.battleFrames = 0;
-            const choosing = isChoosingCard();
             const trap = castNextTrap(s, actor);
             // Not while time stands still: the hand is Resist cards then, and the next turn start adds the card
-            if (TRAP_CARDS[trap] && choosing && !actor.isStateAffected(STATE_TIME_STOP)) {
+            if (TRAP_CARDS[trap] && !actor.isStateAffected(STATE_TIME_STOP)) {
                 addTrapCard(trap);
             }
         }
@@ -4192,7 +4199,15 @@
                     (BattleManager._subject ? BattleManager._subject.name() : "-") + ", god " + !!AP.god,
                 "fight interpreter: " + steps.join(" > "),
                 "fight switches on: " +
-                    [3, 5, 14, 103, 105, 106, 107, 108, 184, 195].filter(id => $gameSwitches.value(id)).join(", "),
+                    [3, 4, 5, 14, 96, 97, 98, 99, 102, 103, 104, 105, 106, 107, 108, 110, 184, 195]
+                        .filter(id => $gameSwitches.value(id))
+                        .join(", "),
+                "hand: " + [141, 142, 143, 144, 145].map(id => $gameVariables.value(id)).join(",") +
+                    " (" + $gameVariables.value(84) + " cards, slot " + $gameVariables.value(3) + ", card " +
+                    $gameVariables.value(85) + "), AP " + $gameVariables.value(86) + ", RP " +
+                    $gameVariables.value(44) + "/" + $gameActors.actor(1).mp + ", deck " +
+                    $gameVariables.value(88) + ", discarded " + $gameVariables.value(89) + ", traps waiting " +
+                    ((state() && state().traps) || []).join(",") + ", forced " + BattleManager.isActionForced(),
                 "fighters: " + $gameParty.members().concat($gameTroop.members()).map(fighter).join(" | ")
             );
         }
