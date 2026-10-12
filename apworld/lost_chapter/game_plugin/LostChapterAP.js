@@ -2147,10 +2147,31 @@
     AP.trapPinned = false;
     AP.isPinned = () => !!AP.trapTimeStop && !!AP.trapPinned;
 
+    // The enemy comes with her when the climax of a pinned down player ends the time stop: what the game does
+    // for an enemy that climaxes during Irrumatio, without the Refractory Period that would follow for him
+    const STATE_CUM_IN_MOUTH = 313;
+    const SE_CUM_IN_MOUTH = "射精フェラ";
+    const cumInMouth = actor => {
+        const cum = $dataStates[STATE_CUM_IN_MOUTH];
+        if (!cum || cum.name !== "Cum in Mouth") {
+            return;
+        }
+        AudioManager.playSe({ name: SE_CUM_IN_MOUTH, volume: 90, pitch: 100, pan: 0 });
+        $gameScreen.startFlash([255, 255, 255, 170], 30);
+        $gameScreen.startShake(5, 5, 30);
+        actor.addState(STATE_CUM_IN_MOUTH);
+        if (!$gameMessage.isBusy()) {
+            $gameMessage.add(cum.message1.replace("%1", actor.name()));
+        }
+    };
+
     const endTrapTimeStop = actor => {
         const pinned = AP.trapPinned;
         AP.trapTimeStop = false;
         AP.trapPinned = false;
+        if (pinned && $gameParty.inBattle() && actor.isAlive() && actor.mp <= 0) {
+            cumInMouth(actor);
+        }
         if (pinned) {
             actor.removeState(STATE_IRRUMATIO);
             actor.removeState(STATE_PIN_DOWN);
