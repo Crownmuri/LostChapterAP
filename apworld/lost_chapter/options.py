@@ -130,7 +130,7 @@ class BattleRewards(Range):
     """
     Adds checks to the fights. While one of them is open, one of the three cards of a won fight is an Archipelago
     card, and taking it sends the check in place of a card. Each stretch of 20 floors (1-20, 21-40, ...) up to
-    the set Final Boss Floor has this many of them, 0 for none. 
+    the set Final Boss Floor has this many of them, 0 for none.
     Remaining checks roll over to the next stretch of floors if you have progressed past them.
     """
     display_name = "Battle Rewards"

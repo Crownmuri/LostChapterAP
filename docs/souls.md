@@ -47,7 +47,9 @@ A single Heavenly King gives nothing by itself.
 | Plushie, Music Box | 51 each |
 | Collar Key | 32 |
 
-Only relics the run found itself count, not the ones the multiworld sent.
+With relicsanity a relic is a check where the game has it and an item of the multiworld. Holding it adds
+nothing then, wherever it came from. Its score is paid out once, as souls, when the check at its place is sent
+for the first time (times the soul multiplier). Without relicsanity the relics a run finds count as above.
 
 ## Cards held
 

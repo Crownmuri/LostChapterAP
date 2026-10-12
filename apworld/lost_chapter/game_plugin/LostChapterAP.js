@@ -1008,6 +1008,14 @@
         _BattleManager_processVictory.apply(this, arguments);
     };
 
+    // What common event 72 adds to the score for a relic that is held. The Dusk Ring is counted twice there.
+    const RELIC_SOULS = {
+        "White Key": 777, "Black Key": 777, "Aetolus Flag": 201, "Crown of Forget-Me-Not": 201,
+        "Crown of Pieris": 201, "Dusk Ring": 202, "Clown Mask": 101, "Moon Hair Ornament": 101,
+        "Recovery Misanga": 101, "Promise Pendant": 101, "Old Iron Hammer": 78, "Memento Chisel": 78,
+        "Plushie": 51, "Music Box": 51, "Collar Key": 32,
+    };
+
     // Relicsanity: a relic handed out by an event becomes a check instead
     const _Game_Party_gainItem = Game_Party.prototype.gainItem;
     Game_Party.prototype.gainItem = function(item, amount, includeEquip) {
@@ -1017,6 +1025,13 @@
         const isRelicGain =
             item && amount > 0 && DataManager.isWeapon(item) && RELIC_WEAPONS.includes(item.id);
         if (isRelicGain && !AP.granting && relicChecks().includes(item.id)) {
+            // The place of a relic is worth what holding the relic is worth in the game's score, the first time
+            // its check is sent. The relic itself adds nothing, wherever it comes from.
+            const worth = Math.floor((RELIC_SOULS[item.name] || 0) * soulRate());
+            if (worth > 0 && !state().checked.includes(RELIC_OFFSET + item.id)) {
+                state().souls = (state().souls || 0) + worth;
+                notify("+" + worth + " souls");
+            }
             check(RELIC_OFFSET + item.id);
             return;
         }
