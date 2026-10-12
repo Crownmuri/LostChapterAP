@@ -2923,14 +2923,33 @@
 
     // How many checks an event has left, null when the client did not say which ones it holds. A pair is counted
     // together, like in the tracker.
+    // The floor events that hand a card out in this version of the game. The world lists a card under every
+    // event that has it in any version: Ride On is the Cat's in the base game and Debauch's with the DLC.
+    const cardGivers = {};
+    const givesCard = (eventId, itemId) => {
+        if (!cardGivers[itemId]) {
+            const gains = item => item.code === 126 && item.parameters[0] === itemId && item.parameters[1] === 0;
+            cardGivers[itemId] = allEvents().filter(other => eventData(other).list.some(gains));
+        }
+        return cardGivers[itemId].length === 0 || cardGivers[itemId].includes(eventId);
+    };
+
     const checksLeft = eventId => {
         const held = AP.slot && AP.slot.event_checks;
         if (!held) {
             return null;
         }
         const group = eventGroup(eventId);
+        const isCard = location => location >= CARD_OFFSET && location < BATTLE_OFFSET;
         return (group ? group.events : [eventId])
-            .reduce((all, id) => all.concat(held[id] || []), [])
+            .reduce(
+                (all, id) =>
+                    all.concat((held[id] || []).filter(
+                        location => !isCard(location) || givesCard(id, location - CARD_OFFSET)
+                    )),
+                []
+            )
+            .filter((location, index, all) => all.indexOf(location) === index)
             .filter(location => !isSent(location)).length;
     };
 

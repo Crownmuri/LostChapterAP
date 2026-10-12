@@ -43,7 +43,10 @@ def check_mark() -> str:
     return f" [font={font.replace(os.sep, '/')}]✓[/font]" if os.path.isfile(font) else ""
 
 
-EVENT_LOCATIONS: Dict[int, List[int]] = {event_id: data.event_locations(event_id) for event_id in data.EVENTS}
+# [without the DLC, with it]: the game with the DLC hands some cards out in another event
+EVENT_LOCATIONS: List[Dict[int, List[int]]] = [
+    {event_id: data.event_locations(event_id, dlc) for event_id in data.EVENTS} for dlc in (False, True)
+]
 
 
 def label(**kwargs) -> Label:
@@ -340,6 +343,7 @@ class LostChapterTabLayout(BoxLayout):
 
         # A seed without the DLC has no use for its events. Older seeds do not list theirs.
         seed_events = ctx.slot_data.get("events")
+        event_locations = EVENT_LOCATIONS[bool(ctx.slot_data.get("include_dlc"))]
         unlock_total = 0
 
         for unlock, widget in self.event_labels.items():
@@ -360,7 +364,7 @@ class LostChapterTabLayout(BoxLayout):
             unlocked_count += unlocked
 
             left = sum(
-                1 for event_id in event_ids for location in EVENT_LOCATIONS[event_id]
+                1 for event_id in event_ids for location in event_locations[event_id]
                 if location in ctx.missing_locations
             )
             color = COLOR_UNLOCKED if unlocked else COLOR_LOCKED

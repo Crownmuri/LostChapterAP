@@ -509,6 +509,9 @@ BONUS_CARDS: Dict[int, str] = {
 # card name -> what it takes: the floor events, the relics, and whether LEWD has to go up first (the Cat only hands
 # out a card from LEWD 10 on). Ride On comes from the Cat or from Debauch depending on the version of the game, so
 # it asks for both. First pass read from the event commands, not yet confirmed in play.
+# card name -> the events that no longer hand it out in the game with the DLC, for the counts of open checks
+DLC_MOVED_CARDS: Dict[str, List[str]] = {"Ride On": ["Cat"]}
+
 CARD_SOURCES: Dict[str, Dict[str, object]] = {
     "Faithful Dog Lassi": {"events": ["Dog"], "relics": ["Collar Key"], "lewd": False},
     "Taunt": {"events": ["Cat"], "relics": [], "lewd": True},
@@ -542,7 +545,7 @@ VICTORY = "Victory"
 ENDING_EVENT = "Reach the Ending"
 
 
-def event_locations(event_id: int) -> List[int]:
+def event_locations(event_id: int, dlc: bool = False) -> List[int]:
     """The checks an event holds: its first visit and the relics and cards found in it."""
     name = EVENTS[event_id]
     locations: List[int] = [SWITCH_OFFSET + event_id]
@@ -552,7 +555,7 @@ def event_locations(event_id: int) -> List[int]:
             locations.append(RELIC_OFFSET + weapon_id)
 
     for item_id, card in CARDS.items():
-        if name in CARD_SOURCES[card]["events"]:
+        if name in CARD_SOURCES[card]["events"] and not (dlc and name in DLC_MOVED_CARDS.get(card, [])):
             locations.append(CARD_OFFSET + item_id)
 
     return locations
