@@ -3696,7 +3696,11 @@
             return "Leaving the standby screen";
         },
         heal: () => {
-            $gameActors.actor(1).recoverAll();
+            // Not recoverAll: that also clears every state, the Virginity State among them
+            const actor = $gameActors.actor(1);
+            actor.setHp(actor.mhp);
+            actor.setMp(actor.mmp);
+            redrawGui();
             return "Recovered";
         },
         stat: words => {
