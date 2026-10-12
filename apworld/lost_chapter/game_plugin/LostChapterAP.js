@@ -1552,7 +1552,7 @@
                 }
                 const lewd = $gameVariables.value(VARIABLE_LEWD);
                 if (eventId === COMMON_EVENT_CAT && named === "Pat" && lewd >= CAT_LEWD && AP.catDone()) {
-                    return "Pat \\c[18](all cards found)\\c[0]en(0)";
+                    return "Pat \\c[18][DONE]\\c[0]en(0)";
                 }
                 // A gift of the merchant that is taken stays on his list, grayed out
                 if (eventId === COMMON_EVENT_MARKET && AP.marketMenu() && /if\(!s\[1[12]\]\)/.test(named)) {
