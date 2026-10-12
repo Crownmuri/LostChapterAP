@@ -203,7 +203,10 @@ class ParalysisTrapWeight(TrapWeight):
 
 
 class AcidTrapWeight(TrapWeight):
-    """How likely a trap is an Acid Trap, which dissolves your clothes."""
+    """
+    How likely a trap is an Acid Trap, which tears your clothes. One on torn clothes dissolves them: with the DLC
+    you are Nude then.
+    """
     display_name = "Acid Trap Weight"
 
 
@@ -216,8 +219,10 @@ class EcstasyTrapWeight(TrapWeight):
 
 class TimeStopTrapWeight(TrapWeight):
     """
-    How likely a trap is a Time Stop Trap, which stops time for you like the Devil of the DLC does: for three turns
-    all you can do is resist. Needs Include DLC, without it there are none of them.
+    How likely a trap is a Time Stop Trap, which stops time for you at the start of a turn like Transgression of
+    the DLC does: all you hold is Resist cards, and nothing the enemy does can be dodged. Two of them (6 AP) within
+    two turns undo it. Otherwise the enemy undresses you and pins you down, and from there you cannot move until
+    you climax. Needs Include DLC, without it there are none of them.
     """
     display_name = "Time Stop Trap Weight"
     default = 5

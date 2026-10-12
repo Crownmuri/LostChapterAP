@@ -374,8 +374,23 @@
     // The common events of the enemy skills behind the traps: Hypnotic Spell, Sticky Fluid, Slash, Time Stop and
     // Brainwash
     const TRAP_EVENTS = { 31: 221, 32: 201, 34: 231, 36: 504, 37: 362 };
-    // Time Stop is the DLC's: its three states count the turns down, and the game ends it through this event
+    // Time Stop is the DLC's: its three states count down, one for every Resist card played and every action of
+    // the enemy, and the game ends it through this event. The Devil casts it, undresses a player who does not get
+    // out of it and goes on to Irrumatio. A trap has any enemy do that, and stricter: only the Resist cards count
+    // down, two of them (6 AP) are what it takes, and the player has two turns for them. After that the enemy
+    // has her pinned down until she climaxes, which is what ends a time stop that was not resisted.
     const STATE_TIME_STOP = 404;
+    const STATE_STEP = 13;
+    const STATE_NUDE = 320;
+    const STATE_IRRUMATIO = 113;
+    const SKILL_LAUGH = 444;
+    const SKILL_UNDRESSING = 445;
+    const SKILL_IRRUMATIO = 113;
+    const SKILL_DEEPTHROATING = 447;
+    const COMMON_EVENT_ACTION_END = 100;
+    const COMMON_EVENT_TURN_BEGIN = 103;
+    const COMMON_EVENT_RESIST = 208;
+    const LABEL_TIME_HELD = "archipelago time held";
     const COMMON_EVENT_TIME_STOP_END = 505;
     const TIME_STOP_VOLUME = 20; // of the music while time stands still, like the skill has it
     // Brainwash is the Shaman's: the Brainwash Start cards it leaves have the player undress and beg, which ends
@@ -392,7 +407,7 @@
     const TRAP_STATE_NAMES = { 33: "Paralysis" };
     const STATE_REFLECTION = 21;
     // 35: Ecstasy Trap, the Lust state. 36: Time Stop Trap. 37: Brainwash Trap.
-    const TRAP_STATES = { 31: [121], 32: [101], 33: [242], 34: [131], 35: [4], 36: [404, 405, 406], 37: [262] };
+    const TRAP_STATES = { 31: [121], 32: [101], 33: [242], 34: [131], 35: [4], 36: [404, 405], 37: [262] };
     const VARIABLE_TORN_CLOTHES = 208; // the standing picture and the Seamstress go by this, not by the state
     const SWITCH_IN_BATTLE = 101;
     const TRAP_DELAY_FRAMES = 120; // into a fight before a trap goes off, and between two traps
@@ -841,7 +856,11 @@
     const _Game_Battler_removeState = Game_Battler.prototype.removeState;
     Game_Battler.prototype.removeState = function(stateId) {
         const lost = stateId === STATE_VIRGINITY && this.isStateAffected(stateId) && this === $gameActors.actor(1);
+        const stopped = stateId === STATE_TIME_STOP && this.isStateAffected(stateId) && this === $gameActors.actor(1);
         _Game_Battler_removeState.apply(this, arguments);
+        if (stopped && AP.trapTimeStop) {
+            endTrapTimeStop(this);
+        }
         if (lost && bound() && option("virgin_mode") && $gameVariables.value(VARIABLE_FLOOR) >= 1) {
             checkTitle(TITLE_LOSE_VIRGINITY);
             notify("Virginity lost, this run is over");
@@ -1902,9 +1921,12 @@
         } else if (STAT_ITEMS[item.id]) {
             $gameActors.actor(1).addParam(STAT_ITEMS[item.id][0], STAT_ITEMS[item.id][1]);
         } else if (item.id === ITEM_CLIMAX_TRAP || TRAP_STATES[item.id]) {
-            // The Time Stop Trap is only made for a slot with the DLC, a game without it has nothing to cast
-            if (item.id !== ITEM_TIME_STOP_TRAP || $dataStates[STATE_TIME_STOP]) {
+            if (item.id !== ITEM_TIME_STOP_TRAP) {
                 s.traps = (s.traps || []).concat([item.id]);
+            } else if ($dataStates[STATE_TIME_STOP]) {
+                // Only made for a slot with the DLC, a game without it has nothing to cast. Time stops at the
+                // start of a turn, so that the cards of that turn are the Resist cards already.
+                s.timeStops = (s.timeStops || 0) + 1;
             }
         }
         if (item.id < RELIC_OFFSET) {
@@ -2020,12 +2042,18 @@
         // A version of the game without the brainwashed scenes confuses the player instead
         const drawn = s.traps.shift();
         const trap = drawn === ITEM_BRAINWASH_TRAP && !AP.brainwashScenes ? ITEM_CONFUSION_TRAP : drawn;
+        // Acid on clothes that are torn already dissolves them, like the Dissolving Fluid of the game does. Only
+        // the versions with the DLC have the Nude State.
+        const nude = $dataStates[STATE_NUDE];
+        const torn = $gameVariables.value(VARIABLE_TORN_CLOTHES) >= 1;
         if (trap === ITEM_CLIMAX_TRAP) {
             actor.setMp(0);
+        } else if (trap === ITEM_ACID_TRAP && torn && nude && nude.name === "Nude") {
+            actor.addState(STATE_NUDE);
         } else {
             castTrap(trap, actor);
         }
-        if (trap === ITEM_ACID_TRAP && $gameVariables.value(VARIABLE_TORN_CLOTHES) < 1) {
+        if (trap === ITEM_ACID_TRAP && !torn) {
             $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 1);
         }
     };
@@ -2055,19 +2083,104 @@
         return $dataSkills._archipelagoFingering || 0;
     };
 
-    // Asked at the start of the enemy's action: true when the enemy fingers the player in place of it
-    AP.trapFingering = interpreter => {
+    // What the enemy does to a player a trap stopped the time for: undress her (or laugh at one who is nude
+    // already), then Irrumatio, then that until she climaxes
+    const trapStopSkill = actor => {
+        if (!AP.trapTimeStop || !actor.isStateAffected(STATE_TIME_STOP)) {
+            return 0;
+        }
+        if (actor.isStateAffected(STATE_IRRUMATIO)) {
+            return SKILL_DEEPTHROATING;
+        }
+        AP.trapStopTurn = (AP.trapStopTurn || 0) + 1;
+        if (AP.trapStopTurn === 1) {
+            return actor.isStateAffected(STATE_NUDE) ? SKILL_LAUGH : SKILL_UNDRESSING;
+        }
+        AP.trapPinned = true;
+        return SKILL_IRRUMATIO;
+    };
+
+    // Asked at the start of the enemy's action: true when a trap has the enemy do something else in place of it.
+    // That is also before the game looks whether the player dodges, which she cannot.
+    AP.trapAction = interpreter => {
         const actor = $gameActors.actor(1);
         const enemy = $gameTroop.members()[0];
+        if (!enemy || enemy.isDeathStateAffected()) {
+            return false;
+        }
         const begged = actor.isStateAffected(STATE_BRAINWASH) && actor.isStateAffected(STATE_PIN_DOWN);
-        const skillId = AP.trapBrainwash && begged && enemy && !enemy.isDeathStateAffected() ? trapFingeringSkill() : 0;
-        if (!skillId) {
+        const skillId = trapStopSkill(actor) || (AP.trapBrainwash && begged ? trapFingeringSkill() : 0);
+        if (!skillId || !$dataSkills[skillId]) {
             return false;
         }
         enemy.forceAction(skillId, -2);
         BattleManager.forceAction(enemy);
         interpreter.setWaitMode("action");
         return true;
+    };
+
+    // Runs at the start of every turn of the player, before the cards are drawn
+    AP.turnStart = () => {
+        const s = bound() ? state() : null;
+        const actor = $gameActors.actor(1);
+        if (!s || !s.timeStops || s.runOver || actor.isDead() || actor.isStateAffected(STATE_TIME_STOP)) {
+            return;
+        }
+        s.timeStops--;
+        AP.trapTimeStop = true;
+        AP.trapStopTurn = 0;
+        AP.trapPinned = false;
+        actor.removeState(STATE_STEP);
+        castTrap(ITEM_TIME_STOP_TRAP, actor);
+        notify("Time Stop Trap: two Resist cards within two turns undo it");
+    };
+
+    AP.holdsTime = () => !!AP.trapTimeStop;
+    AP.trapPinned = false;
+    AP.isPinned = () => !!AP.trapTimeStop && !!AP.trapPinned;
+
+    const endTrapTimeStop = actor => {
+        const pinned = AP.trapPinned;
+        AP.trapTimeStop = false;
+        AP.trapPinned = false;
+        if (pinned) {
+            actor.removeState(STATE_IRRUMATIO);
+            actor.removeState(STATE_PIN_DOWN);
+        }
+    };
+
+    const patchTimeStop = () => {
+        const ticks = $dataCommonEvents[COMMON_EVENT_ACTION_END].list;
+        const resist = $dataCommonEvents[COMMON_EVENT_RESIST].list;
+        const asksState = (item, stateId) => {
+            const p = item.parameters;
+            return item.code === 111 && item.indent === 0 && p[0] === 4 && p[2] === 6 && p[3] === stateId;
+        };
+        const tick = ticks.findIndex(item => asksState(item, STATE_TIME_STOP + 2));
+        const end = tick < 0 ? -1 : branchEnd(ticks, tick);
+        if (end < 0 || !resist.some(item => asksState(item, STATE_TIME_STOP + 2))) {
+            return; // a version of the game without Time Stop
+        }
+        // The action of the enemy does not count the time stop of a trap down
+        ticks.splice(end + 1, 0, command(118, 0, [LABEL_TIME_HELD]));
+        ticks.splice(
+            tick,
+            0,
+            command(111, 0, [12, "LostChapterAP.holdsTime()"]),
+            command(119, 1, [LABEL_TIME_HELD]),
+            command(0, 1, []),
+            command(412, 0, [])
+        );
+        // Pinned down, the Resist cards do nothing any more
+        resist.splice(
+            0,
+            0,
+            command(111, 0, [12, "LostChapterAP.isPinned()"]),
+            command(115, 1, []),
+            command(0, 1, []),
+            command(412, 0, [])
+        );
+        $dataCommonEvents[COMMON_EVENT_TURN_BEGIN].list.unshift(command(355, 0, ["LostChapterAP.turnStart();"]));
     };
 
     // The standing picture only has the brainwashed scenes for the Regression State, in the versions of the game
@@ -2143,7 +2256,7 @@
         list.splice(
             end + 1,
             0,
-            command(111, 0, [12, "LostChapterAP.trapFingering(this)"]),
+            command(111, 0, [12, "LostChapterAP.trapAction(this)"]),
             command(119, 1, [jump.parameters[0]]),
             command(0, 1, []),
             command(412, 0, [])
@@ -2154,6 +2267,8 @@
     BattleManager.endBattle = function() {
         AP.trapBgm = null;
         AP.trapBrainwash = false;
+        AP.trapTimeStop = false;
+        AP.trapPinned = false;
         _BattleManager_endBattle.apply(this, arguments);
     };
 
@@ -4545,6 +4660,7 @@
             patchLastBoss();
             patchEnemyAction();
             patchBrainwashPose();
+            patchTimeStop();
             findScoreCommands();
         } else if (object === $dataTroops && !object._archipelagoPatched) {
             object._archipelagoPatched = true;
