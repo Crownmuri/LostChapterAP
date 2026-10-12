@@ -130,8 +130,8 @@ class BattleRewards(Range):
     """
     Adds checks to the fights. While one of them is open, one of the three cards of a won fight is an Archipelago
     card, and taking it sends the check in place of a card. Each stretch of 20 floors (1-20, 21-40, ...) up to
-    the set Final Boss Floor has this many of them, 0 for none. What an earlier stretch still has open is offered
-    first, so nothing is lost by climbing on.
+    the set Final Boss Floor has this many of them, 0 for none. 
+    Remaining checks roll over to the next stretch of floors if you have progressed past them.
     """
     display_name = "Battle Rewards"
     range_start = 0
@@ -156,11 +156,9 @@ class FinalBossFloor(Range):
 
 class TrapPercentage(Range):
     """
-    How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap, Acid Trap, Ecstasy
-    Trap, Time Stop Trap (DLC), Brainwash Trap and Breeze Trap. A trap goes off in the fight it arrives in, or at
-    the start of the next one. The card its state adds (Shake Free for Sticky, Masturbate for Ecstasy, Resist for Time Stop)
-    is in your hand at once: it takes the place of a card you drew, which goes back to the deck and is drawn again.
-    The weight options below set how the traps are split.
+    How much of the filler is traps: Climax Trap, Breeze Trap, Confusion Trap, Brainwash Trap, Sticky Trap,
+    Paralysis Trap, Acid Trap, Ecstasy Trap, Time Stop Trap (DLC), and a trap goes off in the fight it arrives in.
+    The weight options below set how the traps are split. Set a weight to 0 and it will not be present.
 
     The rest of the filler is gold, +5 LP or +5 RP restored, one-time stat boosts for the current run (+5 Max
     LP, +5 Max RP, +1 STR, MAG, DEF or AGL) and 10, 25 or 50 souls to spend.
@@ -179,7 +177,7 @@ class TrapWeight(Range):
 
 class ClimaxTrapWeight(TrapWeight):
     """
-    How likely a trap is a Climax Trap, which forces a climax and rendering you immobile for 3 turns. 
+    How likely a trap is a Climax Trap, which forces a climax and rendering you immobile for 3 turns.
     Lower odds as some enemies may deal lethal damage in the first 3 turns.
     """
     display_name = "Climax Trap Weight"
@@ -235,8 +233,8 @@ class TimeStopTrapWeight(TrapWeight):
     """
     How likely a trap is a Time Stop Trap, which stops time for you like Transgression of the DLC does: all you
     hold is Resist cards (the cards in your hand go back to the deck and are drawn again afterwards), and nothing
-    the enemy does can be dodged. Two of them (6 AP) within
-    two turns undo it. Otherwise the enemy undresses you and pins you down, and from there you cannot move until
+    the enemy does can be dodged. Two of them (6 AP) within two turns undo it.
+    Otherwise the enemy undresses you and pins you down, and from there you cannot move until
     you climax. Needs Include DLC, without it there are none of them.
     """
     display_name = "Time Stop Trap Weight"
