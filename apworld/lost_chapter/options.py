@@ -179,23 +179,36 @@ class TrapWeight(Range):
 
 class ClimaxTrapWeight(TrapWeight):
     """
-    How likely a trap is a Climax Trap, which forces a climax on your next turn. The nine trap weights are compared
-    with each other: with all of them the same, every kind is as likely. 0 leaves a kind out.
+    How likely a trap is a Climax Trap, which forces a climax and rendering you immobile for 3 turns. 
+    Lower odds as some enemies may deal lethal damage in the first 3 turns.
     """
     display_name = "Climax Trap Weight"
     default = 5
+
+class BreezeTrapWeight(TrapWeight):
+    """How likely a trap is a Breeze Trap, which takes your underwear like the Steal of an enemy does."""
+    display_name = "Breeze Trap Weight"
 
 
 class ConfusionTrapWeight(TrapWeight):
     """
     How likely a trap is a Confusion Trap, which confuses you like an enemy's spell does: up to five cards of the
-    Confused State land in your discard pile.
+    Confused sequence cards land in your discard pile.
     """
     display_name = "Confusion Trap Weight"
 
 
+class BrainwashTrapWeight(TrapWeight):
+    """
+    How likely a trap is a Brainwash Trap, which brainwashes you like an enemy's spell does: up to five Brainwash
+    sequence cards land in your discard pile. Does not affect Virginity like the enemy does originally.
+    Without patch, the sequence cards will be the same as the Confusion Trap.
+    """
+    display_name = "Brainwash Trap Weight"
+
+
 class StickyTrapWeight(TrapWeight):
-    """How likely a trap is a Sticky Trap, which covers you in sticky fluid and lowers your AGL."""
+    """How likely a trap is a Sticky Trap, which covers you in sticky fluid (debuff card) and lowers your AGL."""
     display_name = "Sticky Trap Weight"
 
 
@@ -206,15 +219,14 @@ class ParalysisTrapWeight(TrapWeight):
 
 class AcidTrapWeight(TrapWeight):
     """
-    How likely a trap is an Acid Trap, which tears your clothes. One on torn clothes dissolves them: with the DLC
-    you are Nude then.
+    How likely a trap is an Acid Trap, which dissolves your clothes by one stage (up to two stages in DLC).
     """
     display_name = "Acid Trap Weight"
 
 
 class EcstasyTrapWeight(TrapWeight):
     """
-    How likely a trap is an Ecstasy Trap, which puts you in Lust state, adding a card to your hand.
+    How likely a trap is an Ecstasy Trap, which puts you in Lust state, adding a Comfort debuff card to your hand.
     """
     display_name = "Ecstasy Trap Weight"
 
@@ -229,22 +241,6 @@ class TimeStopTrapWeight(TrapWeight):
     """
     display_name = "Time Stop Trap Weight"
     default = 5
-
-
-class BrainwashTrapWeight(TrapWeight):
-    """
-    How likely a trap is a Brainwash Trap, which brainwashes you like an enemy's spell does: up to five Brainwash
-    Start cards land in your discard pile and turn up once it is shuffled back into the deck. Playing them has you
-    undress and beg, and whatever enemy you are up against then fingers you turn after turn. That does not take
-    the Virginity status. Together with the cards of the Confusion Trap there are never more than ten of them.
-    A version of the game without these scenes (one that is not patched) confuses you instead.
-    """
-    display_name = "Brainwash Trap Weight"
-
-
-class BreezeTrapWeight(TrapWeight):
-    """How likely a trap is a Breeze Trap, which takes your underwear like the Steal of an enemy does."""
-    display_name = "Breeze Trap Weight"
 
 
 class StartingEventCount(Range):

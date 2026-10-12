@@ -86,6 +86,8 @@
     const SWITCH_STANDBY_IMAGE = 88; // on while the standby screen is shown
     const SWITCH_STANDBY_CONTROL = 89; // on while the standby screen takes input
     const VARIABLE_LP = 42;
+    const VARIABLE_RP = 44;
+    const SWITCH_AFTER_CLIMAX = 110; // "For Returning to Orgasm": on from a climax until the RP are given back
     const VARIABLE_FLOOR = 11;
     const VARIABLE_FLOOR_EVENT = 12;
     const VARIABLE_ORIGIN = 2;
@@ -2048,7 +2050,12 @@
         const nude = $dataStates[STATE_NUDE];
         const torn = $gameVariables.value(VARIABLE_TORN_CLOTHES) >= 1;
         if (trap === ITEM_CLIMAX_TRAP) {
+            // The game goes by its own copy of the RP, which it only brings up to date when it redraws the stats.
+            // Left to that the climax came a turn late. It is also held back while the RP of the climax before
+            // are still to be given back.
             actor.setMp(0);
+            $gameVariables.setValue(VARIABLE_RP, 0);
+            $gameSwitches.setValue(SWITCH_AFTER_CLIMAX, false);
         } else if (trap === ITEM_ACID_TRAP && torn && nude && nude.name === "Nude") {
             actor.addState(STATE_NUDE);
         } else {
