@@ -178,17 +178,13 @@ def title_events(number: int, dlc: bool) -> List[str]:
     return TITLE_EVENTS.get(number, []) + (DLC_TITLE_EVENTS.get(number, []) if dlc else [])
 
 
-# title number -> the floor from which its condition is expected to be met. All of these can be had earlier, by
-# taking the same events over and over, but that is out of logic: stats, cards and the swings of FAITH and VIRTUE
-# take a while to add up.
+# title number -> the floor from which its condition is expected to be met. Only the titles no floor event helps
+# with have one. A title about FAITH, VIRTUE, LEWD or the stats is in logic as soon as one of its events
+# (TITLE_EVENTS) can be visited: the soul shop sells the floor event of one's choice, so the same event can be
+# taken floor after floor.
 TITLE_FLOORS: Dict[int, int] = {
-    2: 21,   # FAITH 30 or less
-    3: 21,   # VIRTUE 30 or less
-    5: 21,   # LEWD 15 or more
     8: 21,   # Use 7 cards during 1 turn
     9: 21,   # 7 ailments at the same time: the enemies of the first floors do not inflict that many
-    14: 21,  # VIRTUE 70 or more: the origin Forgotten Martyr starts with both at 65
-    15: 21,  # FAITH 70 or more
 }
 
 # troop id -> enemy name (common event 65 "Fight")

@@ -348,14 +348,15 @@ class LostChapterWorld(World):
                 LocationProgressType.EXCLUDED
             )
 
-        # A title about FAITH, VIRTUE, LEWD or the stats takes an event that moves them, and most of those and the
-        # ones about cards take the floors it needs to add up
+        # A title about FAITH, VIRTUE, LEWD or the stats takes an event that moves them, which the soul shop lets a
+        # player take as often as it takes. The ones about cards and ailments take the floors they need to add up.
         for number in sorted(set(data.TITLE_EVENTS) | set(data.TITLE_FLOORS)):
-            items = [data.event_item(event) for event in data.title_events(number, bool(self.options.include_dlc))]
+            events = data.title_events(number, bool(self.options.include_dlc))
 
             self.get_location(f"Title: {data.TITLES[number]}").access_rule = (
-                lambda state, items=items, floor=data.TITLE_FLOORS.get(number, 1): (
-                    (not items or state.has_any(items, player)) and self.can_reach_floor(state, floor)
+                lambda state, events=events, floor=data.TITLE_FLOORS.get(number, 1): (
+                    (not events or any(self.can_reach_event(state, event) for event in events))
+                    and self.can_reach_floor(state, floor)
                 )
             )
 
@@ -401,6 +402,12 @@ class LostChapterWorld(World):
             and all(self.has_relic(state, relic) for relic in conditions["relics"])
             and (not conditions["any_relic"] or any(self.has_relic(state, relic) for relic in conditions["any_relic"]))
         )
+
+    def can_reach_event(self, state: CollectionState, event: str) -> bool:
+        """A floor event can be visited on a floor that is in logic."""
+        late = data.EVENT_IDS[event] >= data.LATE_EVENT_FIRST
+
+        return self.can_visit(state, event) and self.can_reach_floor(state, data.LATE_EVENT_FLOOR if late else 1)
 
     def can_find_relic(self, state: CollectionState, name: str) -> bool:
         """The place of a relic can be reached: its events, the floor they come up on and what it is traded for."""

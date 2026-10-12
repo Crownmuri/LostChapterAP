@@ -250,12 +250,22 @@ class LostChapterTabLayout(BoxLayout):
             unlock = data.EVENT_UNLOCKS[data.EVENT_IDS[event]]
             return data.EVENT_OFFSET + data.UNLOCK_EVENTS[unlock][0] in received
 
-        events = data.title_events(number, bool(self.ctx.slot_data.get("include_dlc")))
-        floor = data.TITLE_FLOORS.get(number, 1)
-        needed = min((floor - 1) // data.BOSS_FLOOR_INTERVAL, len(keys))
+        def keys_for(floor: int) -> int:
+            return min((floor - 1) // data.BOSS_FLOOR_INTERVAL, len(keys))
 
-        if events and not any(unlocked(event) for event in events):
-            return OUT_OF_LOGIC
+        events = [
+            event for event in data.title_events(number, bool(self.ctx.slot_data.get("include_dlc")))
+            if unlocked(event)
+        ]
+        needed = keys_for(data.TITLE_FLOORS.get(number, 1))
+
+        if number in data.TITLE_EVENTS:
+            if not events:
+                return OUT_OF_LOGIC
+
+            # The earliest of its events decides, the ones of floor 41 and later take the door keys to get there
+            late = all(data.EVENT_IDS[event] >= data.LATE_EVENT_FIRST for event in events)
+            needed = max(needed, keys_for(data.LATE_EVENT_FLOOR if late else 1))
 
         # Without the floors logic asks for, the title is still there for whoever takes the same events or fights
         # over and over

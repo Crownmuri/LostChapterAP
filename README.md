@@ -182,10 +182,10 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 Logic: first visits need the event unlock, kings and their four titles need the door key, relics need their
 source events, the ending needs all four door keys. Every boss floor passed takes one more door key: floors
 21-40 need one, 41-60 two, 61-80 three, which also applies to the floor 41+ events and their relics. The titles about
-FAITH, VIRTUE, LEWD and the stats need one of the events that move them (`TITLE_EVENTS` in `data.py`). Those and
-the titles about cards are also only in logic from the floor they are expected by (`TITLE_FLOORS`): LEWD 15, 7 cards
-in a turn, 15 cards, the stats over 30 and FAITH or VIRTUE 70 or more or 30 or less, all from floor 21.
-Earlier is possible by taking the same events over and over, which is out of logic. A first victory
+FAITH, VIRTUE, LEWD and the stats need one of the events that move them (`TITLE_EVENTS` in `data.py`) and no
+floor: the soul shop sells the floor event of one's choice, so an event can be taken as often as it takes. Only
+the titles no event helps with are in logic from a floor (`TITLE_FLOORS`): 7 cards in a turn and 7 ailments at
+the same time, both from floor 21. A first victory
 needs the floor its enemy first shows up on (`ENEMY_FLOORS`): three new enemies every 20 floors, the last six on
 floors 101 and 121, which are past the last boss. How hard a fight is and the remaining titles have no rules yet.
 
