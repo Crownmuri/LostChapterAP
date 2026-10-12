@@ -3471,6 +3471,8 @@
                 AP.chosenFloorEvent = members[Math.floor(Math.random() * members.length)];
             }]);
         }
+        // By name: the list is long and the events are looked for, not read through
+        entries.sort((a, b) => a[0].localeCompare(b[0]));
         entries.push(["Back", true, () => {
             AP.standbyMenu = "shop";
         }]);
@@ -3515,6 +3517,8 @@
         if (offered.length === 0) {
             return false;
         }
+        // By name, like the list of the soul shop
+        offered.sort((a, b) => eventName(a).localeCompare(eventName(b)));
         AP.offer = { floor: floor, events: offered };
         const switchIds = [SWITCH_FIGHT].concat(offered);
         const names = ["Battle"].concat(offered.map(offerName));
