@@ -1244,11 +1244,11 @@
         58: {"Remove the Portrait": "the donated Gold ×3", "Use Black Key": "all Stats +3, later +1"},
         59: {"Seduce the King": "LEWD +4, VIRTUE -10, the king dies", "Show Ring": "Aetolus Flag"},
         60: {"Hoist Flag": "uses Aetolus Flag"},
-        61: {"Open the Door": "White Key and Black Key: Monster quest, without them FAITH +10", "Apologize": "FAITH +10"},
+        61: {"Open the Door": "needs White Key and Black Key: Monster quest, without them FAITH +10", "Apologize": "FAITH +10"},
         591: {"Wear Clothes": "ends Nude", "Wear a swimsuit": "ends Nude", "Stay as you are": "LUX +50"},
         592: {"I want to fight too": "DEF +1", "Leave him ＜Loyal Dog Lassie＞ Lost": "Max LP +30", "I don’t know what to do": "opens the Checkpoint"},
         593: {"Show contempt for the man": "FAITH -5", "Praise the woman": "FAITH +5", "Release desire": "LEWD +2"},
-        594: {"Depart": "FAITH -5", "Accept to take a message.": "VIRTUE +5", "Hello": "Memento Chisel: VIRTUE +5, else LP & RP full", "I won't hesitate to do it.": "Gold +150, Pieris"},
+        594: {"Depart": "FAITH -5", "Accept to take a message.": "VIRTUE +5", "Hello": "with Memento Chisel: VIRTUE +5, else LP & RP full", "I won't hesitate to do it.": "Gold +150, Pieris"},
         595: {"Continue onward": "AGL +1", "Turn Back": "MAG +1 on the road, LEWD -2 at the checkpoint", "Take off underwear ＜Strip＞Required": "LEWD +2", "I came to see you": "VIRTUE +5, Memento Chisel", "Don't you want to see your mother?": "Pieris, Memento Chisel", "Refuse the request": "LEWD +2"},
         597: {"Sell your body": "Gold +100, LEWD +2", "Refuse": "LEWD -3", "Overlook": "Gold +300", "Give Judgment": "Pieris, ends Beastification", "Resist": "LP -8", "Accept the offer": "Beastification"},
         598: {"Offer a crown of Forget-Me-Not": "LP regen +5", "Offer a crown of Pieris": "RP regen +5", "Depart": "FAITH -5"},
@@ -1282,8 +1282,9 @@
                 effect = effect.replace(name, sent ? name + " (found)" : cardLabel(itemId) || name);
             }
         }
-        // The same for a relic, where the choice hands it out: one that is given up or used is the relic itself
-        const handsOut = !/^(lose|uses) /.test(effect);
+        // The same for a relic, where the choice hands it out: one that is given up, used or asked for is the
+        // relic itself
+        const handsOut = !/^(lose|uses|needs|with) /.test(effect);
         for (const weaponId of handsOut ? relicChecks() : []) {
             const name = $dataWeapons[weaponId] ? $dataWeapons[weaponId].name : "";
             if (name && effect.includes(name) && !text.includes(relicLabel(weaponId) || name)) {
