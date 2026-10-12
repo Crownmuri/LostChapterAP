@@ -226,8 +226,9 @@ class TimeStopTrapWeight(TrapWeight):
 class BrainwashTrapWeight(TrapWeight):
     """
     How likely a trap is a Brainwash Trap, which brainwashes you like an enemy's spell does: up to five Brainwash
-    Start cards land in your discard pile and turn up once it is shuffled back into the deck. Together with the
-    cards of the Confusion Trap there are never more than ten of them.
+    Start cards land in your discard pile and turn up once it is shuffled back into the deck. Playing them has you
+    undress and beg, and whatever enemy you are up against then fingers you turn after turn. That does not take
+    the Virginity status. Together with the cards of the Confusion Trap there are never more than ten of them.
     """
     display_name = "Brainwash Trap Weight"
 

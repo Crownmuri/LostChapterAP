@@ -378,6 +378,14 @@
     const STATE_TIME_STOP = 404;
     const COMMON_EVENT_TIME_STOP_END = 505;
     const TIME_STOP_VOLUME = 20; // of the music while time stands still, like the skill has it
+    // Brainwash is the Shaman's: the Brainwash Start cards it leaves have the player undress and beg, which ends
+    // in the Pin Down State, and the Shaman answers that with Fingering. After a Brainwash Trap every enemy does.
+    const ITEM_BRAINWASH_TRAP = 37;
+    const STATE_BRAINWASH = 262;
+    const STATE_PIN_DOWN = 7;
+    const SKILL_FINGERING = 264;
+    const COMMON_EVENT_ENEMY_ACTION = 107;
+    const VARIABLE_ENEMY_LP = 63;
     // The skill behind the Paralysis Trap has no common event of its own, only an animation
     const TRAP_ANIMATIONS = { 33: 144 };
     const TRAP_STATE_NAMES = { 33: "Paralysis" };
@@ -1973,6 +1981,9 @@
             spell = unreflected.map(item => command(item.code, item.indent - 1, item.parameters));
         }
         spell = spell.filter(item => item.code !== 339);
+        if (trap === ITEM_BRAINWASH_TRAP) {
+            AP.trapBrainwash = true;
+        }
         if (trap === ITEM_TIME_STOP_TRAP) {
             // The skill turns the music of a regular fight down and its end turns that one up again. A trap can go
             // off in any fight, so the music that is playing is kept instead.
@@ -2028,9 +2039,61 @@
         return _Game_Interpreter_command241.apply(this, arguments);
     };
 
+    // The Fingering of the Shaman takes the Virginity State, the one a trap leads to does not
+    const trapFingeringSkill = () => {
+        const fingering = $dataSkills[SKILL_FINGERING];
+        if (!$dataSkills._archipelagoFingering && fingering && fingering.name === "Fingering") {
+            const skill = JSON.parse(JSON.stringify(fingering));
+            skill.id = $dataSkills.length;
+            skill.effects = skill.effects.filter(effect => !(effect.code === 22 && effect.dataId === STATE_VIRGINITY));
+            $dataSkills.push(skill);
+            $dataSkills._archipelagoFingering = skill.id;
+        }
+        return $dataSkills._archipelagoFingering || 0;
+    };
+
+    // Asked at the start of the enemy's action: true when the enemy fingers the player in place of it
+    AP.trapFingering = interpreter => {
+        const actor = $gameActors.actor(1);
+        const enemy = $gameTroop.members()[0];
+        const begged = actor.isStateAffected(STATE_BRAINWASH) && actor.isStateAffected(STATE_PIN_DOWN);
+        const skillId = AP.trapBrainwash && begged && enemy && !enemy.isDeathStateAffected() ? trapFingeringSkill() : 0;
+        if (!skillId) {
+            return false;
+        }
+        enemy.forceAction(skillId, -2);
+        BattleManager.forceAction(enemy);
+        interpreter.setWaitMode("action");
+        return true;
+    };
+
+    const patchEnemyAction = () => {
+        const list = $dataCommonEvents[COMMON_EVENT_ENEMY_ACTION].list;
+        // Behind the branch that ends the action of an enemy without LP
+        const defeated = list.findIndex(item => {
+            const p = item.parameters;
+            return item.code === 111 && item.indent === 0 && p[0] === 1 && p[1] === VARIABLE_ENEMY_LP && p[4] === 2;
+        });
+        const end = defeated < 0 ? -1 : branchEnd(list, defeated);
+        const jump = list.find(item => item.code === 119 && item.indent === 1);
+        if (end < 0 || !jump) {
+            console.error("[AP] Common event 107 has an unexpected layout, a Brainwash Trap leads nowhere");
+            return;
+        }
+        list.splice(
+            end + 1,
+            0,
+            command(111, 0, [12, "LostChapterAP.trapFingering(this)"]),
+            command(119, 1, [jump.parameters[0]]),
+            command(0, 1, []),
+            command(412, 0, [])
+        );
+    };
+
     const _BattleManager_endBattle = BattleManager.endBattle;
     BattleManager.endBattle = function() {
         AP.trapBgm = null;
+        AP.trapBrainwash = false;
         _BattleManager_endBattle.apply(this, arguments);
     };
 
@@ -4420,6 +4483,7 @@
             patchPond();
             patchFinisher();
             patchLastBoss();
+            patchEnemyAction();
             findScoreCommands();
         } else if (object === $dataTroops && !object._archipelagoPatched) {
             object._archipelagoPatched = true;
