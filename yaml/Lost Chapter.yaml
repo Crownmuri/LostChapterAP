@@ -54,7 +54,7 @@ Lost Chapter:
   trap_percentage: 20
 
   # 0-100 each. How the traps are split between the nine kinds, compared with each other. 0 leaves a kind out
-  climax_trap_weight: 5       # forces a climax on your next turn, which can decide a fight
+  climax_trap_weight: 5       # forces a climax at once, which costs you your turns
   confusion_trap_weight: 20   # up to five cards of the Confused State land in your discard pile
   sticky_trap_weight: 20      # lowers your AGL
   paralysis_trap_weight: 20   # can decide a fight
