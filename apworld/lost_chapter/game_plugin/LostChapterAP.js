@@ -2078,6 +2078,27 @@
     AP.trapBrainwashPose = () =>
         !!AP.trapBrainwash && ![TROOP_CONJURER, TROOP_SHAMAN].includes($gameVariables.value(VARIABLE_TROOP));
 
+    // The brainwashed scenes are drawn for the regressed body only, the game brainwashes nobody else. A trap does:
+    // while its brainwash lasts, the standing picture is drawn as if the player were regressed. Only the picture,
+    // the Regression State itself and all it changes stay out of it.
+    const _Game_BattlerBase_isStateAffected = Game_BattlerBase.prototype.isStateAffected;
+    Game_BattlerBase.prototype.isStateAffected = function(stateId) {
+        if (stateId === STATE_REGRESSION && AP.drawingPose && this === $gameActors.actor(1)) {
+            if (_Game_BattlerBase_isStateAffected.call(this, STATE_BRAINWASH)) {
+                return true;
+            }
+        }
+        return _Game_BattlerBase_isStateAffected.apply(this, arguments);
+    };
+
+    const _Game_Interpreter_executeCommand = Game_Interpreter.prototype.executeCommand;
+    Game_Interpreter.prototype.executeCommand = function() {
+        AP.drawingPose = !!AP.trapBrainwash && this._list === $dataCommonEvents[COMMON_EVENT_STANDING].list;
+        const result = _Game_Interpreter_executeCommand.apply(this, arguments);
+        AP.drawingPose = false;
+        return result;
+    };
+
     const patchBrainwashPose = () => {
         const list = $dataCommonEvents[COMMON_EVENT_STANDING].list;
         const label = list.findIndex(item => item.code === 118 && item.parameters[0] === LABEL_EXPOSED);
