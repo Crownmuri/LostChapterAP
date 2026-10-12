@@ -1397,13 +1397,22 @@
         const passed = taken ? otherwise : at;
         const choices = passed < 0 ? null : partChoices(list, passed, item.indent);
         const takes = taken ? condition.unmet : condition.met;
+        const named = part =>
+            (part || []).map(choice => effectKey(String(choice))).filter(name => /[a-z]/i.test(name));
+        // The part that runs instead can offer the same (the Desert asks to advance dressed or not, only what
+        // it costs to get there differs): nothing is passed over then
+        const instead = taken ? at : otherwise;
+        const offered = instead < 0 ? null : partChoices(list, instead, item.indent);
+        if (choices && offered && named(choices).every(name => named(offered).includes(name))) {
+            return;
+        }
         let text = null;
         if (choices) {
-            const names = choices.map(choice => effectKey(String(choice))).filter(name => /[a-z]/i.test(name));
-            const named = names.slice(0, SKIP_NOTICE_CHOICES).map(name => "\"" + name + "\"");
-            const verb = names.length > named.length ? " and more are" : named.length > 1 ? " are" : " is";
-            text = named.length > 0
-                ? named.join(", ") + verb + " not offered here. That takes: " + takes + "."
+            const names = named(choices);
+            const quoted = names.slice(0, SKIP_NOTICE_CHOICES).map(name => "\"" + name + "\"");
+            const verb = names.length > quoted.length ? " and more are" : quoted.length > 1 ? " are" : " is";
+            text = quoted.length > 0
+                ? quoted.join(", ") + verb + " not offered here. That takes: " + takes + "."
                 : "Another scene of this event takes: " + takes + ".";
         } else if (taken && ["state", "relic", "card", "origin"].includes(condition.kind)) {
             // Nothing to choose from is passed over, but the branch leaves for another part of the event
