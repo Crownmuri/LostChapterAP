@@ -158,7 +158,8 @@ class TrapPercentage(Range):
     """
     How much of the filler is traps: Climax Trap, Confusion Trap, Sticky Trap, Paralysis Trap, Acid Trap, Ecstasy
     Trap, Time Stop Trap (DLC) and Brainwash Trap. A trap goes off in the fight it arrives in, or at the start of
-    the next one, where the cards its state adds are in your first hand already.
+    the next one. The card its state adds (Shake Free for Sticky, Masturbate for Ecstasy, Resist for Time Stop)
+    is in your hand at once: it takes the place of a card you drew, which goes back to the deck and is drawn again.
     The weight options below set how the traps are split.
 
     The rest of the filler is gold, +5 LP or +5 RP restored, one-time stat boosts for the current run (+5 Max

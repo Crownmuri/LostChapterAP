@@ -2034,7 +2034,7 @@
         }
     };
 
-    // One of the traps that are waiting goes off
+    // One of the traps that are waiting goes off. Returns which.
     const castNextTrap = (s, actor) => {
         // A version of the game without the brainwashed scenes confuses the player instead
         const drawn = s.traps.shift();
@@ -2053,6 +2053,7 @@
         if (trap === ITEM_ACID_TRAP && !torn) {
             $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 1);
         }
+        return trap;
     };
 
     // The cards in hand, the deck and the pile of discarded cards are variables of the game: five hand slots, forty
@@ -2068,6 +2069,9 @@
     const VARIABLE_DRAW = 151; // the deck slot a draw takes
     const STATE_CARDS = [81, 108]; // ids of the cards a state adds
     const SKILL_RESIST = 108;
+    // The card the turn start adds for the state of a trap, and the hand slot it takes: [slot, card]
+    // 32, the Sticky Trap: Shake Free. 35, the Ecstasy Trap: Masturbate.
+    const TRAP_CARDS = { 32: [0, 92], 35: [1, 85] };
     const COMMON_EVENT_HAND = 3;
     const SWITCH_PLAYER_TURN = 104;
     const SWITCH_HAND_CONTROL = 5;
@@ -2075,29 +2079,66 @@
 
     // Time stops in the middle of a turn: the cards in hand become Resist cards. The ones that came from the deck
     // go back to it, and are the first the deck gives out again.
-    const stopHand = () => {
+    const isStateCard = card => card >= STATE_CARDS[0] && card <= STATE_CARDS[1];
+
+    // Puts `card` into hand slot `index` in place of what is there. A card that came from the deck goes back to it.
+    const replaceHandCard = (index, card) => {
         const returned = AP.returnedSlots || (AP.returnedSlots = []);
-        for (let i = 0; i < HAND_SLOTS; i++) {
-            const card = $gameVariables.value(VARIABLE_HAND + i);
-            if (!card) {
-                continue;
-            }
-            let slot = -1;
-            for (let j = 0; j < DECK_SLOTS && slot < 0; j++) {
-                slot = $gameVariables.value(VARIABLE_DECK + j) === 0 ? VARIABLE_DECK + j : -1;
-            }
-            if ((card < STATE_CARDS[0] || card > STATE_CARDS[1]) && slot >= 0) {
-                $gameVariables.setValue(slot, card);
-                $gameVariables.setValue(VARIABLE_DECK_LEFT, $gameVariables.value(VARIABLE_DECK_LEFT) + 1);
-                returned.push(slot);
-            }
-            $gameVariables.setValue(VARIABLE_HAND + i, SKILL_RESIST);
+        const held = $gameVariables.value(VARIABLE_HAND + index);
+        let slot = -1;
+        for (let j = 0; j < DECK_SLOTS && slot < 0; j++) {
+            slot = $gameVariables.value(VARIABLE_DECK + j) === 0 ? VARIABLE_DECK + j : -1;
         }
+        if (held && !isStateCard(held) && slot >= 0) {
+            $gameVariables.setValue(slot, held);
+            $gameVariables.setValue(VARIABLE_DECK_LEFT, $gameVariables.value(VARIABLE_DECK_LEFT) + 1);
+            returned.push(slot);
+        }
+        $gameVariables.setValue(VARIABLE_HAND + index, card);
+    };
+
+    const redrawHand = () => {
         $gameVariables.setValue(VARIABLE_HAND_SELECTED, 0);
         const hand = new Game_Interpreter();
         hand.setup($dataCommonEvents[COMMON_EVENT_HAND].list);
         hand.update();
     };
+
+    const stopHand = () => {
+        for (let i = 0; i < HAND_SLOTS; i++) {
+            if ($gameVariables.value(VARIABLE_HAND + i)) {
+                replaceHandCard(i, SKILL_RESIST);
+            }
+        }
+        redrawHand();
+    };
+
+    // The state of a trap that goes off in the middle of a turn brings its card at once: in the hand slot the turn
+    // start would have put it in, or behind the cards that are left when there are fewer
+    const addTrapCard = trap => {
+        const [slot, card] = TRAP_CARDS[trap];
+        const count = $gameVariables.value(VARIABLE_HAND_COUNT);
+        const index = Math.min(slot, count);
+        const held = $gameVariables.value(VARIABLE_HAND + index);
+        if (!$dataSkills[card] || index >= HAND_SLOTS || held === card) {
+            return;
+        }
+        // The card of another state stays where it is, this one goes behind the hand then
+        const free = held && isStateCard(held) ? count : index;
+        if (free >= HAND_SLOTS) {
+            return;
+        }
+        replaceHandCard(free, card);
+        if (free >= count) {
+            $gameVariables.setValue(VARIABLE_HAND_COUNT, count + 1);
+        }
+        redrawHand();
+    };
+
+    const isChoosingCard = () =>
+        $gameSwitches.value(SWITCH_PLAYER_TURN) &&
+        $gameSwitches.value(SWITCH_HAND_CONTROL) &&
+        !$gameSwitches.value(SWITCH_CARD_IN_USE);
 
     // Asked where the turn start picks the deck slot of a draw: a card a time stop sent back comes first
     AP.drawReturned = () => {
@@ -2135,11 +2176,7 @@
         }
         // Time stops first. In the middle of a turn that takes the player to be choosing a card.
         if (s.timeStops > 0 && !actor.isStateAffected(STATE_TIME_STOP)) {
-            const choosing =
-                $gameSwitches.value(SWITCH_PLAYER_TURN) &&
-                $gameSwitches.value(SWITCH_HAND_CONTROL) &&
-                !$gameSwitches.value(SWITCH_CARD_IN_USE);
-            if (choosing) {
+            if (isChoosingCard()) {
                 AP.battleFrames = 0;
                 startTrapTimeStop(s, actor, true);
             }
@@ -2147,7 +2184,12 @@
         }
         if (s.traps && s.traps.length > 0) {
             AP.battleFrames = 0;
-            castNextTrap(s, actor);
+            const choosing = isChoosingCard();
+            const trap = castNextTrap(s, actor);
+            // Not while time stands still: the hand is Resist cards then, and the next turn start adds the card
+            if (TRAP_CARDS[trap] && choosing && !actor.isStateAffected(STATE_TIME_STOP)) {
+                addTrapCard(trap);
+            }
         }
     };
 
