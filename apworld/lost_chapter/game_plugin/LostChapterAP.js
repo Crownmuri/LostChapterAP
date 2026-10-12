@@ -2976,6 +2976,30 @@
         }
     };
 
+    // The Locksmith has nothing more to say to a player who opened the Prison, for the rest of the run. In the
+    // game she opened it with the keys he made. In a multiworld the keys can come from anywhere and having him
+    // make one is a check, so he goes on working while one of those is open.
+    const SWITCH_MONSTER_QUEST = 275;
+    AP.locksmithRefuses = () => {
+        if (!$gameSwitches.value(SWITCH_MONSTER_QUEST)) {
+            return false;
+        }
+        const open = weaponId => relicChecks().includes(weaponId) && !state().checked.includes(RELIC_OFFSET + weaponId);
+        return !(shuffled() && [WEAPON_WHITE_KEY, WEAPON_BLACK_KEY].some(open));
+    };
+
+    const patchLocksmith = () => {
+        const refuses = $dataCommonEvents[COMMON_EVENT_LOCKSMITH].list.find(item => {
+            const p = item.parameters;
+            return item.code === 111 && item.indent === 0 && p[0] === 0 && p[1] === SWITCH_MONSTER_QUEST && p[2] === 0;
+        });
+        if (!refuses) {
+            console.error("[AP] Common event 57 has an unexpected layout, the Locksmith stops working after the Prison");
+            return;
+        }
+        refuses.parameters = [12, "LostChapterAP.locksmithRefuses()"];
+    };
+
     const patchStandUp = () => {
         const list = $dataCommonEvents[COMMON_EVENT_GAME_OVER].list;
         const paid = list.findIndex(item => {
@@ -5143,6 +5167,7 @@
             patchBrainwashPose();
             patchTimeStop();
             patchStandUp();
+            patchLocksmith();
             patchPretend();
             patchImmobile();
             patchTurnStart();
