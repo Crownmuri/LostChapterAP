@@ -165,7 +165,8 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - An asterisk behind a floor event (`Old Woman*`) says something is left to do there that is no check, but opens
   one in another event.
 - The soul shop also sells a Yellow Vial (50) that ends the Regression State and a Repair Kit (50) that mends
-  torn clothes and dresses a nude player, each only while there is use for it, and "Back" in the floor choice
+  torn clothes and dresses a nude player, each only while there is use for it. Scissors (50) go the other way:
+  whole clothes are torn, torn ones are cut off (Nude, with the DLC). And "Back" in the floor choice
   returns to the standby screen with the same floor events.
 - Next to the soul shop the floor choice has a Boon Shop with the boons of the game's bonus shop at fixed prices:
   Small Boons (200: stats, regen, FAITH and VIRTUE), Medium Boons (300: Gold +200,

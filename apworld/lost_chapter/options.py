@@ -277,7 +277,7 @@ class SoulMultiplier(Range):
     The souls a run earns, as a percentage: 100 is what the game counts, 200 twice that. Souls add up over the runs
     of a seed and are spent in the soul shop of the standby screen: a new set of floor events to choose from, a
     floor event of your choice, a Forget-Me-Not, a Pieris (DLC), 10 LP or RP, a Yellow Vial that ends the
-    Regression State, or a Repair Kit that mends your clothes. The random boon start also turned into its own
+    Regression State, a Repair Kit that mends your clothes, or Scissors that tear them. The random boon start also turned into its own
     one-time purchase shop on the standby screen.
     """
     display_name = "Soul Multiplier"

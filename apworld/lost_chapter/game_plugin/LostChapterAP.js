@@ -195,7 +195,7 @@
         ],
     };
     const SHOP_LIMITS = { forgetMeNot: 2, pieris: 2 }; // how many of each a run can buy
-    const SHOP_PRICES = { reroll: 10, pick: 40, forgetMeNot: 150, pieris: 300, heal: 20, cards: 20, vial: 50, repair: 50 };
+    const SHOP_PRICES = { reroll: 10, pick: 40, forgetMeNot: 150, pieris: 300, heal: 20, cards: 20, vial: 50, repair: 50, scissors: 50 };
     // The three cards to choose from after a fight: common event 17 rolls and shows them while its switch is on,
     // common event 16 takes the choice while its switch is on
     const SWITCH_DROP_CONTROL = 16;
@@ -3151,6 +3151,21 @@
                     actor.removeState(STATE_NUDE);
                 }
                 $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 0);
+                redrawGui();
+            }));
+        }
+        // The other way around, for the events that ask for it: whole clothes are torn, torn ones are cut off
+        // (the Nude State of the game with the DLC). The same two steps the Acid Trap takes.
+        const isNude = nude && actor.isStateAffected(STATE_NUDE);
+        if (!torn && !isNude) {
+            entries.push(entry("Scissors: tear your clothes", "scissors", () => {
+                actor.addState(STATE_TORN_CLOTHES);
+                $gameVariables.setValue(VARIABLE_TORN_CLOTHES, 1);
+                redrawGui();
+            }));
+        } else if (nude && !isNude) {
+            entries.push(entry("Scissors: cut your clothes off", "scissors", () => {
+                actor.addState(STATE_NUDE);
                 redrawGui();
             }));
         }
