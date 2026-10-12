@@ -167,6 +167,9 @@ Game changes in a session (the plugin patches the event data in memory at load, 
   (`patchPretend`).
 - "First Visit: Small Room - Vacant Cabin" also takes the Desert unlock in logic: the cabin only comes up for a
   player in Lust, and the drink of the Desert is the sure way to that.
+- Who the origin The New Ruler kills for a Pieris (the man of the Desert, the merchant, Lassi, the ranger of the
+  Camp, the proprietress) is back on the next floor, so no event is lost for the run. Each of those events hands
+  out one Pieris a run (`reviveVictims`).
 - An asterisk behind a floor event (`Old Woman*`) says something is left to do there that is no check, but opens
   one in another event.
 - The soul shop also sells a Yellow Vial (50) that ends the Regression State and a Repair Kit (50) that mends

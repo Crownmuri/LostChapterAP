@@ -967,6 +967,42 @@
         }
     };
 
+    // The origin The New Ruler (DLC) can kill for a Pieris: the man of the Desert, the merchant, Lassi, the ranger
+    // of the Camp, the proprietress. The game never offers the event of a dead one again in that run, and with it
+    // go its checks and what it is good for (the Desert is the way to Lust). In a multiworld they are back on the
+    // next floor. Each of those events still parts with one Pieris a run only.
+    const DEATH_SWITCHES = [247, 254, 243, 245, 246];
+    const reviveVictims = () => {
+        if (!shuffled()) {
+            return;
+        }
+        for (const switchId of DEATH_SWITCHES) {
+            if ($gameSwitches.value(switchId)) {
+                _Game_Switches_setValue.call($gameSwitches, switchId, false);
+            }
+        }
+    };
+
+    // Whether the Pieris a floor event is about to hand out is the one of this run. False for a second kill.
+    const takesPieris = list => {
+        const kills = item => {
+            const p = item.parameters;
+            return item.code === 121 && p[0] === p[1] && p[2] === 0 && DEATH_SWITCHES.includes(p[0]);
+        };
+        const eventId = shuffled() ? floorEventOf(list) : 0;
+        if (!eventId || !list.some(kills)) {
+            return true;
+        }
+        const s = state();
+        s.pieris = s.pieris || [];
+        if (s.pieris.includes(eventId)) {
+            notify("No Pieris this time: one a run from here");
+            return false;
+        }
+        s.pieris.push(eventId);
+        return true;
+    };
+
     const _Game_Variables_setValue = Game_Variables.prototype.setValue;
     Game_Variables.prototype.setValue = function(variableId, value) {
         _Game_Variables_setValue.apply(this, arguments);
@@ -976,6 +1012,7 @@
         const s = state();
         AP.battleDrop = false;
         AP.skipNotes = [];
+        reviveVictims();
         if (value === 0 && s) {
             // "---Game Initialization---" strips every relic at the start of a run
             s.regrant = true;
@@ -985,6 +1022,7 @@
             s.claimedSets = [];
             s.shopBought = {};
             s.boons = [];
+            s.pieris = [];
             s.checkpoint = 0;
             // The souls of the run that ended are kept, the next one adds to them
             s.souls = (s.souls || 0) + (s.runSouls || 0);
@@ -1063,6 +1101,9 @@
     const _Game_Interpreter_command127 = Game_Interpreter.prototype.command127;
     Game_Interpreter.prototype.command127 = function(params) {
         const p = params || this._params || [];
+        if (p[0] === WEAPON_PIERIS && p[1] === 0 && !takesPieris(this._list)) {
+            return true;
+        }
         const takes = item => item.code === 127 && item.parameters[0] === p[0] && item.parameters[1] === 1;
         const isKey = [WEAPON_WHITE_KEY, WEAPON_BLACK_KEY].includes(p[0]);
         AP.relicReturned = bound() && !isKey && floorEventOf(this._list) !== 0 && this._list.some(takes);
