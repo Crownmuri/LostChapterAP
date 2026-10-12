@@ -164,12 +164,12 @@ TITLE_EVENTS: Dict[int, List[str]] = {
 # The same with the DLC, on top of the above: its own events, and the events of the base game that the version of
 # the game the DLC comes with gave a new choice or outcome (tools: compare dump/base with dump/dlc).
 DLC_TITLE_EVENTS: Dict[int, List[str]] = {
-    2: ["Gold and Silver Treasures", "Farm Village", "Old Woman", "Graveyard", "Treasury"],  # FAITH down
+    2: ["Gold and Silver Treasures", "Farm Village", "Old Woman", "Graveyard", "Royal Tomb"],  # FAITH down
     5: ["Cat"],  # LEWD up
     11: ["Cat"],  # 1000 G, by way of LEWD
     12: ["Barracks", "Checkpoint"],  # STR/DEF/MAG/AGL
     14: ["Old Woman", "Sculptor"],  # VIRTUE up
-    15: ["Desert", "Library", "Farm Village", "Sculptor", "Treasury"],  # FAITH up
+    15: ["Desert", "Library", "Farm Village", "Sculptor", "Royal Tomb"],  # FAITH up
 }
 
 
@@ -309,7 +309,7 @@ DLC_EVENTS: Dict[int, str] = {
     168: "Graveyard",
     169: "Girl with Flower Crown",
     170: "Sculptor",
-    171: "Treasury",
+    171: "Royal Tomb",  # "Treasury" in the game
 }
 EVENTS.update(DLC_EVENTS)
 

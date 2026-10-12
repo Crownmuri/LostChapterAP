@@ -76,7 +76,7 @@ Lost Chapter:
   #   Lake Shore, Locksmith, Corridor, Throne, Hill, Prison
   # With include_dlc also:
   #   Costume Room, Barracks, Farm Village, Old Woman, Checkpoint, Clinic, Slave Market, Graveyard,
-  #   Girl with Flower Crown, Sculptor, Treasury
+  #   Girl with Flower Crown, Sculptor, Royal Tomb
   starting_events: []
 
   # 100-200. The souls a run earns, as a percentage. Souls add up over the runs and are spent in the soul shop

@@ -268,7 +268,7 @@ class StartingEvents(OptionSet):
     Locksmith, Corridor, Throne, Hill, Prison.
 
     With Include DLC also: Costume Room, Barracks, Farm Village, Old Woman, Checkpoint, Clinic, Slave Market,
-    Graveyard, Girl with Flower Crown, Sculptor, Treasury.
+    Graveyard, Girl with Flower Crown, Sculptor, Royal Tomb.
     """
     display_name = "Starting Events"
     valid_keys = frozenset(data.UNLOCK_EVENTS)
