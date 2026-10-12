@@ -131,7 +131,7 @@ class BattleRewards(Range):
     """
     Adds checks to the fights. While one of them is open, one of the three cards of a won fight is an Archipelago
     card, and taking it sends the check in place of a card. Each stretch of 20 floors (1-20, 21-40, ...) up to
-    the set Final Boss Floor has this many of them, 0 for none.
+    the set Required Floor has this many of them, 0 for none.
     Remaining checks roll over to the next stretch of floors if you have progressed past them.
     """
     display_name = "Battle Rewards"
@@ -140,16 +140,18 @@ class BattleRewards(Range):
     default = 0
 
 
-class FinalBossFloor(Range):
+class RequiredFloor(Range):
     """
-    The floor you have to reach before the final boss can be challenged. It spawns on the boss floor, and
-    those come every 20 floors, so a value in between counts up to the next one.
+    The floor you have to reach to beat the game: before it the boss of your goal cannot be challenged. That is
+    the final boss, or with a DLC goal the boss behind The Last Door. Both are at a boss floor, and those come
+    every 20 floors, so a value in between counts up to the next one.
 
     Normally the game forces an ending on floor 100 but the AP sets the game to post-game environment.
-    You can refight Heavenly Kings (and even the final boss if going for DLC end) for bonus stats.
+    You can refight Heavenly Kings for bonus stats. With a DLC goal the final boss can be fought from floor 100
+    as well, for bonus stats and souls.
     Max is set to 200 to include for possible post-game monster checks that are behind floor 101.
     """
-    display_name = "Final Boss Floor"
+    display_name = "Required Floor"
     range_start = 100
     range_end = 200
     default = 100
@@ -298,7 +300,7 @@ class LostChapterOptions(PerGameCommonOptions):
     finisher_move: FinisherMove
     floor_exploration: FloorExploration
     battle_rewards: BattleRewards
-    final_boss_floor: FinalBossFloor
+    required_floor: RequiredFloor
     trap_percentage: TrapPercentage
     climax_trap_weight: ClimaxTrapWeight
     confusion_trap_weight: ConfusionTrapWeight

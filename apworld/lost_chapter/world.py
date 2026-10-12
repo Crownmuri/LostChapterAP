@@ -14,7 +14,7 @@ from .options import LostChapterOptions
 
 SLOT_DATA_OPTIONS = (
     "goal", "virgin_mode", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
-    "finisher_move", "floor_exploration", "final_boss_floor", "soul_multiplier", "death_link", "battle_rewards",
+    "finisher_move", "floor_exploration", "required_floor", "soul_multiplier", "death_link", "battle_rewards",
 )
 
 
@@ -251,7 +251,7 @@ class LostChapterWorld(World):
         return events + self.random.sample(candidates, min(missing, len(candidates)))
 
     def battle_rewards(self) -> Dict[str, Tuple[int, int]]:
-        stretches = data.battle_stretches(self.options.final_boss_floor.value)
+        stretches = data.battle_stretches(self.options.required_floor.value)
 
         return data.battle_rewards(self.options.battle_rewards.value, stretches)
 
@@ -379,12 +379,13 @@ class LostChapterWorld(World):
             self.get_location(data.ENDING_EVENT).access_rule = (
                 lambda state: all(self.has_relic(state, key) for key in data.DLC_BOSS_KEYS.values())
                 and (not true_end or self.can_visit(state, "Corridor"))
+                and self.can_reach_floor(state, self.options.required_floor.value)
             )
         else:
-            # The last boss is one of the doors from the final boss floor on, 100 at the least, which takes all four
+            # The last boss is one of the doors from the required floor on, 100 at the least, which takes all four
             # Heavenly Kings defeated
             self.get_location(data.ENDING_EVENT).access_rule = (
-                lambda state: self.can_reach_floor(state, self.options.final_boss_floor.value)
+                lambda state: self.can_reach_floor(state, self.options.required_floor.value)
             )
 
     def can_visit(self, state: CollectionState, event: str) -> bool:

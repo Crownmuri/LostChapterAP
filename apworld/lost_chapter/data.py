@@ -28,14 +28,14 @@ BOSS_FLOOR_INTERVAL = 20
 FLOOR_CHECKS = range(10, 81, 10)
 
 # Battle rewards: one of the cards a won fight offers is a check. Each stretch of 20 floors up to the floor of the
-# final boss (the final_boss_floor option, 100 to 200) has its own, as many as the battle_rewards option says.
+# final boss (the required_floor option, 100 to 200) has its own, as many as the battle_rewards option says.
 BATTLE_STRETCHES = 10
 BATTLE_REWARDS_MAX = 10
 
 
-def battle_stretches(final_boss_floor: int) -> int:
+def battle_stretches(required_floor: int) -> int:
     """The stretches of 20 floors up to the boss floor the final boss waits on."""
-    return -(-final_boss_floor // BOSS_FLOOR_INTERVAL)
+    return -(-required_floor // BOSS_FLOOR_INTERVAL)
 
 
 def battle_reward(stretch: int, number: int) -> str:

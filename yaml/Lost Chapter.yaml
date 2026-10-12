@@ -43,12 +43,13 @@ Lost Chapter:
   # Expected by floor 21, 41, 61, 81 and 101
   floor_exploration: 5
 
-  # 0-10. Battle reward checks for each stretch of 20 floors up to final_boss_floor: one of the three cards of a won
+  # 0-10. Battle reward checks for each stretch of 20 floors up to required_floor: one of the three cards of a won
   # fight is an Archipelago card, taking it sends the next one in place of a card. 0 for none
   battle_rewards: 5
 
-  # 100-200. The floor to reach before the final boss can be challenged at the doors of a boss floor
-  final_boss_floor: 100
+  # 100-200. The floor to reach to beat the game: before it the boss of your goal cannot be challenged (the final
+  # boss, or The Last Door with a DLC goal, where the final boss is there from floor 100 for stats and souls)
+  required_floor: 100
 
   # 0-100. How much of the filler is traps. The rest is gold, souls and one-time stat boosts for the current run
   trap_percentage: 20

@@ -329,7 +329,8 @@
     const SWITCH_WHITE_DOOR = 182; // the White Door there can be opened
     const SWITCH_BLACK_DOOR = 183;
     const SWITCH_LAST_DOOR = 193; // both are defeated, the last door is offered
-    const SWITCH_FINAL_BOSS = 159; // the floor of the final_boss_floor option is reached
+    const SWITCH_FINAL_BOSS = 159; // the floor from which the "Final Boss" door opens is reached
+    const SWITCH_LAST_DOOR_FLOOR = 156; // the same for "The Last Door" of the DLC
     // Market (common event 33): the merchant hands out the Plushie and the Music Box, thanks the player who took
     // both (VIRTUE +5) and is gone from then on. With both as checks he stays, see patchMarket.
     const COMMON_EVENT_MARKET = 33;
@@ -736,7 +737,7 @@
             shuffle_title_effects: 0,
             finisher_move: 0,
             floor_exploration: 0,
-            final_boss_floor: FREE_DOORS_FLOOR,
+            required_floor: FREE_DOORS_FLOOR,
             soul_multiplier: 100,
             death_link: 0,
             battle_rewards: 0,
@@ -1109,6 +1110,7 @@
 
     // MPP_ChoiceEX conditions at the end of a choice: if(...) hides it, en(...) grays it out
     const FINAL_BOSS_LOCK = "en(s[" + SWITCH_FINAL_BOSS + "])";
+    const LAST_DOOR_LOCK = "en(s[" + SWITCH_LAST_DOOR_FLOOR + "])";
     const CHOICE_SHOWN = /\s?if\((.+?)\)/;
     const CHOICE_ENABLED = /\s?en\((.+?)\)/;
     const STAT_VARIABLES = { 49: "FAITH", 50: "VIRTUE", 51: "LEWD" };
@@ -1497,6 +1499,9 @@
                 if (named.includes(FINAL_BOSS_LOCK) && !$gameSwitches.value(SWITCH_FINAL_BOSS)) {
                     return named.replace(FINAL_BOSS_LOCK, " \\c[18]requires floor " + finalBossFloor() + "\\c[0]en(0)");
                 }
+                if (named.includes(LAST_DOOR_LOCK) && !$gameSwitches.value(SWITCH_LAST_DOOR_FLOOR)) {
+                    return named.replace(LAST_DOOR_LOCK, " \\c[18]requires floor " + requiredFloor() + "\\c[0]en(0)");
+                }
                 if (!eventId) {
                     return named;
                 }
@@ -1705,7 +1710,7 @@
         // The stretches go up to the boss floor of the final boss
         const last = Math.min(
             Math.ceil($gameVariables.value(VARIABLE_FLOOR) / BOSS_FLOOR_INTERVAL),
-            Math.ceil(finalBossFloor() / BOSS_FLOOR_INTERVAL)
+            Math.ceil(requiredFloor() / BOSS_FLOOR_INTERVAL)
         );
         for (let stretch = 1; stretch <= last; stretch++) {
             for (let number = 1; number <= (option("battle_rewards") || 0); number++) {
@@ -2805,8 +2810,12 @@
     // From the floor of the last boss on the doors are a free choice: any king again, the last boss, or go on
     const freeDoors = () => shuffled() && ($gameVariables.value(VARIABLE_FLOOR) >= FREE_DOORS_FLOOR || kingsDefeated());
 
-    // The "Final Boss" door choice only opens from this floor on (final_boss_floor option)
-    const finalBossFloor = () => option("final_boss_floor") || FREE_DOORS_FLOOR;
+    // The required_floor option: the floor to reach before the boss of the goal can be challenged. That is the
+    // "Final Boss" door, or "The Last Door" with one of the goals of the DLC. The last boss is there from floor 100
+    // then, like in the game, for what a win over him is worth.
+    const requiredFloor = () => option("required_floor") || option("final_boss_floor") || FREE_DOORS_FLOOR;
+    const dlcGoal = () => [GOAL_DLC_NORMAL, GOAL_DLC_TRUE].includes(option("goal"));
+    const finalBossFloor = () => (dlcGoal() ? FREE_DOORS_FLOOR : requiredFloor());
 
     const doorOpen = kingSwitch => {
         const defeated = $gameSwitches.value(kingSwitch);
@@ -2829,6 +2838,7 @@
         mirrorSwitch(SWITCH_TURN_BACK, shuffled() && !freeDoors());
         mirrorSwitch(SWITCH_FREE_DOORS, freeDoors());
         mirrorSwitch(SWITCH_FINAL_BOSS, $gameVariables.value(VARIABLE_FLOOR) >= finalBossFloor());
+        mirrorSwitch(SWITCH_LAST_DOOR_FLOOR, !dlcGoal() || $gameVariables.value(VARIABLE_FLOOR) >= requiredFloor());
         const sent = weaponId => state().checked.includes(RELIC_OFFSET + weaponId);
         mirrorSwitch(SWITCH_MARKET_THANKS, AP.marketMenu() && MARKET_RELICS.every(sent));
         const hasKey = weaponId => !shuffled() || $gameParty.hasItem($dataWeapons[weaponId], false);
@@ -4371,7 +4381,7 @@
             12,
             "!LostChapterAP.bound() && $gameSwitches.value(" + DLC_BOSS_SWITCHES[0] + ")",
         ];
-        const lastDoor = "The Last Doorif(s[" + SWITCH_LAST_DOOR + "])";
+        const lastDoor = "The Last Door" + LAST_DOOR_LOCK + "if(s[" + SWITCH_LAST_DOOR + "])";
         const branch = [command(402, indent, [list[choices].parameters[0].length, lastDoor]), command(221, 0, [])]
             .concat(list.slice(leave, transfer + 1).map(item => Object.assign({}, item)), [
                 command(121, 0, [SWITCH_BEHIND, SWITCH_BEHIND, 1]),
