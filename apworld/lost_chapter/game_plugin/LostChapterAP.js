@@ -4706,8 +4706,32 @@
         { event: 59, off: [273], line: "The king is dead.", revisit: "the king is dead", reset: "the king lives" },
         // Old Woman (DLC): "Disappearance of Old Woman", and her message with it so it can be taken again
         { event: 594, off: [264, 261], line: "The old woman is gone.", revisit: "she is gone", reset: "she is back" },
+        // Battlefield: the knight left once his quest was done ("Knight of the Beginning"), or died to the origin
+        // The New Ruler (DLC). Either way the Dusk Ring and the Collar Key go with him.
+        { event: 42, off: [290], line: "The knight has left.", revisit: "he has left", reset: "he is back" },
+        { event: 42, off: [242], line: "The knight is dead.", revisit: "he is dead", reset: "he lives" },
     ];
     AP.revives = () => shuffled();
+
+    // Battlefield: the knight asks to free his dog and hands the Collar Key over, but not when Lassi is dead or
+    // was laid to rest already (DLC). In a multiworld the key is a check, and while that is open he hands it over
+    // whatever became of the dog.
+    const COMMON_EVENT_BATTLEFIELD = 42;
+    const LASSI_GONE_SWITCHES = [243, 270];
+    AP.lassiGone = switchId => {
+        const sent = state().checked.includes(RELIC_OFFSET + WEAPON_COLLAR_KEY);
+        const open = shuffled() && relicChecks().includes(WEAPON_COLLAR_KEY) && !sent;
+        return $gameSwitches.value(switchId) && !open;
+    };
+
+    const patchBattlefield = () => {
+        for (const item of $dataCommonEvents[COMMON_EVENT_BATTLEFIELD].list) {
+            const p = item.parameters;
+            if (item.code === 111 && p[0] === 0 && LASSI_GONE_SWITCHES.includes(p[1]) && p[2] === 0) {
+                item.parameters = [12, "LostChapterAP.lassiGone(" + p[1] + ")"];
+            }
+        }
+    };
 
     const patchRevivals = () => {
         for (const revival of REVIVALS) {
@@ -5152,6 +5176,7 @@
             patchMarket();
             patchConclusions();
             patchRevivals();
+            patchBattlefield();
             patchStandbyVerse();
             patchStandbyTip();
             patchCheckpoint();
