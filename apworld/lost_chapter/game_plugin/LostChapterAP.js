@@ -1003,6 +1003,8 @@
         if (troopId >= 1 && troopId <= CHECK_TROOP_MAX) {
             check(TROOP_OFFSET + troopId);
         } else if (troopId === TROOP_LAST_BOSS && bound()) {
+            // A check with a goal of the DLC, where the world has it
+            check(SWITCH_OFFSET + SWITCH_LAST_BOSS);
             state().lastBossSeen = true;
             lastBossDefeated();
         } else if (troopId === TROOP_DLC_LAST_BOSS && bound()) {

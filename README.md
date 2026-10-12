@@ -111,8 +111,8 @@ Everything the game does runs through common events, switches and variables:
 Generates and fills; the client, installer and bridge are tested outside the game. The plugin is tested against the
 real `CommonEvents.json` in a headless browser with a stubbed engine, but has not been run in the game yet.
 
-Checks: Heavenly Kings, title conditions, first victories, every 10th floor, first visit of each floor event,
-relics from events, soul milestones.
+Checks: Heavenly Kings, the last boss where the goal is one of the DLC, title conditions, first victories, every
+10th floor, first visit of each floor event, relics and cards from events, battle rewards.
 
 Items: floor event unlocks, door keys, title effects, card sets, relics, gold.
 

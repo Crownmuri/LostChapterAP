@@ -57,6 +57,8 @@ difference and is only there for those who want the challenge.
 ## Which locations are checks?
 
 - Defeating each of the four Heavenly Kings
+- Defeating Magisdusk, the last boss of the base game, when the goal is one of the DLC. He can be challenged from
+  floor 100 then, whatever the required floor is.
 - Meeting the condition of each title
 - The first victory against each regular enemy
 - Reaching every 10th floor

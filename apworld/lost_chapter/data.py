@@ -238,6 +238,11 @@ DLC_BOSSES: Dict[int, str] = {
     278: "Migwarners",
     279: "Bordosegeia",
 }
+# The last boss of the base game is a check where he is not the goal: with a goal of the DLC he is one of the doors
+# from floor 100 on, like in the game. The location id is the offset of the switches + the switch of his fight.
+LAST_BOSS = "Magisdusk"
+LAST_BOSS_SWITCH = 64
+LAST_BOSS_FLOOR = 100
 # switch id of the DLC boss -> the relic that opens its door
 DLC_BOSS_KEYS: Dict[int, str] = {
     278: "White Key",

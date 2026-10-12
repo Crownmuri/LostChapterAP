@@ -24,6 +24,8 @@ def location_table() -> Dict[str, int]:
     for switch_id, name in list(data.HEAVENLY_KINGS.items()) + list(data.DLC_BOSSES.items()):
         table[f"Defeat {name}"] = data.SWITCH_OFFSET + switch_id
 
+    table[f"Defeat {data.LAST_BOSS}"] = data.SWITCH_OFFSET + data.LAST_BOSS_SWITCH
+
     for number, name in data.TITLES.items():
         table[f"Title: {name}"] = data.SWITCH_OFFSET + data.TITLE_SWITCH_BASE + number
 
@@ -276,6 +278,10 @@ class LostChapterWorld(World):
         if not self.options.include_dlc:
             included -= self.location_name_groups["DLC Bosses"]
 
+        # The last boss of the base game is a check where the goal is another boss
+        if self.options.goal.current_key not in data.DLC_GOALS:
+            included.discard(f"Defeat {data.LAST_BOSS}")
+
         return {name: loc_id for name, loc_id in self.location_name_to_id.items() if name in included}
 
     def create_regions(self) -> None:
@@ -365,6 +371,12 @@ class LostChapterWorld(World):
 
         for name in self.cards().values():
             self.get_location(f"Card: {name}").access_rule = lambda state, name=name: self.can_find_card(state, name)
+
+        if self.options.goal.current_key in data.DLC_GOALS:
+            # One of the doors from floor 100 on, which takes all four Heavenly Kings defeated
+            self.get_location(f"Defeat {data.LAST_BOSS}").access_rule = (
+                lambda state: self.can_reach_floor(state, data.LAST_BOSS_FLOOR)
+            )
 
         if self.options.include_dlc:
             for switch_id, name in data.DLC_BOSSES.items():
