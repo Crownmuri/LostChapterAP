@@ -14,7 +14,7 @@ from .options import LostChapterOptions
 
 SLOT_DATA_OPTIONS = (
     "goal", "virgin_mode", "include_dlc", "relicsanity", "shuffle_keys", "first_victories", "shuffle_title_effects",
-    "finisher_move", "field_exploration", "final_boss_floor", "soul_multiplier", "death_link", "battle_rewards",
+    "finisher_move", "floor_exploration", "final_boss_floor", "soul_multiplier", "death_link", "battle_rewards",
 )
 
 
@@ -299,7 +299,7 @@ class LostChapterWorld(World):
         keys = min((floor - 1) // data.BOSS_FLOOR_INTERVAL, len(data.DOOR_KEYS))
         # Nothing in the game asks for these, they are expected so the events of the later floors can be found
         exploration = min(
-            sum(floor >= expected for expected in data.EXPLORATION_FLOORS), self.options.field_exploration.value
+            sum(floor >= expected for expected in data.EXPLORATION_FLOORS), self.options.floor_exploration.value
         )
 
         return state.has_group("Door Keys", self.player, keys) and state.has(
@@ -478,7 +478,7 @@ class LostChapterWorld(World):
 
         pool: List[LostChapterItem] = [self.create_item(name) for name in sorted(names)]
 
-        pool += [self.create_item(data.EXPLORATION) for _ in range(self.options.field_exploration.value)]
+        pool += [self.create_item(data.EXPLORATION) for _ in range(self.options.floor_exploration.value)]
         pool += [self.create_item(name) for name in self.relic_items()]
         pool += [self.create_item(f"Card: {name}") for name in self.cards().values()]
         pool += [self.create_item(f"Card: {name}") for name in data.BONUS_CARDS.values()]

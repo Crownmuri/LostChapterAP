@@ -529,7 +529,7 @@ TITLE_LEWD = 5
 FINISHER_ID = 10
 FINISHER = "Kick Balls"
 
-# One more floor event to choose from on every floor, next to the two the choice starts with. The field_exploration
+# One more floor event to choose from on every floor, next to the two the choice starts with. The floor_exploration
 # option says how many there are, and the climb expects one of them by each of these floors.
 EXPLORATION_ID = 11
 EXPLORATION = "Progressive Floor Exploration"

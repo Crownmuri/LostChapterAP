@@ -241,7 +241,7 @@ the White Key are relics like the others in every seed, and there is no option f
 (only once the useful item Kick Balls is found), `boon_shop` (only once it is bought in the Boon Shop for 1000
 souls, which holds for every later run too) or `remove`.
 
-`field_exploration` (0 to 5, default 5) puts that many Progressive Floor Exploration items into the pool. Each
+`floor_exploration` (0 to 5, default 5) puts that many Progressive Floor Exploration items into the pool. Each
 adds a floor event to the two a floor lets you choose from. Logic expects one by floor 21, two by 41, three by 61,
 four by 81 and five by 101; nothing in the game holds the climb up for them.
 

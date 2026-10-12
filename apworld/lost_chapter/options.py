@@ -113,14 +113,14 @@ class FinisherMove(Choice):
     default = 0
 
 
-class FieldExploration(Range):
+class FloorExploration(Range):
     """
-    Adds a soft-logic layer by adding Progressive Floor Exploration, which makes exploring new fields less RNG heavy.
-    Normally you start off with Battle + 2 fields, and each Progressive Floor Exploration adds another field.
+    Adds a soft-logic layer by adding Progressive Floor Exploration, which makes exploring new floor events less RNG heavy.
+    Normally you start off with Battle + 2 floor events, and each Progressive Floor Exploration adds another one.
     The climb expects one of them by floor 21, two by floor 41, three by floor 61, four by floor 81 and five by
     floor 101, as far as there are that many.
     """
-    display_name = "Field Exploration"
+    display_name = "Floor Exploration"
     range_start = 0
     range_end = len(data.EXPLORATION_FLOORS)
     default = len(data.EXPLORATION_FLOORS)
@@ -294,7 +294,7 @@ class LostChapterOptions(PerGameCommonOptions):
     first_victories: FirstVictories
     shuffle_title_effects: ShuffleTitleEffects
     finisher_move: FinisherMove
-    field_exploration: FieldExploration
+    floor_exploration: FloorExploration
     battle_rewards: BattleRewards
     final_boss_floor: FinalBossFloor
     trap_percentage: TrapPercentage

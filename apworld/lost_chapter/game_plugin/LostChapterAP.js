@@ -734,7 +734,7 @@
             first_victories: 0,
             shuffle_title_effects: 0,
             finisher_move: 0,
-            field_exploration: 0,
+            floor_exploration: 0,
             final_boss_floor: FREE_DOORS_FLOOR,
             soul_multiplier: 100,
             death_link: 0,
