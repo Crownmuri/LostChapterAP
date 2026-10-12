@@ -178,13 +178,13 @@ def title_events(number: int, dlc: bool) -> List[str]:
     return TITLE_EVENTS.get(number, []) + (DLC_TITLE_EVENTS.get(number, []) if dlc else [])
 
 
-# title number -> the floor from which its condition is expected to be met. Only the titles no floor event helps
-# with have one. A title about FAITH, VIRTUE, LEWD or the stats is in logic as soon as one of its events
-# (TITLE_EVENTS) can be visited: the soul shop sells the floor event of one's choice, so the same event can be
-# taken floor after floor.
+# title number -> the floor from which its condition is expected to be met. A title about FAITH, VIRTUE, LEWD or
+# the stats has none: it is in logic as soon as one of its events (TITLE_EVENTS) can be visited, since the soul shop
+# sells the floor event of one's choice and the same event can be taken floor after floor.
 TITLE_FLOORS: Dict[int, int] = {
     8: 21,   # Use 7 cards during 1 turn
     9: 21,   # 7 ailments at the same time: the enemies of the first floors do not inflict that many
+    11: 21,  # Possess 1000 G: its events pay, but that much takes a while to come together
 }
 
 # troop id -> enemy name (common event 65 "Fight")
