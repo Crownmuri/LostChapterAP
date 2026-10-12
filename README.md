@@ -170,6 +170,8 @@ Game changes in a session (the plugin patches the event data in memory at load, 
 - Who the origin The New Ruler kills for a Pieris (the man of the Desert, the merchant, Lassi, the ranger of the
   Camp, the proprietress) is back on the next floor, so no event is lost for the run. Each of those events hands
   out one Pieris a run (`reviveVictims`).
+- With the Monster quest on, an event that turned into a scene of what he left behind (the empty Inn) asks
+  "Revisit or reset the event?": that scene, or the event as it was before him (`patchMonsterScenes`).
 - The scenes the Monster quest and the flag on the Hill put in front of an event (the king murdered on the
   Throne, the traveler of the Collapse dead, the merchant gone) wait while a relic of that event is a check that
   is still open (`patchStoryScenes`).

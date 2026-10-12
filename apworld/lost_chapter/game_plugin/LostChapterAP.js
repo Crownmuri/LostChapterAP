@@ -5151,6 +5151,50 @@
         }
     };
 
+    // With the Monster quest on most events are a scene of what he left behind: the empty Inn, the dead merchant.
+    // That lasts for the rest of the run. In a multiworld the player is asked, like at an event that reached its
+    // conclusion: that scene, or the event as it was before him. The quest itself is not touched by the answer.
+    const MONSTER_SWITCH = 275;
+    const MONSTER_EVENTS_KEPT = [50, 61]; // the Sea and the Prison are the quest itself
+    const patchMonsterScenes = () => {
+        const asksMonster = item => {
+            const p = item.parameters;
+            const plain = p[0] === 0 && p[1] === MONSTER_SWITCH && p[2] === 0;
+            const patched = p[0] === 12 && /storyScene\(\d+, 275\)|locksmithRefuses/.test(String(p[1]));
+            return item.code === 111 && item.indent === 0 && (plain || patched);
+        };
+        for (const eventId of allEvents().filter(id => !MONSTER_EVENTS_KEPT.includes(id))) {
+            const list = eventData(eventId).list;
+            const scene = list.findIndex(asksMonster);
+            const behind = list.findIndex((item, i) => i > scene && item.indent === 0);
+            if (scene < 0 || behind < 0) {
+                continue;
+            }
+            // Before him is what follows the scene, or its Else where it has one
+            const otherwise = list[behind].code === 411;
+            const label = "archipelago before the monster " + eventId;
+            const answers = ["Revisit Event (after the Monster)", "Reset Event (before the Monster)"];
+            list.splice(behind + 1, 0, command(118, otherwise ? 1 : 0, [label]));
+            list.splice(
+                scene + 1,
+                0,
+                command(111, 1, [12, "LostChapterAP.revives()"]),
+                command(101, 2, ["", 0, 1, 2, ""]),
+                command(401, 2, ["The Monster has been here."]),
+                command(401, 2, ["Revisit or reset the event?"]),
+                command(102, 2, [answers, -1, 0, 2, 0]),
+                command(402, 2, [0, answers[0]]),
+                command(0, 3, []),
+                command(402, 2, [1, answers[1]]),
+                command(119, 3, [label]),
+                command(0, 3, []),
+                command(404, 2, []),
+                command(0, 2, []),
+                command(412, 1, [])
+            );
+        }
+    };
+
     const patchRevivals = () => {
         for (const revival of REVIVALS) {
             const commonEvent = $dataCommonEvents[revival.event];
@@ -5615,6 +5659,7 @@
             patchStandUp();
             patchLocksmith();
             patchStoryScenes();
+            patchMonsterScenes();
             patchPretend();
             patchImmobile();
             patchTurnStart();

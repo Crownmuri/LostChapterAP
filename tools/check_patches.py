@@ -112,6 +112,17 @@ try {
             }
         });
     });
+    // The events that ask "after or before the Monster", and what the answer "before" lands on
+    lines.push("before the monster: " + $dataCommonEvents.filter(function(event) {
+        return event && event.list.some(function(command) {
+            return command.code === 118 && /before the monster/.test(command.parameters[0]);
+        });
+    }).map(function(event) {
+        var at = event.list.findIndex(function(command) {
+            return command.code === 118 && /before the monster/.test(command.parameters[0]);
+        });
+        return event.name + " (behind " + event.list[at - 1].code + ")";
+    }).join(", "));
     // The verse of the standby screen that lost a line break in one version of the game
     $dataCommonEvents[87].list.forEach(function(command) {
         var text = command.code === 357 && command.parameters[3] ? String(command.parameters[3].text) : "";
