@@ -28,10 +28,6 @@ class Goal(Choice):
     option_ending_true = 1
     option_dlc_normal = 3
     option_dlc_true = 4
-    # The names these had before
-    alias_normal_end = 0
-    alias_true_end = 1
-    alias_dlc_end = 3
     default = 0
 
     @classmethod
