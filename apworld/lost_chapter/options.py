@@ -229,6 +229,7 @@ class BrainwashTrapWeight(TrapWeight):
     Start cards land in your discard pile and turn up once it is shuffled back into the deck. Playing them has you
     undress and beg, and whatever enemy you are up against then fingers you turn after turn. That does not take
     the Virginity status. Together with the cards of the Confusion Trap there are never more than ten of them.
+    A version of the game without these scenes (one that is not patched) confuses you instead.
     """
     display_name = "Brainwash Trap Weight"
 

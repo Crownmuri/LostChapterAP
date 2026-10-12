@@ -381,6 +381,7 @@
     // Brainwash is the Shaman's: the Brainwash Start cards it leaves have the player undress and beg, which ends
     // in the Pin Down State, and the Shaman answers that with Fingering. After a Brainwash Trap every enemy does.
     const ITEM_BRAINWASH_TRAP = 37;
+    const ITEM_CONFUSION_TRAP = 31;
     const STATE_BRAINWASH = 262;
     const STATE_PIN_DOWN = 7;
     const SKILL_FINGERING = 264;
@@ -2016,7 +2017,9 @@
             return;
         }
         AP.battleFrames = 0;
-        const trap = s.traps.shift();
+        // A version of the game without the brainwashed scenes confuses the player instead
+        const drawn = s.traps.shift();
+        const trap = drawn === ITEM_BRAINWASH_TRAP && !AP.brainwashScenes ? ITEM_CONFUSION_TRAP : drawn;
         if (trap === ITEM_CLIMAX_TRAP) {
             actor.setMp(0);
         } else {
@@ -2112,6 +2115,7 @@
         if (pose.length < 2) {
             return; // a version of the game without these scenes
         }
+        AP.brainwashScenes = true;
         const indent = list[shaman].indent;
         list.splice(
             end + 1,
