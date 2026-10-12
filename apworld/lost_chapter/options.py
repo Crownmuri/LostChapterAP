@@ -115,8 +115,8 @@ class FinisherMove(Choice):
 
 class FieldExploration(Range):
     """
-    Adds a soft-logic layer by adding Progressive Field Exploration, which makes exploring new fields less RNG heavy.
-    Normally you start off with Battle + 2 fields, and each Progressive Field Exploration adds another field.
+    Adds a soft-logic layer by adding Progressive Floor Exploration, which makes exploring new fields less RNG heavy.
+    Normally you start off with Battle + 2 fields, and each Progressive Floor Exploration adds another field.
     The climb expects one of them by floor 21, two by floor 41, three by floor 61, four by floor 81 and five by
     floor 101, as far as there are that many.
     """
